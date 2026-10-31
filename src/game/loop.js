@@ -3,7 +3,8 @@ import { camera, renderer, scene } from '../render/renderer.js';
 import { inner } from '../render/lights.js';
 import { crowd } from '../arenas/crowd.js';
 import { ARENAS, turntable } from '../arenas/arenas.js';
-import { arenaOpen, prog, saveProg } from './progress.js';
+import { prog, saveProg } from './progress.js';
+import { reachAct } from './unlocks.js';
 import { arenaId, arenaTick } from '../arenas/current.js';
 import { _a, _b, _c, aimRing, fillTrail, pushTrail } from '../render/trails.js';
 import { PN, burst, flash, pGeo, pMat, pPos, pVel } from '../render/particles.js';
@@ -83,14 +84,13 @@ function frame(nowMs) {
       if (bar === 2) toast('GO!', 900);
       if (!game.FREE && !game.TUT && bar >= 3 && a > game.act) {
         game.act = a;
-        if (!game.TUT && a > prog.maxAct) {
-          const was = Object.keys(ARENAS).filter(arenaOpen);
-          prog.maxAct = a;
-          saveProg();
-          const now2 = Object.keys(ARENAS)
-            .filter(arenaOpen)
-            .filter(k => !was.includes(k));
-          if (now2.length) setTimeout(() => toast('Unlocked: ' + ARENAS[now2[0]].name + '!', 2200), 900);
+        if (!game.TUT) {
+          if (a > prog.maxAct) {
+            prog.maxAct = a;
+            saveProg();
+          }
+          const got = reachAct(a, id => ARENAS[id].name);
+          if (got.length) setTimeout(() => toast('Unlocked: ' + got.slice(0, 3).join(' · '), 2400), 900);
         }
         game.netLeft = pk('net');
         if (a === FINAL + 1 && !game.encore) {

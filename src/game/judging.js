@@ -6,17 +6,19 @@ import { _b } from '../render/trails.js';
 import { burst } from '../render/particles.js';
 import { ac, initAudio, sfxNoise } from '../audio/synth.js';
 import { FINAL, lat, now, timeAt } from '../audio/clock.js';
-import { freeSteer } from './freeride.js';
+import { frNear, frTime, freeSteer } from './freeride.js';
+import { ARENAS } from '../arenas/arenas.js';
 import { player, pool } from './objects.js';
 import { DIRS } from './chart.js';
 import { addBal, ov, showJudge } from '../ui/hud.js';
 import { chargeBoost, useBoost } from './boost.js';
-import { addScore, awardTickets, gw, pk, pw } from './perks.js';
+import { addScore, gw, pk, pw } from './perks.js';
 import { countPlay, recordRun, showOver } from '../ui/leaderboard.js';
 import { tutEv } from '../ui/tutorial.js';
 import { resetInput } from './run.js';
 import { $, G, R, V3 } from '../core/constants.js';
 import { bst } from '../bikes/stats.js';
+import { recordCareer } from './unlocks.js';
 import { hitSound } from '../audio/songs.js';
 
 function release(type) {
@@ -222,7 +224,7 @@ function finale() {
     prog.maxAct = Math.max(prog.maxAct, FINAL);
     saveProg();
     recordRun();
-    game.over.tickets = awardTickets(true);
+    game.over.unlocked = careerRun(true);
     game.over.newBest = game.over.score > game.best;
     if (game.over.newBest) {
       game.best = game.over.score;
@@ -240,6 +242,14 @@ function finale() {
     showOver();
   };
 }
+/* fold this run into the lifetime stats that drive unlocks (tutorial runs don't count) */
+function careerRun(win) {
+  if (game.TUT) return [];
+  const run = game.FREE
+    ? { free: true, time: frTime, near: frNear }
+    : { act: game.act, win, score: game.score, combo: game.stats.maxCombo, perfect: game.stats.perfect };
+  return recordCareer(run, id => ARENAS[id].name);
+}
 function gameOver() {
   game.over = { score: Math.floor(game.score) };
   countPlay();
@@ -248,7 +258,7 @@ function gameOver() {
     saveProg();
   }
   recordRun();
-  game.over.tickets = awardTickets(false);
+  game.over.unlocked = careerRun(false);
   game.over.newBest = game.over.score > game.best;
   if (game.over.newBest) {
     game.best = game.over.score;

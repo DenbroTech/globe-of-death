@@ -127,17 +127,18 @@ function showOver() {
       showBoard(showOver);
     };
   };
-  const crowdLine = '';
+  const got = game.over.unlocked || [],
+    crowdLine = got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '';
   if (game.FREE) {
     ov.innerHTML = `<div class="card home"><h1><small>Free ride</small>${game.over.fell ? 'Fell off!' : 'Crash!'}</h1>
     <div class="res"><div><span>Time</span><b>${fmtT(frTime)}</b></div><div><span>Near misses</span><b>${frNear}</b></div><div><span>Score</span><b>${Math.floor(game.score).toLocaleString()}</b></div></div>
-    <div class="best">${frTime >= freeBest - 0.01 ? '<span class="newbest">New best time!</span>' : 'Best ' + fmtT(freeBest)} · +${game.over.tickets} tickets</div>${crowdLine}${btns()}</div>`;
+    <div class="best">${frTime >= freeBest - 0.01 ? '<span class="newbest">New best time!</span>' : 'Best ' + fmtT(freeBest)}</div>${crowdLine}${btns()}</div>`;
     wire('free');
     return;
   }
   ov.innerHTML = `<div class="card home"><h1><small>${game.over.win ? 'Full show' : 'Act ' + game.act + ' of ' + FINAL}</small>${game.over.win ? 'Take a bow!' : 'Crash!'}</h1>
     <div class="res"><div><span>Score</span><b>${game.over.score.toLocaleString()}</b></div><div><span>Best combo</span><b>${game.stats.maxCombo}</b></div><div><span>Perfect</span><b>${game.stats.perfect}</b></div></div>
-    <div class="best">${game.over.newBest ? '<span class="newbest">New best show!</span>' : 'Best ' + game.best.toLocaleString()} · +${game.over.tickets} tickets</div>${crowdLine}${btns()}</div>`;
+    <div class="best">${game.over.newBest ? '<span class="newbest">New best show!</span>' : 'Best ' + game.best.toLocaleString()}</div>${crowdLine}${btns()}</div>`;
   wire('show');
 }
 

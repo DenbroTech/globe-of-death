@@ -19,6 +19,9 @@ import { CATALOG, findItem } from '../bikes/catalog.js';
 import { makeFigure } from '../rider/rider.js';
 import { BIKE_STATS, STAT_NAMES } from '../bikes/stats.js';
 import { showStart } from './menus.js';
+import { isUnlocked, reqText, sanitizeSel } from '../game/unlocks.js';
+
+const LOCK = '<svg class="lk" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
 let G0, garageRoom;
 
@@ -104,6 +107,11 @@ const catOf = id => {
 let gCat = {},
   gPart = 'suit';
 function showGarage(msg) {
+  if (sanitizeSel(garage.sel)) {
+    saveGarage();
+    rebuildPlayerBike();
+    if (showroom) rebuildGarageSet();
+  }
   app.classList.add('menu');
   game.running = false;
   if (!showroom) {
@@ -120,14 +128,19 @@ function showGarage(msg) {
     sel = garage.sel,
     hex = finishCss;
   const cards = k =>
-    `<div class="igrid">${CATALOG[k].map(it => `<button class="item${sel[k] === it.id ? ' sel' : ''}" data-k="${k}" data-id="${it.id}"><b>${it.name}</b><span>${sel[k] === it.id ? (k === 'style' ? 'Riding' : 'Wearing') : 'Owned'}</span></button>`).join('')}</div>`;
+    `<div class="igrid">${CATALOG[k]
+      .map(it => {
+        const open = isUnlocked(k, it.id);
+        return `<button class="item${sel[k] === it.id ? ' sel' : ''}${open ? '' : ' locked'}" data-k="${k}" data-id="${it.id}"><b>${it.name}</b><span>${!open ? LOCK + reqText(k, it.id) : sel[k] === it.id ? (k === 'style' ? 'Riding' : 'Wearing') : ''}</span></button>`;
+      })
+      .join('')}</div>`;
   const palette = (key, def) => {
     const cur = sel[key],
       cat = gCat[key] || (cur ? catOf(cur) : 'Solid');
     gCat[key] = cat;
     const list = CATALOG.paint.filter(PCATS.find(c => c[0] === cat)[1]);
     return `<div class="cats">${PCATS.map(([c]) => `<button class="cat" data-cat="${c}" data-key="${key}" aria-pressed="${c === cat}">${c}</button>`).join('')}</div>
-      <div class="hs" data-hs="sw-${key}-${cat}">${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></button>`).join('')}</div>`;
+      <div class="hs" data-hs="sw-${key}-${cat}">${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}${isUnlocked('paint', it.id) ? '' : ' locked'}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></button>`).join('')}</div>`;
   };
   const st = BIKE_STATS[sel.style],
     pname = k => (sel[k] ? findItem('paint', sel[k]).name : 'Outfit colours');
@@ -178,6 +191,13 @@ function showGarage(msg) {
       }),
   );
   const pick = (k, id) => {
+    const kind = k === 'suit' || k === 'helmet' ? 'paint' : k;
+    if (id && !isUnlocked(kind, id)) {
+      // locked: say how to earn it, don't select
+      const it = CATALOG[kind].find(i => i.id === id);
+      showGarage(`${LOCK}<b>${it.name}</b> · ${reqText(kind, id)}`);
+      return;
+    }
     garage.sel[k] = id || null;
     // a new outfit starts in its own colours
     if (k === 'costume') garage.sel.suit = garage.sel.helmet = null;

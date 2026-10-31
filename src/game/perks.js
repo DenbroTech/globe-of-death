@@ -67,16 +67,9 @@ function offerPerks(a, skipAd) {
       }),
   );
 }
-function awardTickets(win) {
-  const t = Math.floor(game.score / 200) + (game.act - 1) * 10 + (win ? 150 : 0);
-  garage.tickets += t;
-  saveGarage();
-  return t;
-}
-
 export function initPerks() {
   game.perks = {};
   game.netLeft = 0;
 }
 
-export { addScore, awardTickets, gw, offerPerks, pk, pw };
+export { addScore, gw, offerPerks, pk, pw };

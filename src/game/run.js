@@ -1,4 +1,6 @@
 import { game } from '../core/state.js';
+import { sanitizeSel } from './unlocks.js';
+import { garage } from './save.js';
 import { app } from '../render/renderer.js';
 import { crowd } from '../arenas/crowd.js';
 import { _c, fillTrail } from '../render/trails.js';
@@ -17,6 +19,7 @@ import { $, R } from '../core/constants.js';
 import { showStart } from '../ui/menus.js';
 
 function start() {
+  if (sanitizeSel(garage.sel)) rebuildPlayerBike();
   crowd.sync();
   game.TUT = game.tutPending;
   game.tutPending = false;

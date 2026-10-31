@@ -25,8 +25,9 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 
 **Screens**
 - Home: title, The show / Free ride chips, Ride, icon row (Level · Garage · Scores · Learn · Settings).
-- Levels list (status: Selected / Unlocked / requirement). Unlock order when not testing: Big Top (start), Beach (act 2), Stadium (act 3), Sky crane (act 5), Underwater (act 7), Moon (finish all 10 acts).
-- Garage: Bike / Rider tabs. 6 bikes in a grid (classic, dirt, chopper, vintage, sport, rocket) with stats that affect play. Paint groups: Solid, Metallic, Patterns, Animal, Neon. Rider: outfits grid + Suit/Helmet colour picker.
+- Unlocks (`game/unlocks.js`): bikes, paints (also suit/helmet colours), outfits and arenas open by milestones from a lifetime `career` (acts reached, shows finished, show points, best combo, perfects, shows played, best free-ride time, near misses). One table, `UNLOCKS`; arenas accept a show OR free-ride milestone. Starters: Classic bike, Leathers, Fire red / Midnight / Pearl / Royal blue + Ice blue/Racing green-type solids listed as unlocks. Neon is last. Locked items show a lock + milestone; tapping says how to earn it; the over screen lists new unlocks; act unlocks toast mid-run. Tickets were removed.
+- Levels list (status: Selected / Unlocked / requirement).
+- Garage (buttons have a 50% dark backing, chosen one solid): Bike / Rider tabs. 6 bikes in a grid (classic, dirt, chopper, vintage, sport, rocket) with stats that affect play. Paint groups: Solid, Metallic, Patterns, Animal, Neon. Rider: outfits grid + Suit/Helmet colour picker.
 - Leaderboard (on-phone, localStorage): Show points, Best combo, Free ride time; top 10. No names (it's your phone): rows show rank, the run (act / near misses), score, date.
 - Settings: sound, touch ring, unlock all, replay tutorial.
 - Test ads: full-screen placeholder after acts 3, 6, 9, closable after 5 s.

@@ -271,3 +271,19 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 /* tutorial: pulsing ring on the camera button during the camera step */
 .ib.hint{animation:hintPulse 1s ease-in-out infinite;border-color:var(--amber)}
 @keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.7)}50%{box-shadow:0 0 0 7px rgba(255,179,71,0)}}
+
+/* garage: buttons sit over the 3D scene, so give them a 50% dark backing; the chosen one is solid */
+.gcard .item,.gcard .cat,.gcard .seg,.gcard .tab{background:rgba(14,11,16,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.gcard .item.sel{background:#141017;border-color:var(--ok)}
+.gcard .cat[aria-pressed="true"]{background:#2a2530;color:var(--ink)}
+.gcard .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.gcard .item span{color:var(--mute)}.gcard .item.sel span{color:var(--ok)}
+/* locked items: dimmed with a lock and the milestone that opens them */
+.item.locked{opacity:.75}.item.locked b{color:var(--mute)}
+.item.locked span{display:flex;align-items:center;gap:3px;font-size:10.5px;line-height:1.15;color:var(--amber)}
+.lk{flex:none;width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:2.4}
+.swb.locked{position:relative;filter:saturate(.35) brightness(.55)}
+.swb.locked::after{content:'';position:absolute;inset:0;margin:auto;width:14px;height:14px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.6'%3E%3Crect x='5' y='11' width='14' height='10' rx='2'/%3E%3Cpath d='M8 11V8a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E")}
+.gmsg .lk{width:13px;height:13px;vertical-align:-1px;margin-right:4px;color:var(--amber)}
+/* over screen: what this run unlocked */
+.unl{font-size:15px;color:var(--ink);background:rgba(255,194,61,.12);border:1px solid rgba(255,194,61,.35);border-radius:10px;padding:8px 12px}.unl b{color:var(--gold);margin-right:6px}
