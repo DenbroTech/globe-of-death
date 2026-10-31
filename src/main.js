@@ -1,3 +1,9 @@
+// fonts are bundled so the app works offline
+import '@fontsource/bungee/400.css';
+import '@fontsource/barlow-condensed/500.css';
+import '@fontsource/barlow-condensed/600.css';
+import '@fontsource/barlow-condensed/700.css';
+import { initApp } from './platform/app.js';
 import { game } from './core/state.js';
 import { arenaId, setArena } from './arenas/current.js';
 import { beatAt, lat, now, timeAt } from './audio/clock.js';
@@ -130,3 +136,4 @@ function boot() {
   }
 }
 boot();
+initApp();

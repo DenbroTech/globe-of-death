@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Globe of Death</string>
+    <string name="title_activity_main">Globe of Death</string>
+    <string name="package_name">com.globeofdeath.game</string>
+    <string name="custom_url_scheme">com.globeofdeath.game</string>
+</resources>

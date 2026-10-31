@@ -80,7 +80,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 1. ~~Restructure into Vite + ES modules~~ (done: menus, levels, all 6 arenas and the garage render pixel-identical to `original/` apart from sub-pixel noise; the show ride matches; free ride matches step-for-step in game state — its screenshot is not deterministic even original-vs-original). Upgrade three.js from r128 when safe (r128-specific APIs: `material.skinning`, `outputEncoding`, examples/js loaders) — re-run the parity test against `original/` before/after.
 2. Further tidy-ups as we touch code: move more of `S` into owning modules, remove `rider/riderModel.js` if no imported model is planned.
 3. **Rider**: keep improving toward the reference race suits (owner will share images); or import a rigged rider model the owner downloads (`.glb`/`.fbx`) and pose it with the existing IK targets.
-4. **Mobile app**: wrap with Capacitor for iOS/Android; Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
+4. **Mobile app**: Capacitor 8 set up (`ios/`, `android/`, `capacitor.config.json`, `src/platform/app.js`, icons/splash from `assets/`, fonts bundled, portrait + full screen; see README for running on a phone). Still to do: Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
 5. **Online leaderboards** (later): Google Play Games / Game Center, or a small backend.
 6. Performance pass on mid-range phones (draw calls, shadow map size, crowd counts, particle counts).
 
