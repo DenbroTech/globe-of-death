@@ -8,7 +8,7 @@
     "userInterfaceStyle": "dark",
     "backgroundColor": "#07060a",
     "android": {
-      "package": "com.denbro.globeofdeath.app",
+      "package": "com.denbro.globeofdeath",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07060a",
