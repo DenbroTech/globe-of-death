@@ -383,4 +383,117 @@ function sharkGeo() {
   return mergeG([body, ...fins, ...eyes]);
 }
 
-export { dolphinGeo, footballMat, makePalm, makeSailboat, sharkGeo };
+/* Sea turtle (nose toward +z, ~2.9 long). Pattern is drawn per pixel: kind 0 = shell (scutes with radiating
+   streaks, dark seams, marginal rim, pale plastron), kind 1 = skin (dark scales with yellow edges, pale beak). */
+function turtleMat(kind) {
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: kind ? 0.6 : 0.42, metalness: 0.05, side: THREE.DoubleSide });
+  m.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTP;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTP=position;');
+    const shell = `
+      vec3 p=vTP;vec3 col;
+      if(p.y<0.015){ // plastron: cream with a seam grid
+        float g=min(abs(fract(p.z*2.2)-.5),abs(fract(p.x*1.6+.5)-.5));
+        col=mix(vec3(.55,.45,.25),vec3(.93,.85,.6),smoothstep(.0,.06,g));
+      } else {
+        float w=.95*(1.-.12*p.z/1.2),r=length(vec2(p.x/w,p.z/1.25));
+        vec2 q=p.xz;float d1=9.,d2=9.;vec2 c1=vec2(0.);
+        vec2 C[13];
+        C[0]=vec2(0.,.78);C[1]=vec2(0.,.38);C[2]=vec2(0.,-.02);C[3]=vec2(0.,-.42);C[4]=vec2(0.,-.82);
+        C[5]=vec2(.52,.55);C[6]=vec2(.58,.12);C[7]=vec2(.55,-.32);C[8]=vec2(.42,-.72);
+        C[9]=vec2(-.52,.55);C[10]=vec2(-.58,.12);C[11]=vec2(-.55,-.32);C[12]=vec2(-.42,-.72);
+        for(int i=0;i<13;i++){float d=length(q-C[i]);if(d<d1){d2=d1;d1=d;c1=C[i];}else if(d<d2){d2=d;}}
+        float seam=1.-smoothstep(.015,.045,d2-d1);
+        vec2 v=q-c1;float ang=atan(v.y,v.x);
+        float streak=.5+.5*sin(ang*9.+length(v)*20.);
+        vec3 base=mix(vec3(.30,.19,.09),vec3(.62,.42,.2),streak*smoothstep(.0,.35,length(v)));
+        base=mix(base,vec3(.78,.55,.26),.35*smoothstep(.25,.0,length(v)));
+        if(r>.86){ // marginal scutes around the rim
+          float a=atan(p.x,p.z);float mseam=1.-smoothstep(.02,.07,abs(fract(a*24./6.2832)-.5)*2.);
+          base=mix(vec3(.42,.28,.13),vec3(.55,.37,.17),.5+.5*sin(a*24.));seam=max(mseam*.9,1.-smoothstep(.0,.025,abs(r-.86)));
+        }
+        col=mix(base,vec3(.12,.07,.03),seam*.85);
+      }`;
+    const skin = `
+      vec3 p=vTP*11.;vec3 ip=floor(p);float d1=9.,d2=9.;
+      for(int x=-1;x<=1;x++)for(int y=-1;y<=1;y++)for(int z=-1;z<=1;z++){
+        vec3 c=ip+vec3(x,y,z);vec3 h=fract(sin(vec3(dot(c,vec3(127.1,311.7,74.7)),dot(c,vec3(269.5,183.3,246.1)),dot(c,vec3(113.5,271.9,124.6))))*43758.5);
+        float d=length(p-c-h);if(d<d1){d2=d1;d1=d;}else if(d<d2){d2=d;}}
+      float edge=1.-smoothstep(.04,.16,d2-d1);
+      vec3 col=mix(vec3(.24,.22,.12),vec3(.86,.78,.48),edge);
+      if(vTP.z>1.56&&vTP.y<.05)col=mix(col,vec3(.75,.68,.45),.7); // beak
+      if(vTP.y<-.08)col=mix(col,vec3(.9,.86,.66),.6); // pale underside`;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTP;')
+      .replace('#include <color_fragment>', `#include <color_fragment>\n{${kind ? skin : shell}\ndiffuseColor.rgb*=pow(col,vec3(2.2));}`); // colours above are screen (sRGB) values
+  };
+  m.customProgramCacheKey = () => 'turtle' + kind;
+  return m;
+}
+function makeTurtle() {
+  const T = new THREE.Group(),
+    shellM = turtleMat(0),
+    skinM = turtleMat(1);
+  // carapace: teardrop dome over a flatter plastron
+  const cg = new THREE.SphereGeometry(1, 72, 40),
+    P = cg.attributes.position;
+  for (let i = 0; i < P.count; i++) {
+    let x = P.getX(i),
+      y = P.getY(i),
+      z = P.getZ(i);
+    const zz = z * 1.25,
+      w = 0.95 * (1 - 0.12 * z) * (z < 0 ? 1 - 0.28 * z * z : 1);
+    x *= w;
+    y = y > 0 ? y * 0.42 + 0.045 * Math.max(0, 1 - Math.abs(x) * 3) * y : y * 0.17;
+    P.setXYZ(i, x, y, zz);
+  }
+  cg.computeVertexNormals();
+  const shell = new THREE.Mesh(cg, shellM);
+  T.add(shell);
+  // neck + head with a beak
+  T.add(new THREE.Mesh(sculptGeo(new V3(0, -0.02, 0.8), new V3(0, 0.02, 1.18), new V3(0, 1, 0), [[0, 0.2, 0.16], [0.6, 0.16, 0.13], [1, 0.15, 0.13]], 20, 12), skinM));
+  T.add(
+    new THREE.Mesh(
+      sculptGeo(new V3(0, 0.02, 1.08), new V3(0, 0.0, 1.7), new V3(0, 1, 0), [[0, 0.15, 0.13], [0.35, 0.19, 0.16], [0.7, 0.17, 0.15, 0.01], [0.9, 0.11, 0.1, -0.015], [1, 0.035, 0.04, -0.035]], 28, 24, 0.32),
+      skinM,
+    ),
+  );
+  const eyeM = new THREE.MeshStandardMaterial({ color: 0x0b0806, roughness: 0.15 });
+  [1, -1].forEach(sx => {
+    const e = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), eyeM);
+    e.position.set(sx * 0.15, 0.07, 1.47);
+    T.add(e);
+  });
+  // flippers on pivots so they can stroke
+  const flipper = (pts, depth, sx, pos) => {
+    const g = finGeo(pts, depth, 0.02);
+    g.rotateX(Math.PI / 2);
+    const m = new THREE.Mesh(g, skinM),
+      piv = new THREE.Group();
+    m.scale.x = sx;
+    piv.position.set(...pos);
+    piv.add(m);
+    T.add(piv);
+    return piv;
+  };
+  const front = [[0, 0.12], ...curve([0, 0.12], [0.8, 0.28], [1.55, -0.5]), ...curve([1.55, -0.5], [0.8, -0.18], [0, -0.22]).slice(1)],
+    rear = [[0, 0.1], ...curve([0, 0.1], [0.32, 0.08], [0.48, -0.2]), ...curve([0.48, -0.2], [0.22, -0.3], [0, -0.12]).slice(1)];
+  const F = [1, -1].map(sx => flipper(front, 0.05, sx, [sx * 0.72, -0.03, 0.62])),
+    Rr = [1, -1].map(sx => flipper(rear, 0.04, sx, [sx * 0.58, -0.04, -0.9]));
+  T.traverse(o => (o.castShadow = o.isMesh));
+  // swimming stroke: front flippers fly (flap + sweep), rear ones steer
+  T.userData.swim = t => {
+    const s = Math.sin(t * 1.7);
+    F.forEach((f, i) => {
+      const sx = i ? -1 : 1;
+      f.rotation.z = sx * (0.15 + s * 0.6);
+      f.rotation.y = sx * (0.25 + Math.sin(t * 1.7 - 1.3) * 0.4);
+    });
+    Rr.forEach((f, i) => (f.rotation.y = (i ? -1 : 1) * (0.2 + Math.sin(t * 1.7 + 0.8) * 0.18)));
+    shell.rotation.x = s * 0.04;
+  };
+  return T;
+}
+
+export { dolphinGeo, footballMat, makePalm, makeSailboat, makeTurtle, sharkGeo };

@@ -7,7 +7,7 @@ import { makeSeaLife, mergeG } from './sealife.js';
 import { GY, V3 } from '../core/constants.js';
 import { clock2, flyRound, mkBird, mkBursts, rand } from './life.js';
 import { sculptGeo } from '../rider/rider.js';
-import { dolphinGeo, footballMat, makeSailboat } from './props.js';
+import { dolphinGeo, footballMat, makeSailboat, makeTurtle } from './props.js';
 
 /* ---------- people as sprites (same sheet as the crowd): standing, dancing or lying on towels ---------- */
 function spritePeople(g, list) {
@@ -1084,28 +1084,7 @@ const LIFE = {
     }
     manta.scale.setScalar(1.6);
     g.add(manta);
-    const turtle = new THREE.Group();
-    {
-      const sh = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10), std(0x5a7a3a, { flatShading: true }));
-      sh.scale.set(1, 0.4, 1.3);
-      turtle.add(sh);
-      const hd = new THREE.Mesh(new THREE.SphereGeometry(0.35, 10, 8), std(0x8aa86a));
-      hd.position.z = 1.4;
-      turtle.add(hd);
-      const fl = [];
-      [
-        [-1, 1],
-        [1, 1],
-        [-1, -1],
-        [1, -1],
-      ].forEach(([sx, sz]) => {
-        const f = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 0.4), std(0x8aa86a));
-        f.position.set(sx * 0.9, 0, sz * 0.6);
-        turtle.add(f);
-        fl.push(f);
-      });
-      turtle.userData.fl = fl;
-    }
+    const turtle = makeTurtle();
     g.add(turtle);
     let bn = 0;
     return t => {
@@ -1131,7 +1110,7 @@ const LIFE = {
         const a = -t * 0.1;
         turtle.position.set(Math.cos(a) * 14, 7 + Math.sin(t * 0.5) * 1.5, Math.sin(a) * 14);
         turtle.lookAt(Math.cos(a - 0.05) * 14, turtle.position.y, Math.sin(a - 0.05) * 14);
-        turtle.userData.fl.forEach((f, k) => (f.rotation.z = Math.sin(t * 2.4 + (k % 2) * 3.1) * 0.5));
+        turtle.userData.swim(t);
       }
       seaLife(t);
       bn -= dt;

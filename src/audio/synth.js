@@ -281,7 +281,7 @@ function voice(kind, t, m, v = 0.1, d = 0.3) {
   } else if (kind === 'calliope') {
     // steam calliope: breathy pipe with wobbly pitch
     synthNote(t, f, ['square', 'sine'], v * 0.75, d * 1.2, 2600, 1800, 0.02, 6, 0.012, -0.1);
-    nz(t, 'bandpass', f * 2, v * 0.25, d * 0.6, 4, -0.1);
+    nz(t, 'bandpass', f * 2, v * 0.08, d * 0.4, 6, -0.1);
   } else if (kind === 'organ') {
     osc(t, f, 'square', v * 0.3, d);
     osc(t, f * 2, 'sine', v * 0.45, d);
@@ -384,46 +384,9 @@ function applyArenaAudio(id) {
 }
 /* ---- ambience beds: a looping filtered-noise layer plus occasional themed events ---- */
 let amb = null;
-function bed(type, freq, q, level, lfoRate, lfoDepth, pan = 0) {
-  const s = ac.createBufferSource(),
-    f = ac.createBiquadFilter(),
-    g = ac.createGain();
-  s.buffer = noiseBuf;
-  s.loop = true;
-  f.type = type;
-  f.frequency.value = freq;
-  f.Q.value = q;
-  g.gain.value = level;
-  s.connect(f);
-  f.connect(g);
-  let node = g;
-  if (pan && ac.createStereoPanner) {
-    const p = ac.createStereoPanner();
-    p.pan.value = pan;
-    g.connect(p);
-    node = p;
-  }
-  node.connect(ambBus);
-  const l = ac.createOscillator(),
-    lg = ac.createGain();
-  l.frequency.value = lfoRate;
-  lg.gain.value = level * lfoDepth;
-  l.connect(lg);
-  lg.connect(g.gain);
-  s.start(0, Math.random() * 1.5);
-  l.start();
-  return [s, l];
-}
 function startAmbience(kind) {
-  if (amb) amb.nodes.forEach(n => n.stop());
-  amb = { kind, nodes: [], next: 1 };
-  const N = amb.nodes;
-  if (kind === 'tent') N.push(...bed('bandpass', 700, 0.8, 0.05, 0.13, 0.5), ...bed('bandpass', 1800, 1.2, 0.02, 0.21, 0.6, 0.4));
-  else if (kind === 'surf') N.push(...bed('lowpass', 900, 0.5, 0.12, 0.11, 0.9, -0.3), ...bed('lowpass', 1600, 0.4, 0.05, 0.07, 0.9, 0.4));
-  else if (kind === 'crowd') N.push(...bed('bandpass', 800, 0.6, 0.11, 0.09, 0.4), ...bed('bandpass', 2200, 1, 0.04, 0.17, 0.5, -0.3));
-  else if (kind === 'city') N.push(...bed('lowpass', 300, 0.7, 0.1, 0.05, 0.4), ...bed('bandpass', 1200, 3, 0.02, 0.08, 0.9, 0.5));
-  else if (kind === 'deep') N.push(...bed('lowpass', 160, 1, 0.22, 0.06, 0.5), ...bed('bandpass', 420, 2, 0.03, 0.1, 0.8, 0.3));
-  else if (kind === 'space') N.push(...bed('lowpass', 120, 2, 0.12, 0.03, 0.6), ...bed('bandpass', 3000, 6, 0.006, 0.4, 1, -0.5));
+  // no continuous noise beds (they read as static); ambience is just the occasional themed sound below
+  amb = { kind, next: 1 };
 }
 /* called every frame: sprinkles the arena's one-off ambience sounds */
 function ambienceTick(dt) {
@@ -444,14 +407,12 @@ function ambienceTick(dt) {
     amb.next = 4 + r() * 6;
   } else if (amb.kind === 'tent') {
     // laughs/cheers ripple and the odd honk of a clown horn
-    if (r() < 0.4) [0, 0.09].forEach(d => osc(t + d, 420, 'square', 0.03, 0.12, 380, pan));
-    else nz(t, 'bandpass', 1400, 0.05, 0.6, 1, pan);
-    amb.next = 3 + r() * 5;
+    [0, 0.09].forEach(d => osc(t + d, 420, 'square', 0.03, 0.12, 380, pan));
+    amb.next = 6 + r() * 8;
   } else if (amb.kind === 'crowd') {
     // a surge of the crowd and an air horn now and then
-    if (r() < 0.25) synthNote(t, 233, ['sawtooth', 'square'], 0.05, 0.9, 1800, 1500, 0.02, 15, 0, pan);
-    else nz(t, 'bandpass', 1000, 0.09, 1.4, 0.7, pan);
-    amb.next = 2.5 + r() * 4;
+    synthNote(t, 233, ['sawtooth', 'square'], 0.05, 0.9, 1800, 1500, 0.02, 15, 0, pan);
+    amb.next = 7 + r() * 8;
   } else if (amb.kind === 'city') {
     // distant car horns and a far-off siren
     if (r() < 0.3) {
@@ -465,8 +426,7 @@ function ambienceTick(dt) {
     amb.next = 1.5 + r() * 3;
   } else if (amb.kind === 'space') {
     // mission-control beeps and radio crackle
-    if (r() < 0.5) [0, 0.15].forEach(d => osc(t + d, 1760, 'sine', 0.025, 0.08, 0, pan));
-    else nz(t, 'bandpass', 2500, 0.03, 0.5, 4, pan);
+    [0, 0.15].forEach(d => osc(t + d, 1760, 'sine', 0.025, 0.08, 0, pan));
     amb.next = 3 + r() * 5;
   } else amb.next = 5;
   dest = prev;

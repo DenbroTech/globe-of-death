@@ -246,13 +246,14 @@ const ARENAS = {
     blurb: 'Hanging over the city on a single cable.',
     env: {
       bg: 0x090a1a,
-      fog: [0x0d0d22, 70, 330],
+      // blue night haze: buildings fade into it with distance, which gives the city depth and scale
+      fog: [0x1b2a52, 30, 400],
       sky: [
         [0, '#010208'],
-        [0.45, '#050820'],
-        [0.78, '#0c0d28'],
-        [0.92, '#16112e'],
-        [1, '#0d0d22'],
+        [0.4, '#050820'],
+        [0.72, '#0f1838'],
+        [0.88, '#1b2a52'],
+        [1, '#1b2a52'],
       ],
       hemi: [0x7080c0, 0x140e1c, 0.5],
       sun: 0.35,
@@ -352,19 +353,21 @@ const ARENAS = {
         map: wm,
       });
       const box = new THREE.BoxGeometry(1, 1, 1);
-      const NB = 520,
+      const NB = 760,
         inst = new THREE.InstancedMesh(box, bm, NB),
         o = new THREE.Object3D();
       for (let i = 0; i < NB; i++) {
         let x, z;
         do {
           const a = Math.random() * 6.283,
-            r = 30 + Math.pow(Math.random(), 0.7) * 520;
+            r = 30 + Math.pow(Math.random(), 0.75) * 640;
           x = Math.cos(a) * r;
           z = Math.sin(a) * r;
         } while (Math.hypot(x, z) < 28);
-        const h = 15 + Math.random() * 55,
-          w = 6 + Math.random() * 8;
+        // skyscrapers: the closest ones tower over the cage
+        const near = Math.hypot(x, z) < 140,
+          h = 22 + Math.pow(Math.random(), 1.6) * (near ? 150 : 95),
+          w = 7 + Math.random() * 11;
         o.position.set(x, -73 + h / 2, z);
         o.scale.set(w, h, w);
         o.updateMatrix();
