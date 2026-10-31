@@ -17,8 +17,6 @@ import {
   sfx,
   shaker,
   snare,
-  stadiumChant,
-  stadiumStomp,
   tom,
   tone,
   voice,
@@ -282,10 +280,6 @@ function scheduleStep(s) {
     hat(t, false);
   } else {
     playStep(S, k, bar, a, t, 30 / bpmOfAct(a));
-    if (arenaId === 'stadium' && game.running && !game.FREE && k === 0 && bar >= 6 && !game.paused) {
-      if (bar % 16 === 8) stadiumChant(bar * 4);
-      else if (bar % 16 === 0) stadiumStomp(bar * 4);
-    }
   }
   if (bar === 1 && k >= 6) snare(t);
   if (bar === 1 && k % 2 === 0) tone(t, k === 6 ? 1320 : 660, 'square', 0.12, 0.12);
@@ -324,7 +318,7 @@ const menu = { t: 0, step: 0, on: false };
 function menuMusic() {
   if (!ac || ac.state !== 'running') return;
   const inRide = game.running && !game.over;
-  setMusicLevel(inRide ? 1 : 0.5);
+  setMusicLevel(inRide ? 1 : 0.33); // menus: a third of the ride volume
   if (inRide || game.paused) {
     menu.on = false;
     return;

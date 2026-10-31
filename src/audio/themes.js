@@ -40,7 +40,7 @@ const THEMES = {
     toms: 1,
     space: { dur: 3.2, decay: 2.2, wet: 0.3 },
     echo: { beats: 1, fb: 0.18, wet: 0.12 },
-    amb: 'crowd',
+    amb: null, // no background crowd noise (owner found it read as static)
   },
   crane: {
     lead: 'synth',

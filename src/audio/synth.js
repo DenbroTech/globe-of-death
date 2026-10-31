@@ -75,7 +75,7 @@ function initAudio() {
       e.connect(echoIn);
       return g;
     };
-    musicBus = bus(game.running ? 1 : 0.5, 1, 1);
+    musicBus = bus(game.running ? 1 : 0.33, 1, 1);
     sfxBus = bus(1, 0.7, 0.5);
     ambBus = bus(0.55, 0.4, 0);
     dest = musicBus;
@@ -409,10 +409,6 @@ function ambienceTick(dt) {
     // laughs/cheers ripple and the odd honk of a clown horn
     [0, 0.09].forEach(d => osc(t + d, 420, 'square', 0.03, 0.12, 380, pan));
     amb.next = 6 + r() * 8;
-  } else if (amb.kind === 'crowd') {
-    // a surge of the crowd and an air horn now and then
-    synthNote(t, 233, ['sawtooth', 'square'], 0.05, 0.9, 1800, 1500, 0.02, 15, 0, pan);
-    amb.next = 7 + r() * 8;
   } else if (amb.kind === 'city') {
     // distant car horns and a far-off siren
     if (r() < 0.3) {
@@ -515,9 +511,10 @@ function sfxNoise(dur, freq, vol, type) {
       nz(t, 'bandpass', 3200, vol * 0.3, dur * 0.5, 0.7);
       osc(t, 90, 'sine', vol * 0.5, 0.4, 35);
     } else {
-      // crowd cheer: a few overlapping bands swelling
-      nz(t, 'bandpass', freq, vol, dur, 0.6, -0.3);
-      nz(t + 0.05, 'bandpass', freq * 1.7, vol * 0.6, dur * 0.9, 0.8, 0.3);
+      // crowd cheer after wheelies, jumps and combos: kept quiet (33%) so it doesn't hiss over the music
+      const v = vol * 0.33;
+      nz(t, 'bandpass', freq, v, dur, 0.6, -0.3);
+      nz(t + 0.05, 'bandpass', freq * 1.7, v * 0.6, dur * 0.9, 0.8, 0.3);
     }
   });
 }
