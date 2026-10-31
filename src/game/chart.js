@@ -44,7 +44,11 @@ function addNote(beat, type, len) {
   notesEl.appendChild(n.el);
   game.notes.push(n);
   game.lastNoteBeat = beat + (n.len ? 0.5 : 0);
-  if (n.len) game.holdEnd = beat + n.len;
+  if (n.len) {
+    game.holdEnd = beat + n.len;
+    game.holdStart = beat;
+    game.holdSingles = 0; // single moves placed inside this long press (max 2)
+  }
 }
 let ppbNow = 50;
 function genBarNotes(b) {
@@ -143,6 +147,9 @@ function genBarNotes(b) {
   for (const s of slots) {
     const B = b * 4 + s;
     if (B > actEnd - 1) continue;
+    // at most two single moves while a long press is held (holds can run into the next bar)
+    const inHold = B > (game.holdStart ?? -9) && B < game.holdEnd;
+    if (inHold && game.holdSingles >= 2) continue;
     let type;
     const canJump =
         B - game.lastTiltBeat >= 1 &&
@@ -158,6 +165,7 @@ function genBarNotes(b) {
       type = opts[Math.floor(Math.random() * opts.length)];
     } else continue;
     addNote(B, type);
+    if (inHold) game.holdSingles++;
   }
 }
 

@@ -12,6 +12,7 @@ const page = await browser.newPage({ viewport: { width: 400, height: 400 } });
 page.on('pageerror', e => console.log('PAGEERROR', e.message));
 await page.goto(url);
 await page.waitForFunction(() => window.__god);
+if (process.env.BACK) await page.evaluate(() => (window.__back = 1));
 const data = await page.evaluate(async () => {
   const loaded = performance.getEntriesByType('resource').map(e => e.name);
   const imp = p => import(loaded.filter(u => new URL(u).pathname === p).pop() || p);
@@ -30,9 +31,14 @@ const data = await page.evaluate(async () => {
   scene.add(new THREE.HemisphereLight(0xfff4e8, 0x302020, 0.45));
   const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(3, 5, 6); scene.add(key);
   const cols = 7, W = 1400, H = 640, cw = 200;
+  // same helmet colour rule as the garage: the outfit's own helmet, else the bike paint
+  const BACK = !!window.__back;
   looks.forEach(([cid, suit], i) => {
-    const f = makeFigure(cid, 0xd62828, null, suit, null);
+    const C = CATALOG.costume.find(c => c.id === cid) || {};
+    const f = makeFigure(cid, C.helmet ?? 0xd62828, null, suit, null);
     f.position.set((i % cols) * 1.0 - 3, ((i / cols) | 0) * -2.2, 0);
+    if (BACK) f.rotation.y = Math.PI;
+    if (f.userData.tick) f.userData.tick(0.5, 0);
     scene.add(f);
   });
   const cam = new THREE.OrthographicCamera(-3.5, 3.5, 2.05, -2.05, 0.1, 50);

@@ -7,6 +7,7 @@ import { applyFinish, deep } from '../bikes/finishes.js';
 import { findItem } from '../bikes/catalog.js';
 import { envify } from '../render/envmap.js';
 import { ik2 } from './ik.js';
+import { COSTUMES, makeCape } from './costumes.js';
 
 /* ---------- riders: sculpted bodies (smooth profiles, not tubes) plus real riding kit ---------- */
 function sculptGeo(a, b, front, prof, ws = 16, hs = 18, k = 0.3, cfn = null) {
@@ -101,10 +102,16 @@ function riderKit(par, M) {
       return e;
     },
     V = (x, y, z) => new V3(x, y, z);
+  /* costume designs repaint the suit: M.design(part, code, ...cfnArgs) may return a new code or a colour */
   const toneFn =
     (pal, cfn) =>
     (...a) => {
-      const c = cfn ? cfn(...a) : MAIN;
+      let c = cfn ? cfn(...a) : MAIN;
+      if (M.design && pal === M.pal) {
+        const o = M.design(M.part, c, ...a);
+        if (o != null) c = o;
+      }
+      if (c && c.isColor) return c;
       return c === MAIN
         ? pal.main
         : c === BLK
@@ -167,6 +174,7 @@ function riderKit(par, M) {
         if (t < 0.24 && side > 0.42) return BLK;
         return MAIN;
       };
+      M.part = 'torso';
       sc(
         H.clone().addScaledVector(u, -0.05),
         N,
@@ -189,6 +197,7 @@ function riderKit(par, M) {
         tc,
       );
       /* pelvis/seat: black with main-colour front */
+      M.part = 'pelvis';
       sc(
         H.clone().addScaledVector(u, -0.12).addScaledVector(f, -0.015),
         H.clone().addScaledVector(u, 0.13),
@@ -206,6 +215,7 @@ function riderKit(par, M) {
         (t, n) => (n.dot(f) > 0.4 && t > 0.4 && Math.abs(n.dot(X)) < 0.6 ? MAIN : BLK),
       );
       /* aero hump: main colour, white spine stripe, black flanks */
+      M.part = 'hump';
       sc(
         N.clone().addScaledVector(u, -0.27).addScaledVector(f, -0.1),
         N.clone().addScaledVector(u, 0.06).addScaledVector(f, -0.07),
@@ -273,6 +283,7 @@ function riderKit(par, M) {
           else if (Math.abs(x) < 0.13 && y > 0.18 && z < 0.7) c = hp.sec;
           else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.085) c = hp.sec;
           else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.13) c = hp.blk;
+          if (M.hdesign) c = M.hdesign(x, y, z, hp) || c;
           C[i * 3] = c.r;
           C[i * 3 + 1] = c.g;
           C[i * 3 + 2] = c.b;
@@ -359,6 +370,7 @@ function riderKit(par, M) {
           return o > 0.72 && t > 0.1 ? SEC : o > -0.15 && t > 0.08 ? MAIN : BLK;
         },
         fc = (t, n) => (n.dot(YAX) > 0.15 && t < 0.86 ? MAIN : BLK);
+      M.part = 'uarm';
       sc(
         sh,
         el.clone().addScaledVector(d1, 0.035),
@@ -376,6 +388,7 @@ function riderKit(par, M) {
         0.3,
         oc,
       );
+      M.part = 'farm';
       sc(
         el.clone().addScaledVector(d2, -0.04),
         wr,
@@ -394,6 +407,7 @@ function riderKit(par, M) {
       );
       const o1 = out.clone().addScaledVector(d1, -out.dot(d1)).normalize();
       /* shoulder armour: one moulded cap, white on top, black underneath, with a slider */
+      M.part = 'shoulder';
       sc(
         sh.clone().add(V(-sx * 0.02, 0.05, 0)),
         sh.clone().add(V(sx * 0.085, -0.075, 0)),
@@ -423,6 +437,7 @@ function riderKit(par, M) {
         M.slider,
       );
       /* gauntlet: cuff, back of hand, knuckle armour */
+      M.part = 'cuff';
       sc(
         wr.clone().addScaledVector(d2, -0.11),
         wr.clone().addScaledVector(d2, 0.012),
@@ -568,6 +583,7 @@ function riderKit(par, M) {
         .addScaledVector(dth, -V(0, 0.3, 1).dot(dth))
         .normalize();
       /* thigh: main front, white stripe down the outside, black inside and seat */
+      M.part = 'thigh';
       sc(
         hip,
         kn.clone().addScaledVector(dth, 0.035),
@@ -592,6 +608,7 @@ function riderKit(par, M) {
         },
       );
       /* shin: main front, black calf; overlaps the knee (no ball joint) */
+      M.part = 'shin';
       sc(
         kn.clone().addScaledVector(dsh, -0.035),
         an,
@@ -612,6 +629,7 @@ function riderKit(par, M) {
       /* knee armour + big slider */
       const kd = dth.clone().add(dsh).normalize(),
         kf = fwd.clone().addScaledVector(kd, -fwd.dot(kd)).normalize();
+      M.part = 'knee';
       sc(
         kn.clone().addScaledVector(kd, -0.08).addScaledVector(kf, 0.056),
         kn.clone().addScaledVector(kd, 0.08).addScaledVector(kf, 0.056),
@@ -634,6 +652,7 @@ function riderKit(par, M) {
       const ankle = an,
         sole0 = ankle.clone().add(V(0, -0.075, -0.07)),
         toe = ankle.clone().add(V(0, -0.08, 0.17));
+      M.part = 'boot';
       sc(
         ankle.clone().addScaledVector(dsh, -0.3),
         ankle.clone().add(V(0, -0.02, 0)),
@@ -649,6 +668,7 @@ function riderKit(par, M) {
         0.3,
         t => (t > 0.86 ? SEC : BLK),
       );
+      M.part = 'bootplate';
       sc(
         ankle.clone().addScaledVector(dsh, -0.26).addScaledVector(fwd, 0.062),
         ankle.clone().addScaledVector(fwd, 0.072),
@@ -664,6 +684,7 @@ function riderKit(par, M) {
         0.3,
         () => MAIN,
       );
+      M.part = 'foot';
       sc(
         sole0.clone().add(V(0, 0.035, 0)),
         toe.clone().add(V(0, 0.03, 0)),
@@ -735,11 +756,29 @@ function riderMats(o, C, P) {
     if (!neon) mat.color.set(0xffffff);
     return { main, sec, blk: new THREE.Color(0x111115), dim: main.clone().multiplyScalar(0.55) };
   };
+  const pal = tones(suit),
+    hpal = tones(helm),
+    D = COSTUMES[C.id];
+  // outfit palette: its own stripe and panel colours (the suit picker still sets the main colour)
+  if (D && D.pal && suit.userData.neon == null) {
+    if (D.pal.sec != null) pal.sec = new THREE.Color(D.pal.sec).convertSRGBToLinear();
+    if (D.pal.blk != null) pal.blk = new THREE.Color(D.pal.blk).convertSRGBToLinear();
+  }
+  const CODE = { MAIN, SEC, BLK, DIM };
   return {
     suit,
     helm,
-    pal: tones(suit),
-    hpal: tones(helm),
+    pal,
+    hpal,
+    design:
+      D && D.design && !C.ghost
+        ? (...a) => {
+            const r = D.design(...a);
+            return typeof r === 'string' ? CODE[r] : r;
+          }
+        : null,
+    hdesign: D && D.helmet ? (x, y, z, hp) => D.helmet(x, y, z, hp) : null,
+    costume: D,
     pad: SM(0x1e2026, 0.38, 0.3),
     blk: SM(0x111114, 0.6, 0.15),
     visor: SM(0x1a3550, 0.04, 0.95, { emissive: 0x0a1a2a, emissiveIntensity: 0.3 }),
@@ -806,6 +845,28 @@ function costumeExtras(add, C, tc, f, u, hc) {
     }
   }
 }
+/* anchor points and orientations costume props are placed from (rider on the bike or standing figure) */
+function costumeCtx(Hp, N, u, f, hc, hu, hf) {
+  const X = new V3().crossVectors(u, f).normalize(),
+    hX = new V3().crossVectors(hu, hf).normalize(),
+    q = (a, b, c) => new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(a, b, c));
+  const pt = (o, a, b, c) => (x, y, z) => o.clone().addScaledVector(a, x).addScaledVector(b, y).addScaledVector(c, z);
+  return {
+    u,
+    f,
+    X,
+    hu,
+    hf,
+    hX,
+    neck: N.clone(),
+    qUp: new THREE.Quaternion().setFromUnitVectors(YAX, u),
+    qFront: q(X, u, f),
+    qHead: q(hX, hu, hf),
+    at: pt(Hp, X, u, f),
+    hip: pt(Hp, X, u, f),
+    head: pt(hc, hX, hu, hf),
+  };
+}
 function buildRider(rider, S, st, C, o, P, X) {
   const V = (x, y, z) => new V3(x, y, z),
     M = riderMats(o, C, P),
@@ -852,7 +913,7 @@ function buildRider(rider, S, st, C, o, P, X) {
     const kn = ik2(hip, an, 0.42, 0.42, V(sx * 0.18, 0.6, 1));
     riderKit(limbs[sx], M).leg(hip, kn, an, sx, V(0, 0, 1));
   });
-  costumeExtras(K.mesh, C, Hp.clone().addScaledVector(u, 0.3), f, u, hc);
+  if (M.costume && M.costume.props) M.costume.props(K.mesh, costumeCtx(Hp, N, u, f, hc, hu, hf));
   const trick = new THREE.Group();
   trick.visible = false;
   trick.userData.keep = true;
@@ -875,32 +936,14 @@ function buildRider(rider, S, st, C, o, P, X) {
     TK.leg(hip, kn, an, 1, V(0.3, 0, 1).normalize());
   }
   let flutter = null;
-  if (C.cape) {
-    const cg = new THREE.PlaneGeometry(0.4, 0.85, 4, 10);
-    cg.translate(0, -0.425, 0);
-    const base = cg.attributes.position.array.slice();
-    const cape = new THREE.Mesh(
-      cg,
-      new THREE.MeshStandardMaterial({
-        color: C.cape,
-        side: THREE.DoubleSide,
-        roughness: 0.6,
-        metalness: C.metal ? 0.8 : 0.1,
-      }),
-    );
-    cape.position.copy(N).addScaledVector(f, -0.15);
-    cape.rotation.x = 0.85;
-    cape.castShadow = true;
-    cape.userData.keep = true;
-    rider.add(cape);
-    flutter = (t, amt) => {
-      const p = cg.attributes.position.array;
-      for (let i = 0; i < p.length; i += 3) {
-        const d = -base[i + 1];
-        p[i + 2] = base[i + 2] + Math.sin(t * 14 - d * 7 + base[i] * 4) * 0.07 * d * amt;
-      }
-      cg.attributes.position.needsUpdate = true;
-    };
+  const capeSpec = (M.costume && M.costume.cape) || (C.cape ? { col: C.cape, lining: C.cape, metal: C.metal } : null);
+  if (capeSpec) {
+    const cape = makeCape(capeSpec, capeSpec.short ? 0.6 : 0.85, 0.5);
+    cape.grp.position.copy(N).addScaledVector(f, -0.15);
+    cape.grp.rotation.x = 0.85;
+    cape.grp.userData.keep = true;
+    rider.add(cape.grp);
+    flutter = (t, amt) => cape.flutter(t, amt);
   }
   mergeGroup(G);
   mergeGroup(limbs[1]);
@@ -946,52 +989,31 @@ function makeFigure(cid, paintHex, suitHex, suitId, helmId) {
   head.position.set(0, 1.69, 0.01);
   body.add(head);
   riderKit(head, M).helmet(V(0, 0, 0), U, F);
-  costumeExtras(
-    (g, m) => {
+  if (M.costume && M.costume.props) {
+    const add = grp => (g, m) => {
       const e = new THREE.Mesh(g, m);
       e.castShadow = true;
-      body.add(e);
+      grp.add(e);
       return e;
-    },
-    C,
-    V(0, 1.27, 0),
-    F,
-    U,
-    V(0, 1.78, 0),
-  );
-  let cg = null,
-    base = null;
-  if (C.cape) {
-    cg = new THREE.PlaneGeometry(0.5, 1.15, 4, 10);
-    cg.translate(0, -0.575, 0);
-    base = cg.attributes.position.array.slice();
-    const cape = new THREE.Mesh(
-      cg,
-      new THREE.MeshStandardMaterial({
-        color: C.cape,
-        side: THREE.DoubleSide,
-        roughness: 0.6,
-        metalness: C.metal ? 0.8 : 0.1,
-      }),
-    );
-    cape.position.set(0, 1.58, -0.2);
-    cape.rotation.x = 0.12;
-    cape.castShadow = true;
-    body.add(cape);
+    };
+    const ctx = costumeCtx(Hp, N, U, F, V(0, 0, 0), U, F);
+    ctx.addH = add(head);
+    M.costume.props(add(body), ctx);
+  }
+  let cape = null;
+  const capeSpec = (M.costume && M.costume.cape) || (C.cape ? { col: C.cape, lining: C.cape, metal: C.metal } : null);
+  if (capeSpec) {
+    cape = makeCape(capeSpec, capeSpec.short ? 0.8 : 1.15, 0.62);
+    cape.grp.position.set(0, 1.58, -0.2);
+    cape.grp.rotation.x = 0.12;
+    body.add(cape.grp);
   }
   f.userData.tick = (t, cheer) => {
     body.position.y = Math.sin(t * 2) * 0.01 + cheer * Math.max(0, Math.sin(t * 12)) * 0.12;
     head.rotation.y = Math.sin(t * 0.7) * 0.25;
     arms[0].rotation.z = cheer ? 2.6 + Math.sin(t * 12) * 0.2 : 0.08 + Math.sin(t * 1.3) * 0.03;
     arms[1].rotation.z = cheer ? -2.6 - Math.sin(t * 12) * 0.2 : -0.08 - Math.sin(t * 1.3) * 0.03;
-    if (cg) {
-      const p = cg.attributes.position.array;
-      for (let i = 0; i < p.length; i += 3) {
-        const d = -base[i + 1];
-        p[i + 2] = base[i + 2] - d * 0.12 + Math.sin(t * 2.2 - d * 4 + base[i] * 3) * 0.03 * d;
-      }
-      cg.attributes.position.needsUpdate = true;
-    }
+    if (cape) cape.flutter(t, 1, 1);
   };
   neonify(f);
   envify(f);

@@ -6,7 +6,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Tests on an Android phone (Android only for now), sometimes on desktop. Builds the app on their Windows PC with `npx eas-cli build --platform android --profile preview` (same workflow as their Flippy Mat game). Phone-first always: portrait, thumb controls, 60 fps target.
 - Wants things to look good and feel polished. Dislikes: clutter and paragraphs of text on screens, anything that looks "AI generated", primitive-looking models ("spheres and cylinders"), pastel colours where they asked for bold.
 - Gives quick, informal feedback mid-task; act on it, keep replies short, show screenshots of what changed.
-- Everything is unlocked for testing ("Unlock all" in Settings defaults ON). Keep it that way until they say otherwise.
+- "Unlock all" (Settings) now defaults OFF: the owner is testing real progression. They found unlocks too fast, so milestones were made ~3× harder; neon needs finished shows.
 - Name is **Globe of Death** (not the Spanish one).
 
 ## Game overview
@@ -44,6 +44,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 **Visual systems**
 - Bikes: procedural "v2" builder (BSPEC per style): continuous frames, distinct engines (twin/single/V-twin/MX/four/jet), spoked or cast wheels, drilled discs, sprockets, chain, shocks with coil springs, exhausts, controls/cables/mirrors/dials, shaped tanks/seats/fairings (extruded side profiles), lights. Static parts merged per material for performance (`mergeGroup`).
 - Rider: procedural "kit v3" (`riderKit`) — sculpted limbs/torso (`sculptGeo` with RGB vertex-colour panels), one-piece colour-blocked race leathers modelled on `art/rider-refs/` (suit material is white; each panel carries main / SEC white-grey stripe / BLK black via codes MAIN, SEC, BLK, DIM mapped through `M.pal`; helmet graphics via `M.hpal`). Leathers default suit colour = bike paint, armour sliders, aero hump, gauntlets wrapped on grips, tall race boots, race helmet (deformed sphere, big tinted visor). Posed with 2-bone IK to grips/pegs. The owner wants this pushed further toward their reference images (Dainese/Alpinestars-style race suits) but stylised, not hyper-real.
+- Costumes (`rider/costumes.js`): each outfit has its own palette, a per-vertex suit design (`design(part, code, t, n, p, X, Y, Z)`; parts are tagged via `M.part` in `riderKit`), helmet graphics, sculpted props (stars + buckle, ruff/pom-poms/hair/nose, studs/mohawk/chain, shield + bolt, curved horns + spade tail, ermine collar + jewelled crown + medallion) and a shaped cape with lining (`makeCape`). Owner asked for detailed costumes, not primitives.
 - Finishes: canvas-generated seamless textures applied triplanar (no UV stretching). Neon = white-hot core + saturated rim + pulsing additive halo shells (`neonify`).
 - Studio env-map reflections on bikes/riders (`envify`). Spotlight shadows are OFF (they caused crawling cage-shadow flicker on floors). Logarithmic depth buffer on.
 - First-person handlebars HUD at the bottom (DOM/SVG): bars steer and lift with stunts, throttle grip has an orange marker that rolls with throttle, tacho + NOS button.

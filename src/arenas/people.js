@@ -675,10 +675,23 @@ const LIFE = {
       );
       body.scale.set(1, 1, 1.6);
       heli.add(body);
-      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.2, 2.6, 6), std(0x22252b));
+      // long tapered tail boom with a fin and a spinning tail rotor
+      const hm = std(0x22252b);
+      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.26, 4.6, 8), hm);
       tail.rotation.x = Math.PI / 2;
-      tail.position.z = -2;
+      tail.position.set(0, 0.15, -3.4);
       heli.add(tail);
+      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.1, 0.55), hm);
+      fin.position.set(0, 0.6, -5.5);
+      fin.rotation.x = -0.35;
+      heli.add(fin);
+      const stab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.35), hm);
+      stab.position.set(0, 0.2, -5.2);
+      heli.add(stab);
+      const trotor = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.3, 0.12), std(0x111));
+      trotor.position.set(0.12, 0.55, -5.7);
+      heli.add(trotor);
+      heli.userData.trotor = trotor;
       const rotor = new THREE.Mesh(new THREE.BoxGeometry(5, 0.04, 0.18), std(0x111));
       rotor.position.y = 0.9;
       heli.add(rotor);
@@ -698,7 +711,7 @@ const LIFE = {
       heli.add(beam);
       heli.userData.beam = beam;
       const red = glowSpr(0xff2030, 1.2);
-      red.position.set(0, -0.6, -3.2);
+      red.position.set(0, 1.1, -5.7);
       heli.add(red);
       heli.userData.red = red;
     }
@@ -744,6 +757,7 @@ const LIFE = {
         heli.position.set(Math.cos(a) * 30, 6 + Math.sin(t * 0.5) * 2, Math.sin(a) * 30);
         heli.lookAt(Math.cos(a + 0.1) * 30, heli.position.y, Math.sin(a + 0.1) * 30);
         heli.userData.rotor.rotation.y += dt * 40;
+        heli.userData.trotor.rotation.x += dt * 60;
         const bm = heli.userData.beam;
         bm.lookAt(0, GY, 0);
         bm.rotateX(-Math.PI / 2);

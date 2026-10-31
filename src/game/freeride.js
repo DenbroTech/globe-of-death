@@ -31,7 +31,7 @@ function freeReset() {
     s.mark.visible = false;
   });
   fr = [];
-  frNext = 12;
+  frNext = 20; // seconds of free ride before the first rider joins
   frLastB = 0;
   frTime = 0;
   frNear = 0;
@@ -116,9 +116,10 @@ function freeTick(dt, T, B) {
   frTime = tNow;
   game.score += (gain * 10 * (1 + fr.length * 0.3) * (P.fs || FR_CRUISE)) / FR_CRUISE;
   if (game.wheelieDown || game.noseDown) game.score += gain * 45;
-  if (B >= frNext && fr.length < pool.length) {
+  // riders join at 20 s, then after 30 s, 40 s, 50 s… (each wait 10 s longer)
+  if (frTime >= frNext && fr.length < pool.length) {
     frSpawn(B);
-    frNext = B + (fr.length < 2 ? 14 : 22);
+    frNext = frTime + 20 + 10 * fr.length;
   }
   for (const r of fr) {
     if (r.s.state !== 'ride') continue;

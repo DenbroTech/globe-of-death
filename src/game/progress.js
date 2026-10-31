@@ -11,11 +11,11 @@ const arenaOpen = id => isUnlocked('arena', id);
 const reqText = id => unlockReq('arena', id);
 
 export function initProgress() {
-  game.unlockAll = true;
+  game.unlockAll = false; // real progression by default; Settings → Unlock all opens everything for testing
   try {
     const p = JSON.parse(localStorage.getItem('god-prog'));
     if (p) prog = Object.assign(prog, p);
-    game.unlockAll = localStorage.getItem('god-unlockall') !== '0';
+    game.unlockAll = localStorage.getItem('god-unlockall') === '1';
   } catch (e) {}
   initUnlocks(prog);
 }
