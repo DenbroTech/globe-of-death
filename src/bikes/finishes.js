@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { cv, tex } from '../render/textures.js';
+import { NEON_T } from '../render/neon.js';
 
 /* ---------- bikes ---------- */
 /* ---------- garage catalogue ---------- */
@@ -20,32 +21,73 @@ function rng(seed) {
 }
 const FIN_GEN = {
   flames(x, S, r) {
-    x.fillStyle = '#0a0a0e';
+    /* classic hot-rod flames: a hot yellow root on one edge, tongues of different lengths that taper
+       fast and curl at sharp tips, yellow -> orange -> red, outlined with a thin blue pinstripe.
+       Tiles vertically only; each tile starts a fresh burst horizontally. */
+    x.fillStyle = '#08080b';
     x.fillRect(0, 0, S, S);
-    const lick = (y, len, th, a, b, c) => {
-      const g = x.createLinearGradient(S, 0, S - len, 0);
-      g.addColorStop(0, a);
-      g.addColorStop(0.55, b);
-      g.addColorStop(1, c);
-      x.fillStyle = g;
+    // mirrored so the root sits at the front of the bike (+z) and the tips trail backwards
+    x.translate(S, 0);
+    x.scale(-1, 1);
+    const vseam = fn => [-S, 0, S].forEach(dy => { x.save(); x.translate(0, dy); fn(); x.restore(); });
+    const tongue = (y0, len, w, ph, curl) => {
+      const top = [],
+        bot = [],
+        n = 48;
+      for (let i = 0; i <= n; i++) {
+        const u = i / n,
+          px = u * len,
+          cy = y0 + Math.sin(u * 4.2 + ph) * w * 0.9 * u + curl * Math.pow(u, 3) * w * 2.2,
+          hw = w * Math.pow(1 - u, 1.35) * (0.82 + 0.18 * Math.sin(u * 9 + ph));
+        top.push([px, cy - hw]);
+        bot.push([px, cy + hw]);
+      }
       x.beginPath();
-      x.moveTo(S + 40, y - th);
-      x.bezierCurveTo(S - len * 0.4, y - th * 1.3, S - len * 0.7, y - th * 0.1, S - len, y - th * 0.7);
-      x.bezierCurveTo(S - len * 0.8, y, S - len * 0.62, y + th * 0.35, S - len * 0.86, y + th * 0.85);
-      x.bezierCurveTo(S - len * 0.55, y + th * 1.25, S - len * 0.3, y + th * 1.05, S + 40, y + th);
-      x.fill();
+      x.moveTo(-4, top[0][1]);
+      top.forEach(p => x.lineTo(p[0], p[1]));
+      for (let i = bot.length - 1; i >= 0; i--) x.lineTo(bot[i][0], bot[i][1]);
+      x.lineTo(-4, bot[0][1]);
+      x.closePath();
     };
-    for (let row = 0; row < 5; row++) {
-      const y = (row * S) / 5 + S / 10,
-        len = S * (0.55 + r() * 0.4);
-      seam(x, S, () => {
-        x.shadowColor = 'rgba(255,90,0,.55)';
-        x.shadowBlur = 10;
-        lick(y, len, S / 9, '#ff2a12', '#ff7a14', '#ffcc33');
-        x.shadowBlur = 0;
-        lick(y, len * 0.78, S / 17, '#ff9a1f', '#ffe066', '#fff6c4');
+    const grad = len => {
+      const g = x.createLinearGradient(0, 0, len, 0);
+      g.addColorStop(0, '#fff6c0');
+      g.addColorStop(0.16, '#ffd400');
+      g.addColorStop(0.42, '#ff8c00');
+      g.addColorStop(0.72, '#f0290b');
+      g.addColorStop(1, '#9c0508');
+      return g;
+    };
+    const T = [];
+    for (let k = 0; k < 5; k++)
+      T.push({
+        y: (k + 0.5) * (S / 5) + (r() - 0.5) * 10,
+        len: S * (0.62 + r() * 0.36),
+        w: S * (0.085 + r() * 0.035),
+        ph: r() * 6,
+        curl: (r() < 0.5 ? -1 : 1) * (0.4 + r() * 0.6),
       });
-    }
+    T.sort((a, b) => a.len - b.len).reverse();
+    vseam(() => {
+      /* outline pass first (thick blue), then fill: gives a clean pinstripe around the whole burst */
+      x.lineJoin = 'round';
+      T.forEach(t => {
+        tongue(t.y, t.len, t.w, t.ph, t.curl);
+        x.lineWidth = 3.2;
+        x.strokeStyle = '#4fc3ff';
+        x.stroke();
+      });
+      T.forEach(t => {
+        tongue(t.y, t.len, t.w, t.ph, t.curl);
+        x.fillStyle = grad(t.len);
+        x.fill();
+      });
+      T.forEach(t => {
+        tongue(t.y + t.w * 0.1, t.len * 0.45, t.w * 0.45, t.ph + 0.2, t.curl * 0.5);
+        x.fillStyle = 'rgba(255,250,215,.8)';
+        x.fill();
+      });
+    });
   },
   carbon(x, S) {
     x.fillStyle = '#101114';
@@ -340,8 +382,8 @@ const FIN_GEN = {
 };
 /* which finishes glow in the dark, and how many repeats per metre of bike */
 const FIN_META = {
-  tubes: { scale: 1.3, glow: 1.4 },
-  flames: { scale: 1.2, glow: 0.55 },
+  tubes: { scale: 1.3, glow: 1.6 },
+  flames: { scale: 1.5, glow: 0.5 },
   lightning: { scale: 1.3, glow: 1.1 },
   lava: { scale: 1.6, glow: 1 },
   synth: { scale: 2.2, glow: 0.9 },
@@ -367,24 +409,57 @@ function finishTex(id) {
   const M = FIN_META[id] || {};
   return (FIN_CACHE[id] = { map: t, scale: M.scale || 3, glow: M.glow || 0, url: c.toDataURL('image/png') });
 }
-function triplanar(mat, scale) {
+function triplanar(mat, scale, waves) {
+  // triOff shifts the pattern (e.g. flames start at the front of the tank)
+  mat.userData.triOff = mat.userData.triOff || { value: new THREE.Vector3() };
   mat.onBeforeCompile = sh => {
     sh.uniforms.triS = { value: scale };
+    sh.uniforms.uNT = NEON_T;
+    sh.uniforms.triOff = mat.userData.triOff;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTriP=position;vTriN=normal;');
+    /* waves: colours roll through the rainbow and a bright pulse travels along the surface */
+    const wave = waves
+      ? `{float wp=dot(vTriP,vec3(1.3,.9,1.1));float wa=uNT*1.8+wp*2.2;const vec3 wk=vec3(.57735);float wc=cos(wa);
+        tcol.rgb=max(tcol.rgb*wc+cross(wk,tcol.rgb)*sin(wa)+wk*dot(wk,tcol.rgb)*(1.-wc),0.)*(.7+.45*sin(uNT*5.-wp*7.));}`
+      : '';
     const tri = s =>
-      `vec3 tw=pow(abs(normalize(vTriN)),vec3(4.0));tw/=(tw.x+tw.y+tw.z);vec4 tcol=texture2D(${s},vTriP.zy*triS)*tw.x+texture2D(${s},vTriP.zx*triS)*tw.y+texture2D(${s},vTriP.xy*triS)*tw.z;`;
+      `vec3 tw=pow(abs(normalize(vTriN)),vec3(4.0));tw/=(tw.x+tw.y+tw.z);vec3 tp=vTriP+triOff;vec4 tcol=texture2D(${s},tp.zy*triS)*tw.x+texture2D(${s},tp.zx*triS)*tw.y+texture2D(${s},tp.xy*triS)*tw.z;${wave}`;
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float triS;\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
+      .replace('#include <common>', '#include <common>\nuniform float triS;uniform float uNT;uniform vec3 triOff;\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
       .replace('#include <map_fragment>', `#ifdef USE_MAP\n${tri('map')}diffuseColor*=mapTexelToLinear(tcol);\n#endif`)
       .replace(
         '#include <emissivemap_fragment>',
         `#ifdef USE_EMISSIVEMAP\n{${tri('emissiveMap')}totalEmissiveRadiance*=emissiveMapTexelToLinear(tcol).rgb;}\n#endif`,
       );
   };
-  mat.customProgramCacheKey = () => 'tri' + scale;
+  mat.customProgramCacheKey = () => 'tri' + scale + (waves ? 'w' : '');
 }
+/* neon tube look for any surface: white-hot where it faces you, saturated colour toward the edges,
+   and a live buzz (fast hum + the odd stutter, each material on its own phase) */
+const NEON_BUZZ = `float nbT=uNT+uNPh;float nbz=.86+.09*sin(nbT*41.)*sin(nbT*27.3)+.05*sin(nbT*9.1);
+  float nbs=fract(sin(floor(nbT*9.)*91.7+uNPh)*4375.5);nbz*=nbs>.94?.45+.4*fract(nbT*53.):1.;`;
+function neonTube(mat) {
+  const ph = Math.random() * 100;
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uNT = NEON_T;
+    sh.uniforms.uNPh = { value: ph };
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uNT;uniform float uNPh;')
+      .replace(
+        '#include <emissivemap_fragment>',
+        `#include <emissivemap_fragment>
+        {float nf=abs(dot(normalize(normal),normalize(vViewPosition)));
+        vec3 rim=totalEmissiveRadiance*1.5;vec3 core=mix(totalEmissiveRadiance,vec3(1.),.75)*1.25;
+        ${NEON_BUZZ}totalEmissiveRadiance=mix(rim,core,pow(nf,2.2))*nbz;}`,
+      );
+  };
+  mat.customProgramCacheKey = () => 'neonTube';
+}
+/* catalogue colours are picked as screen (sRGB) colours, like the swatches in the garage;
+   three r128 treats material colours as linear, so convert or they come out washed out */
+const deep = hex => new THREE.Color(hex).convertSRGBToLinear();
 function applyFinish(mat, it) {
   if (!it) return mat;
   if (it.metal != null) {
@@ -394,13 +469,14 @@ function applyFinish(mat, it) {
   if (it.neon) {
     mat.userData.neon = it.c;
     mat.color.set(0x000000);
-    mat.emissive.set(it.c).lerp(new THREE.Color(0xffffff), 0.38);
-    mat.emissiveIntensity = 1.25;
+    mat.emissive.copy(deep(it.c));
+    mat.emissiveIntensity = 1;
     mat.toneMapped = false;
     mat.emissiveMap = null;
     mat.map = null;
     mat.metalness = 0;
     mat.roughness = 0.35;
+    neonTube(mat);
     mat.needsUpdate = true;
     return mat;
   }
@@ -417,8 +493,8 @@ function applyFinish(mat, it) {
       if (!mat.transparent) mat.emissive.set(0);
     }
     mat.userData.triScale = T.scale;
-    triplanar(mat, T.scale);
-  } else mat.color.set(it.c);
+    triplanar(mat, T.scale, it.tex === 'tubes');
+  } else mat.color.copy(deep(it.c));
   mat.needsUpdate = true;
   return mat;
 }
@@ -431,4 +507,4 @@ const finishCss = it =>
         ? `radial-gradient(circle at 35% 30%,#fff 0 6%,#${it.c.toString(16).padStart(6, '0')} 40%,#000 120%)`
         : '#' + it.c.toString(16).padStart(6, '0');
 
-export { applyFinish, finishCss, triplanar };
+export { NEON_BUZZ, applyFinish, deep, finishCss, triplanar };

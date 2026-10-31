@@ -3,7 +3,7 @@ import { cv, glowTex, tex } from '../render/textures.js';
 import { neonify } from '../render/neon.js';
 import { RIDER_GLTF, buildRiderModel, riderWaiting } from '../rider/riderModel.js';
 import { V3, YAX } from '../core/constants.js';
-import { applyFinish } from './finishes.js';
+import { applyFinish, deep } from './finishes.js';
 import { findItem } from './catalog.js';
 import { envify } from '../render/envmap.js';
 import { buildRider } from '../rider/rider.js';
@@ -332,7 +332,7 @@ function makeBike(o) {
   m.scale.setScalar(0.85);
   const SM = (c, r, mt, x = {}) =>
     new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: mt }, x));
-  const paint = applyFinish(SM(P.c, P.rough ?? 0.28, P.metal ?? 0.55), P.id ? P : null),
+  const paint = applyFinish(SM(deep(P.c), P.rough ?? 0.28, P.metal ?? 0.55), P.id ? P : null),
     black = SM(0x141417, 0.7, 0.2),
     rubber = SM(0x0d0d0f, 0.92, 0),
     chrome = SM(0xe9ebef, 0.12, 1),
@@ -1465,6 +1465,8 @@ function makeBike(o) {
     m.add(fl);
   }
   mergeGroup(SG);
+  // patterns that have a direction (flames) start at the front of the tank
+  if (paint.userData.triOff) paint.userData.triOff.value.z = -(Math.max(...S.tank.map(p => p[0])) + 0.03);
   /* ---- rider ---- */
   m.add(rider);
   const RA = [S, st, C, o, P, { fx, gripP, cl }],

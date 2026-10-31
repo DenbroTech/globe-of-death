@@ -24,9 +24,8 @@ let G0, garageRoom;
 
 let gFig = null,
   gBike = null;
-function rebuildGarageSet() {
+function rebuildGarageFigure() {
   if (gFig) garageRoom.remove(gFig);
-  if (gBike) garageRoom.remove(gBike.g);
   const gs = garage.sel,
     GC = findItem('costume', gs.costume);
   gFig = makeFigure(
@@ -39,13 +38,19 @@ function rebuildGarageSet() {
   gFig.position.set(-0.75, 0, 0.55);
   gFig.rotation.y = 0.35;
   garageRoom.add(gFig);
+}
+function rebuildGarageBike() {
+  if (gBike) garageRoom.remove(gBike.g);
   gBike = makeBike(garage.sel);
   gBike.rider.visible = false;
   gBike.g.scale.setScalar(1.15);
   gBike.g.position.set(0.75, 0, 0.1);
   gBike.g.rotation.y = -1.05;
   garageRoom.add(gBike.g);
-  game.gCheer = 1.2;
+}
+function rebuildGarageSet() {
+  rebuildGarageFigure();
+  rebuildGarageBike();
 }
 function garageEnv(on) {
   for (const k in built) {
@@ -122,10 +127,10 @@ function showGarage(msg) {
     gCat[key] = cat;
     const list = CATALOG.paint.filter(PCATS.find(c => c[0] === cat)[1]);
     return `<div class="cats">${PCATS.map(([c]) => `<button class="cat" data-cat="${c}" data-key="${key}" aria-pressed="${c === cat}">${c}</button>`).join('')}</div>
-      <div class="hs" data-hs="sw-${key}-${cat}">${def && cat === 'Solid' ? `<button class="swb def${cur ? '' : ' sel'}" data-sw="${key}" data-id="" aria-label="Costume colour" title="Costume colour"></button>` : ''}${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></button>`).join('')}</div>`;
+      <div class="hs" data-hs="sw-${key}-${cat}">${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></button>`).join('')}</div>`;
   };
   const st = BIKE_STATS[sel.style],
-    pname = k => (sel[k] ? findItem('paint', sel[k]).name : 'Costume colour');
+    pname = k => (sel[k] ? findItem('paint', sel[k]).name : 'Outfit colours');
   ov.innerHTML = `<div class="card gcard">
     <div class="ghead"><h2>Garage</h2><div class="seg gseg"><button class="tab" data-tab="bike" aria-pressed="${tab === 'bike'}">Bike</button><button class="tab" data-tab="rider" aria-pressed="${tab === 'rider'}">Rider</button></div></div>
     ${
@@ -174,9 +179,13 @@ function showGarage(msg) {
   );
   const pick = (k, id) => {
     garage.sel[k] = id || null;
+    // a new outfit starts in its own colours
+    if (k === 'costume') garage.sel.suit = garage.sel.helmet = null;
     saveGarage();
     rebuildPlayerBike();
-    rebuildGarageSet();
+    // bike tab changes only the bike; rider tab changes only the rider
+    if (k === 'style' || k === 'paint') rebuildGarageBike();
+    else rebuildGarageFigure();
     showGarage();
   };
   ov.querySelectorAll('.item').forEach(b => (b.onclick = () => pick(b.dataset.k, b.dataset.id)));

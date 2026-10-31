@@ -13,7 +13,7 @@ function glowShellMat(col, inflate, strength, front, skinned) {
     skinning: !!skinned,
     uniforms: { uC: { value: new THREE.Color(col) }, uS: { value: strength }, uI: { value: inflate }, uT: NEON_T },
     vertexShader: `#include <common>\n#include <skinning_pars_vertex>\n#include <logdepthbuf_pars_vertex>\nuniform float uI;varying vec3 vN;varying vec3 vV;void main(){\n#include <beginnormal_vertex>\n#include <skinbase_vertex>\n#include <skinnormal_vertex>\nvec3 transformed=position+normal*uI;\n#include <skinning_vertex>\nvec4 mv=modelViewMatrix*vec4(transformed,1.);vN=normalize(normalMatrix*objectNormal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;\n#include <logdepthbuf_vertex>\n}`,
-    fragmentShader: `#include <common>\n#include <logdepthbuf_pars_fragment>\nuniform vec3 uC;uniform float uS;uniform float uT;varying vec3 vN;varying vec3 vV;void main(){\n#include <logdepthbuf_fragment>\nfloat d=abs(dot(normalize(vN),normalize(vV)));float a=${front ? 'pow(1.-d,1.4)' : 'pow(d,2.2)'};float fl=.78+.22*sin(uT*3.1)+.06*sin(uT*17.)*sin(uT*7.3);gl_FragColor=vec4(uC*a*uS*fl,1.);}`,
+    fragmentShader: `#include <common>\n#include <logdepthbuf_pars_fragment>\nuniform vec3 uC;uniform float uS;uniform float uT;varying vec3 vN;varying vec3 vV;void main(){\n#include <logdepthbuf_fragment>\nfloat d=abs(dot(normalize(vN),normalize(vV)));float a=${front ? 'pow(1.-d,1.4)' : 'pow(d,2.2)'};float fl=.8+.14*sin(uT*41.)*sin(uT*27.3)+.06*sin(uT*9.1);float st=fract(sin(floor(uT*9.)*91.7)*4375.5);fl*=st>.94?.5:1.;gl_FragColor=vec4(uC*a*uS*fl,1.);}`,
   });
   return m;
 }

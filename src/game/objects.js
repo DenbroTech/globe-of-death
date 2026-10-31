@@ -38,7 +38,9 @@ export function initObjects() {
   nextRing = makeRing(0x6fd3ff, 0.04, 0.6, true);
   myRing.visible = nextRing.visible = false;
   pool = CROSS.map(([name, hex], i) => {
-    const bike = makeBike({ paintHex: hex, style: RSTY[i % 5], costume: RCOS[(i * 3 + 1) % 7] });
+    const costume = RCOS[(i * 3 + 1) % 7];
+    // riders in plain leathers wear their bike's colour, so the field stays varied
+    const bike = makeBike({ paintHex: hex, style: RSTY[i % 5], costume, suitHex: costume === 'leathers' ? hex : undefined });
     bike.g.visible = false;
     globe.add(bike.g);
     const beacon = glowSprite(hex, 0.8);

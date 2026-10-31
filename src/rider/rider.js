@@ -3,7 +3,7 @@ import { mergeGroup } from '../bikes/bike.js';
 import { neonify } from '../render/neon.js';
 import { RIDER_GLTF, figureFromModel } from './riderModel.js';
 import { V3, YAX } from '../core/constants.js';
-import { applyFinish } from '../bikes/finishes.js';
+import { applyFinish, deep } from '../bikes/finishes.js';
 import { findItem } from '../bikes/catalog.js';
 import { envify } from '../render/envmap.js';
 import { ik2 } from './ik.js';
@@ -703,7 +703,7 @@ function riderMats(o, C, P) {
   const SM = (c, r, mt, x = {}) =>
     new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: mt }, x));
   const suit = new THREE.MeshStandardMaterial({
-    color: o.suitHex ?? (o.suit ? findItem('paint', o.suit).c : (C.suit ?? P.c)),
+    color: deep(o.suitHex ?? (o.suit ? findItem('paint', o.suit).c : (C.suit ?? P.c))),
     roughness: C.metal ? 0.25 : 0.4,
     metalness: C.metal ? 0.9 : 0.18,
     vertexColors: true,
@@ -714,7 +714,7 @@ function riderMats(o, C, P) {
   });
   const HC = o.helmetHex ?? (o.helmet ? findItem('paint', o.helmet).c : null),
     helm = new THREE.MeshStandardMaterial({
-      color: HC ?? C.helmet ?? P.c,
+      color: deep(HC ?? C.helmet ?? P.c),
       metalness: 0.45,
       roughness: 0.16,
       vertexColors: true,

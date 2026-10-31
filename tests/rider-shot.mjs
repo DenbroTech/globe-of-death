@@ -14,7 +14,7 @@ const page = await browser.newPage({ viewport: { width: 400, height: 400 } });
 page.on('pageerror', e => console.log('PAGEERROR', e.message));
 await page.goto(url);
 await page.waitForFunction(() => window.__god);
-const data = await page.evaluate(async style => {
+const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER]) => {
   // import the exact module instances the game loaded (dev server may tag them with ?t=…)
   const loaded = performance.getEntriesByType('resource').map(e => e.name);
   const imp = p => import(loaded.filter(u => new URL(u).pathname === p).pop() || p);
@@ -28,9 +28,10 @@ const data = await page.evaluate(async style => {
   scene.add(new THREE.HemisphereLight(0xfff4e8, 0x302020, 0.45));
   const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(3, 5, 4); scene.add(key);
   const rim = new THREE.DirectionalLight(0x99bbff, 0.8); rim.position.set(-4, 3, -3); scene.add(rim);
-  const bike = makeBike({ style, paint: 'red', costume: 'leathers' });
+  const bike = makeBike({ style, paint: PAINT, costume: 'leathers', suit: SUIT });
   scene.add(bike.g || bike);
-  const fig = makeFigure('leathers', 0xe63946, null, null, null);
+  if (NORIDER && bike.rider) bike.rider.visible = false;
+  const fig = makeFigure('leathers', 0xe63946, null, SUIT, null);
   fig.position.set(-2.4, 0, 0); scene.add(fig);
   const W = 400, H = 400, views = [
     [[2.8, 1.2, 0.3], [0, 0.7, 0]],    // side
@@ -52,7 +53,7 @@ const data = await page.evaluate(async style => {
   });
   renderer.setPixelRatio(pr); renderer.setSize(prev.x, prev.y, false);
   return sheet.toDataURL('image/png');
-}, style);
+}, [style, process.env.PAINT || 'red', process.env.SUIT || null, !!process.env.NORIDER]);
 fs.writeFileSync(out, Buffer.from(data.split(',')[1], 'base64'));
 await browser.close();
 console.log('wrote', out);

@@ -17,6 +17,8 @@ let arenaId = 'bigtop';
 const built = {};
 function setArena(id) {
   arenaId = id;
+  // the Big Top tent is in the scene from boot; hide it even if it was never "built" (game opened in another arena)
+  bigtop.visible = id === 'bigtop';
   try {
     localStorage.setItem('god-arena', id);
   } catch (e) {}

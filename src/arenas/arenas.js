@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makePalm } from './props.js';
 import { scene } from '../render/renderer.js';
 import { cv, glowTex, stripeTex, tex } from '../render/textures.js';
 import { bigtop } from './stage.js';
@@ -122,34 +123,11 @@ const ARENAS = {
         new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }),
       );
       foam.visible = false;
-      const trunk = std(0x8b5a2b),
-        leaf = std(0x2f9e44, { side: THREE.DoubleSide });
       for (let i = 0; i < 10; i++) {
         const a = Math.PI * 0.85 + (i / 9) * Math.PI * 1.3,
           r = 21 + Math.random() * 7,
-          h = 6 + Math.random() * 3,
-          p = new THREE.Group();
+          p = makePalm(6 + Math.random() * 3);
         p.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-        for (let k = 0; k < 6; k++) {
-          const s = new THREE.Mesh(new THREE.CylinderGeometry(0.18 - k * 0.015, 0.22 - k * 0.015, h / 6, 8), trunk);
-          s.position.set(k * k * 0.03, h / 12 + (k * h) / 6, 0);
-          s.rotation.z = -k * 0.04;
-          p.add(s);
-        }
-        for (let k = 0; k < 7; k++) {
-          const f = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3.2, 4, 1, true), leaf);
-          f.scale.set(1, 1, 0.15);
-          f.position.set(1, h, 0);
-          f.rotation.set(0, (k / 7) * Math.PI * 2, Math.PI / 2 + 0.5);
-          const piv = new THREE.Group();
-          piv.position.set(0.75, h, 0);
-          f.position.set(0, 0, 0);
-          f.translateY(-1.6);
-          piv.add(f);
-          piv.rotation.y = (k / 7) * Math.PI * 2;
-          piv.rotation.z = -0.4;
-          p.add(piv);
-        }
         p.rotation.y = Math.random() * 6;
         g.add(p);
       }
@@ -299,7 +277,7 @@ const ARENAS = {
           map: windows(),
           emissive: 0xffffff,
           emissiveMap: windows(),
-          emissiveIntensity: 0.8,
+          emissiveIntensity: 1.8,
         }),
       );
       bld.position.y = -43;
@@ -370,7 +348,7 @@ const ARENAS = {
         color: 0x222033,
         emissive: 0xffffff,
         emissiveMap: wm,
-        emissiveIntensity: 1.6,
+        emissiveIntensity: 3,
         map: wm,
       });
       const box = new THREE.BoxGeometry(1, 1, 1);
@@ -393,6 +371,34 @@ const ARENAS = {
         inst.setMatrixAt(i, o.matrix);
       }
       g.add(inst);
+      /* low-rise city filling every block between the towers, so no bare ground shows */
+      {
+        const lm = windows(2, 2, 0.5);
+        const lmat = new THREE.MeshLambertMaterial({ color: 0x1c1b2a, emissive: 0xffffff, emissiveMap: lm, emissiveIntensity: 2.6, map: lm });
+        const cell = 9,
+          spots = [];
+        for (let gx = -46; gx <= 46; gx++)
+          for (let gz = -46; gz <= 46; gz++) {
+            if (gx % 5 === 0 || gz % 5 === 0) continue; // avenues
+            const x = gx * cell,
+              z = gz * cell,
+              d = Math.hypot(x, z);
+            if (d < 26 || d > 420 || Math.random() < (d > 260 ? 0.45 : 0.08)) continue;
+            spots.push([x, z]);
+          }
+        const low = new THREE.InstancedMesh(box, lmat, spots.length);
+        spots.forEach(([x, z], i) => {
+          const h = 4 + Math.pow(Math.random(), 2) * 16,
+            w = cell * (0.72 + Math.random() * 0.2),
+            dd = cell * (0.72 + Math.random() * 0.2);
+          o.position.set(x + (Math.random() - 0.5) * 1.2, -73 + h / 2, z + (Math.random() - 0.5) * 1.2);
+          o.scale.set(w, h, dd);
+          o.rotation.set(0, 0, 0);
+          o.updateMatrix();
+          low.setMatrixAt(i, o.matrix);
+        });
+        g.add(low);
+      }
       const yel = std(0xf2b705, { metalness: 0.3, roughness: 0.6 });
       const tower = new THREE.Mesh(
         new THREE.BoxGeometry(1.6, 94, 1.6),
@@ -498,14 +504,14 @@ const ARENAS = {
           emissiveIntensity: 0.4,
         }),
         kelp = [];
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 90; i++) {
         const a = Math.random() * 6.28,
           r = 21 + Math.random() * 30,
-          h = 5 + Math.random() * 9,
+          h = 1.8 + Math.random() * 3.2,
           piv = new THREE.Group();
         piv.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
         piv.rotation.y = Math.random() * 6.28;
-        const k = new THREE.Mesh(new THREE.PlaneGeometry(0.45, h, 1, 6), kelpM);
+        const k = new THREE.Mesh(new THREE.PlaneGeometry(0.3, h, 1, 6), kelpM);
         k.position.y = h / 2;
         piv.add(k);
         piv.userData.ph = Math.random() * 6.28;
@@ -762,19 +768,25 @@ const ARENAS = {
     },
   },
 };
-function windows() {
+function windows(rx = 6, ry = 4, lit = 0.55) {
+  /* lit windows: warm and cool tones, some brighter, a few whole floors on */
   const [c, x] = cv(64, 128);
   x.fillStyle = '#000';
   x.fillRect(0, 0, 64, 128);
-  for (let yy = 4; yy < 128; yy += 8)
-    for (let xx = 4; xx < 64; xx += 8)
-      if (Math.random() < 0.45) {
-        x.fillStyle = Math.random() < 0.8 ? '#ffd98a' : '#9fd8ff';
-        x.fillRect(xx, yy, 4, 5);
+  for (let yy = 3; yy < 128; yy += 8) {
+    const floorOn = Math.random() < 0.12;
+    for (let xx = 3; xx < 64; xx += 8)
+      if (floorOn || Math.random() < lit) {
+        const k = Math.random();
+        x.fillStyle = k < 0.62 ? '#ffd27a' : k < 0.84 ? '#fff1c9' : k < 0.95 ? '#9fdcff' : '#ff9c6b';
+        x.globalAlpha = 0.7 + Math.random() * 0.3;
+        x.fillRect(xx, yy, 5, 6);
       }
+  }
+  x.globalAlpha = 1;
   const t = tex(c, true);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.repeat.set(6, 4);
+  t.repeat.set(rx, ry);
   return t;
 }
 function lattice(rep) {

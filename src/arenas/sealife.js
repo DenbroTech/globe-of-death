@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { sharkGeo } from './props.js';
 import { V3 } from '../core/constants.js';
 import { rand } from './life.js';
 
@@ -188,71 +189,6 @@ const FISH = {
     finCol: '#cfe0ec',
   },
 };
-function sharkGeo() {
-  const body = new THREE.SphereGeometry(1, 32, 18);
-  body.scale(0.3, 0.34, 1.05);
-  const P = body.attributes.position;
-  for (let i = 0; i < P.count; i++) {
-    const z = P.getZ(i);
-    if (z < 0) {
-      const k = 1 + z * 0.55;
-      P.setX(i, P.getX(i) * k);
-      P.setY(i, P.getY(i) * k);
-    }
-    if (z > 0.7) P.setY(i, P.getY(i) - (z - 0.7) * 0.25);
-  }
-  body.computeVertexNormals();
-  paintG(body, (x, y, z, nx, ny) => (y < -0.06 || ny < -0.35 ? '#eef1f4' : '#6b7b88'));
-  const grey = () => '#5f6f7c',
-    dor = paintG(
-      triG([
-        [0, 0.3, 0.25],
-        [0, 0.95, -0.15],
-        [0, 0.28, -0.3],
-      ]),
-      grey,
-    );
-  const tail = paintG(
-    triG([
-      [0, 0, -1.0],
-      [0, 0.85, -1.55],
-      [0, 0.05, -1.25],
-      [0, 0, -1.0],
-      [0, -0.05, -1.25],
-      [0, -0.5, -1.45],
-    ]),
-    grey,
-  );
-  const pec = [1, -1].map(s =>
-    paintG(
-      triG([
-        [s * 0.26, -0.12, 0.32],
-        [s * 0.95, -0.42, -0.12],
-        [s * 0.26, -0.16, -0.02],
-      ]),
-      grey,
-    ),
-  );
-  const eyes = [1, -1].map(s => {
-    const e = new THREE.SphereGeometry(0.045, 8, 6);
-    e.translate(s * 0.2, 0.06, 0.78);
-    return paintG(e, () => '#030405');
-  });
-  const gills = [1, -1].flatMap(s =>
-    [0.45, 0.5, 0.55].map(z =>
-      paintG(
-        triG([
-          [s * 0.29, 0.08, z],
-          [s * 0.29, -0.12, z - 0.02],
-          [s * 0.3, -0.12, z + 0.02],
-        ]),
-        () => '#3c4852',
-      ),
-    ),
-  );
-  const g = mergeG([body, dor, tail, ...pec, ...eyes, ...gills]);
-  return g;
-}
 function swimMat(freq, amp) {
   const m = new THREE.MeshStandardMaterial({
     vertexColors: true,
@@ -404,4 +340,4 @@ export function initSealife() {
   });
 }
 
-export { bubbleMat, makeSeaLife, mergeG };
+export { bubbleMat, makeSeaLife, mergeG, paintG };

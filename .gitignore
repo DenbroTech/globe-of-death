@@ -2,3 +2,5 @@ node_modules/
 dist/
 .DS_Store
 tests/out/
+dist-single/
+globe-of-death-test.html

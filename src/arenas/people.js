@@ -7,6 +7,7 @@ import { makeSeaLife, mergeG } from './sealife.js';
 import { GY, V3 } from '../core/constants.js';
 import { clock2, flyRound, mkBird, mkBursts, rand } from './life.js';
 import { sculptGeo } from '../rider/rider.js';
+import { dolphinGeo, footballMat, makeSailboat } from './props.js';
 
 /* ---------- people as sprites (same sheet as the crowd): standing, dancing or lying on towels ---------- */
 function spritePeople(g, list) {
@@ -193,7 +194,7 @@ function beachExtras(g) {
     bar.add(sp);
     return sp;
   });
-  /* --- people: bartender, dancers in front of the bar, sunbathers on towels --- */
+  /* --- people: bartender and dancers in front of the bar (towels are left empty) --- */
   const W = new V3(),
     loc = (x, z) => {
       W.set(x, 0, z);
@@ -247,7 +248,6 @@ function beachExtras(g) {
     tw.rotation.y = -a + (Math.random() - 0.5) * 0.6;
     tw.receiveShadow = true;
     g.add(tw);
-    people.push({ x: p.x, z: p.z, lie: true, ry: a + Math.PI / 2 + (Math.random() - 0.5) * 0.6, s: 1.3 });
     if (i % 3 === 0) {
       const u = new THREE.Group();
       u.position.set(p.x + 0.9, 0, p.z + 0.4);
@@ -288,72 +288,12 @@ function beachExtras(g) {
   });
   const crowdS = spritePeople(g, people);
   /* --- dolphins out in the surf --- */
-  const dGeo = (() => {
-    const parts = [
-      sculptGeo(
-        new V3(0, 0, -0.9),
-        new V3(0, 0, 0.95),
-        new V3(0, 1, 0),
-        [
-          [0, 0.05, 0.06],
-          [0.2, 0.16, 0.2],
-          [0.5, 0.2, 0.24, 0.02],
-          [0.8, 0.13, 0.15],
-          [0.92, 0.06, 0.07],
-          [1, 0.03, 0.04],
-        ],
-        18,
-        20,
-        0.3,
-        (t, n) => (n.y > 0.1 ? 0.42 : 1),
-      ),
-    ];
-    const fin = new THREE.BufferGeometry();
-    fin.setAttribute(
-      'position',
-      new THREE.BufferAttribute(new Float32Array([0, 0.2, 0.15, 0, 0.48, -0.12, 0, 0.18, -0.28]), 3),
-    );
-    fin.computeVertexNormals();
-    parts.push(fin);
-    const fl = new THREE.BufferGeometry();
-    fl.setAttribute(
-      'position',
-      new THREE.BufferAttribute(
-        new Float32Array([0, 0, -0.82, -0.42, 0, -1.12, -0.06, 0, -0.9, 0, 0, -0.82, 0.06, 0, -0.9, 0.42, 0, -1.12]),
-        3,
-      ),
-    );
-    fl.computeVertexNormals();
-    parts.push(fl);
-    const pf = new THREE.BufferGeometry();
-    pf.setAttribute(
-      'position',
-      new THREE.BufferAttribute(
-        new Float32Array([
-          0.15, -0.08, 0.35, 0.42, -0.22, 0.12, 0.15, -0.1, 0.18, -0.15, -0.08, 0.35, -0.42, -0.22, 0.12, -0.15, -0.1,
-          0.18,
-        ]),
-        3,
-      ),
-    );
-    pf.computeVertexNormals();
-    parts.push(pf);
-    parts.forEach(p => {
-      if (!p.attributes.color) {
-        p.setAttribute(
-          'color',
-          new THREE.BufferAttribute(new Float32Array(p.attributes.position.count * 3).fill(0.42), 3),
-        );
-      }
-    });
-    return mergeG(parts);
-  })();
+  const dGeo = dolphinGeo();
   const dMat = new THREE.MeshStandardMaterial({
-      color: 0x8fa3b8,
-      roughness: 0.3,
-      metalness: 0.15,
+      color: 0x9fb2c4,
+      roughness: 0.28,
+      metalness: 0.1,
       vertexColors: true,
-      side: THREE.DoubleSide,
     }),
     splash = mkBursts(g, 500, 0.35);
   const dol = [0, 1, 2].map(i => {
@@ -552,18 +492,8 @@ const LIFE = {
       g.add(b);
       return b;
     });
-    const boat = new THREE.Group();
-    {
-      const hull = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 4), std(0xffffff));
-      hull.position.y = 0.3;
-      boat.add(hull);
-      const sg = new THREE.BufferGeometry();
-      sg.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0.6, -1.5, 0, 5, 0, 0, 0.6, 1.4]), 3));
-      sg.computeVertexNormals();
-      const sail = new THREE.Mesh(sg, new THREE.MeshLambertMaterial({ color: 0xff5d73, side: THREE.DoubleSide }));
-      boat.add(sail);
-      boat.scale.setScalar(1.6);
-    }
+    const boat = makeSailboat();
+    boat.scale.setScalar(1.15);
     g.add(boat);
     const ballT = stripeTex(6, '#ff5d73', '#ffffff'),
       balls = [...Array(3)].map((_, i) => {
@@ -682,28 +612,10 @@ const LIFE = {
       g.add(p);
       flags.push(p);
     }
-    const fbT = (() => {
-      const [c, x] = cv(256, 128);
-      x.fillStyle = '#f6f6f6';
-      x.fillRect(0, 0, 256, 128);
-      x.fillStyle = '#16161a';
-      const pent = (cx, cy, r) => {
-        x.beginPath();
-        for (let k = 0; k < 5; k++) {
-          const a = (k / 5) * 6.283 - 1.57;
-          x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-        }
-        x.fill();
-      };
-      for (let row = 0; row < 3; row++)
-        for (let col = 0; col < 6; col++) pent(col * 43 + (row % 2 ? 21 : 0) + 10, row * 43 + 20, 12);
-      return tex(c, true);
-    })();
+    const fbGeo = new THREE.SphereGeometry(0.42, 32, 24),
+      fbMat = footballMat();
     const balls = [...Array(4)].map((_, i) => {
-      const m = new THREE.Mesh(
-        new THREE.SphereGeometry(0.42, 18, 14),
-        new THREE.MeshStandardMaterial({ map: fbT, roughness: 0.45 }),
-      );
+      const m = new THREE.Mesh(fbGeo, fbMat);
       m.userData = { a: i * 1.6, ph: i * 1.7 };
       g.add(m);
       return m;
