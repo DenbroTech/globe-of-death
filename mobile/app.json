@@ -7,11 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#07060a",
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.globeofdeath.game",
-      "requireFullScreen": true
-    },
     "android": {
       "package": "com.globeofdeath.game",
       "versionCode": 1,
@@ -34,6 +29,9 @@
     ],
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "platforms": [
+      "android"
+    ]
   }
 }

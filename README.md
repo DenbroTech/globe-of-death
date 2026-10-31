@@ -17,7 +17,7 @@ The game is bundled as one HTML file, `mobile/assets/game.html`.
 
 After changing the game, refresh that file (repo root): `npm run mobile:sync`
 
-Build an installable APK (from `mobile/`, on your PC):
+Build an installable APK on your PC (after `git clone https://github.com/DenbroTech/globe-of-death.git` into `C:\`; later just `git pull`):
 
 ```
 cd mobile
@@ -27,7 +27,7 @@ npx eas-cli build --platform android --profile preview
 
 First time: log in with your Expo account, say **yes** to creating the project and to generating a new Android keystore.
 The build runs on Expo's servers (~10–20 min) and ends with a link / QR code: open it on the phone to install.
-`--profile production` makes the `.aab` for the Play Store. EAS can also build iOS later without a Mac (needs an Apple Developer account).
+`--profile production` makes the `.aab` for the Play Store.
 
 App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.globeofdeath.game`, icons, splash),
 `mobile/eas.json` (build profiles), `src/platform/app.js` (game side: back button, pause on background; AdMob/"Remove ads" will hook in here).
