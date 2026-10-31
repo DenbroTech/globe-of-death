@@ -1,9 +1,9 @@
 # Globe of Death — project handover
 
-A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe of death" cage, hitting moves to the beat while a crowd watches. Built with three.js r128 + Vite, ES modules in `src/`. It started life as a single-file claude.ai artifact (kept in `original/globe-of-death.html` for comparison) and will later become a mobile app (Capacitor).
+A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe of death" cage, hitting moves to the beat while a crowd watches. Built with three.js r128 + Vite, ES modules in `src/`. It started life as a single-file claude.ai artifact (kept in `original/globe-of-death.html` for comparison) and ships as an Android app: Expo shell in `mobile/` (WebView showing the single-file build `mobile/assets/game.html`), built in the cloud with EAS like the owner's Flippy Mat game.
 
 ## The owner (how to work with them)
-- Tests on an iPhone, sometimes on desktop. Phone-first always: portrait, thumb controls, 60 fps target.
+- Tests on an Android phone (Android only for now), sometimes on desktop. Builds the app on their Windows PC with `npx eas-cli build --platform android --profile preview` (same workflow as their Flippy Mat game). Phone-first always: portrait, thumb controls, 60 fps target.
 - Wants things to look good and feel polished. Dislikes: clutter and paragraphs of text on screens, anything that looks "AI generated", primitive-looking models ("spheres and cylinders"), pastel colours where they asked for bold.
 - Gives quick, informal feedback mid-task; act on it, keep replies short, show screenshots of what changed.
 - Everything is unlocked for testing ("Unlock all" in Settings defaults ON). Keep it that way until they say otherwise.
@@ -61,7 +61,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - `game/` — path (sphere path: `posAt`/`qAt`/turns), freeride, objects (player, other riders), chart (`genBarNotes`, notes DOM), judging (`press`/`release`/`miss`), boost (NOS), perks, progress (arena unlocks), save (garage save), run (`start`, pause, quit), loop (`frame`).
 - `input/` — keys, controls (swipe gestures + handlebar HUD).
 - `ui/` — hud (judge/toast/balance), menus (home, levels, settings), garage (screen + 3D showroom), leaderboard, tutorial.
-- `platform/ads.js` — test-ad placeholder; the Capacitor/AdMob hook goes here.
+- `platform/ads.js` — test-ad placeholder. `platform/app.js` — bridge to the Expo app (window.ReactNativeWebView); AdMob (react-native-google-mobile-ads on the native side) will hook in here.
 - `assets/crowd-atlas.png` — crowd sprites (byte-identical to the old embedded base64). Source sheets live in `art/`.
 `window.__god` is a debug hook (press, release, state, fillBoost, useBoost, timeAt, now) used by headless tests.
 
@@ -80,12 +80,12 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 1. ~~Restructure into Vite + ES modules~~ (done: menus, levels, all 6 arenas and the garage render pixel-identical to `original/` apart from sub-pixel noise; the show ride matches; free ride matches step-for-step in game state — its screenshot is not deterministic even original-vs-original). Upgrade three.js from r128 when safe (r128-specific APIs: `material.skinning`, `outputEncoding`, examples/js loaders) — re-run the parity test against `original/` before/after.
 2. Further tidy-ups as we touch code: move more of `S` into owning modules, remove `rider/riderModel.js` if no imported model is planned.
 3. **Rider**: keep improving toward the reference race suits (owner will share images); or import a rigged rider model the owner downloads (`.glb`/`.fbx`) and pose it with the existing IK targets.
-4. **Mobile app**: Capacitor 8 set up (`ios/`, `android/`, `capacitor.config.json`, `src/platform/app.js`, icons/splash from `assets/`, fonts bundled, portrait + full screen; see README for running on a phone). Still to do: Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
+4. **Mobile app**: Expo app in `mobile/` (see README). `npm run mobile:sync` rebuilds `mobile/assets/game.html` after game changes — always run it before the owner builds. Game-side bridge `src/platform/app.js` (back button, pause on background). Fonts are bundled. Still to do: Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
 5. **Online leaderboards** (later): Google Play Games / Game Center, or a small backend.
 6. Performance pass on mid-range phones (draw calls, shadow map size, crowd counts, particle counts).
 
 ## Known rough edges
 - Rider still reads a bit "mannequin" — the owner wants more realism (in-between stylised and real).
 - Sport bike fairing is blobby; neon halos on thin parts can streak.
-- Flames pattern could look more like classic hot-rod flames.
+- Flames on the sport fairing turn into stripes (fairing geometry/projection).
 - The unused Mixamo/X Bot loader code (`loadRiderModel`, `prepRider`, `buildRiderModel`, `figureFromModel`) can be removed or reused for an imported model.

@@ -1,6 +1,6 @@
 # Globe of Death
 
-Phone-first 3D rhythm motorbike stunt game (three.js r128 + Vite), packaged as an iOS/Android app with Capacitor.
+Phone-first 3D rhythm motorbike stunt game (three.js r128 + Vite), packaged as an Android app (Expo + WebView, built with EAS).
 
 ```bash
 npm install
@@ -10,26 +10,27 @@ npm run build:single # one self-contained HTML (dist-single/index.html)
 npm test             # headless play-test (needs `npm run dev` running)
 ```
 
-## Run it on your iPhone (needs a Mac)
+## The Android app (Expo, built in the cloud with EAS — same as Flippy Mat)
 
-1. Install **Xcode** from the Mac App Store and open it once.
-2. In this folder: `npm install`, then `npm run ios` (builds the game, copies it into the iOS project and opens Xcode).
-3. In Xcode: select the **App** target → **Signing & Capabilities** → tick *Automatically manage signing* and pick your **Team** (add your Apple ID under Xcode → Settings → Accounts; a free Apple ID works).
-   If it complains the bundle id is taken, change `com.globeofdeath.game` to something unique (e.g. `com.yourname.globeofdeath`).
-4. Plug in the iPhone, choose it as the run destination, press **▶ Run**.
-5. First time only, on the phone: Settings → General → VPN & Device Management → trust your developer certificate. Also turn on Settings → Privacy & Security → Developer Mode if asked.
+`mobile/` is a small Expo app that shows the game full screen in a WebView (immersive, kept awake, back button pauses).
+The game is bundled as one HTML file, `mobile/assets/game.html`.
 
-With a free Apple ID the app runs for 7 days before it needs re-installing from Xcode; a paid Apple Developer account ($99/yr) removes that and enables TestFlight.
+After changing the game, refresh that file (repo root): `npm run mobile:sync`
 
-## Android
+Build an installable APK (from `mobile/`, on your PC):
 
-`npm run android` opens Android Studio; press Run with a phone connected (USB debugging on).
+```
+cd mobile
+npm install
+npx eas-cli build --platform android --profile preview
+```
 
-## App bits
+First time: log in with your Expo account, say **yes** to creating the project and to generating a new Android keystore.
+The build runs on Expo's servers (~10–20 min) and ends with a link / QR code: open it on the phone to install.
+`--profile production` makes the `.aab` for the Play Store. EAS can also build iOS later without a Mac (needs an Apple Developer account).
 
-- `capacitor.config.json` — app id/name, splash, status bar. Native projects: `ios/`, `android/` (portrait only, full screen).
-- `src/platform/app.js` — native-only setup (status bar). AdMob + "Remove ads" purchase plug in here.
-- `assets/` — icon and splash sources (rendered from the game); regenerate all sizes with `npx capacitor-assets generate`.
-- After changing game code: `npm run app:sync` (or `npm run ios` / `npm run android`).
+App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.globeofdeath.game`, icons, splash),
+`mobile/eas.json` (build profiles), `src/platform/app.js` (game side: back button, pause on background; AdMob/"Remove ads" will hook in here).
+Icon/splash sources (rendered from the game) are in `assets/`.
 
 See `CLAUDE.md` for the game design, code map and working notes. `original/globe-of-death.html` is the single-file version this project was split from.
