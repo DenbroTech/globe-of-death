@@ -1,6 +1,6 @@
 # Globe of Death — project handover
 
-A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe of death" cage, hitting moves to the beat while a crowd watches. Built with three.js r128 in a single HTML file (`globe-of-death.html`, ~1.2 MB, all code + embedded crowd sprite atlas). It started life as a claude.ai artifact and now needs to become a proper project and, later, a mobile app.
+A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe of death" cage, hitting moves to the beat while a crowd watches. Built with three.js r128 + Vite, ES modules in `src/`. It started life as a single-file claude.ai artifact (kept in `original/globe-of-death.html` for comparison) and will later become a mobile app (Capacitor).
 
 ## The owner (how to work with them)
 - Tests on an iPhone, sometimes on desktop. Phone-first always: portrait, thumb controls, 60 fps target.
@@ -49,22 +49,35 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 
 **Audio**: WebAudio drum machine + bass + lead scheduled on the beat; tempo map supports pausing by shifting tempo times (`holdClock`/`freeClock`). Hit sounds are musical (in key, per-arena instrument). The game clock is the AudioContext clock — it's resumed on every touch and when returning to the app (iOS suspends audio).
 
-## Code map (`globe-of-death.html`, search these banner comments)
-renderer · textures · lights · arena · crowds (sprite atlas, InstancedMesh with per-instance UV) · globe · arenas (ARENAS table: env, crowd, build) · arena life (LIFE per arena) · people as sprites (beach) · sea life · finishes (FIN_GEN, applyFinish, triplanar) · bikes v2 (BSPEC, makeBike, mergeGroup) · riders (sculptGeo, helmetDeform, riderKit, riderMats, buildRider, makeFigure) · neon (neonify) · rider model (unused Mixamo loader path, can delete) · bike stats · garage save · audio · clock & tempo map · path (posAt/qAt/turns) · free ride · song/chart (genBarNotes) · songs · judging (press/release/miss) · input (touch gestures) · camera · screens · perks · garage screen + garage set · leaderboard · tutorial · frame (main loop).
-`window.__god` is a debug hook (press, release, state, fillBoost, useBoost…) used by headless tests.
+## Code map (`src/`)
+- `main.js` — boot: calls every module's `initX()` in the original order, then starts the frame loop. Modules only declare things at load time; anything that touches the scene, DOM or storage runs inside `initX()`, so import order never matters.
+- `core/` — `constants.js` (R, GY, D, clamp, `$`…), `state.js` (`S`: mutable state shared across systems — score, combo, balance, act, run flags, input state…).
+- `render/` — renderer (scene, camera, PMREM env), textures, lights, envmap (`envify`), neon (`neonify`), trails & rings, particles, camera (modes, orbit, resize).
+- `arenas/` — stage (Big Top tent), crowd (sprite atlas → InstancedMesh), globe (cage), arenas (`ARENAS` table: env, crowd, build), current (`setArena`, `arenaTick`), life (`LIFE`), people (beach sprite people + extras), sealife (fish, sharks).
+- `bikes/` — bike (`BSPEC`, `makeBike`, `mergeGroup`), finishes (`FIN_GEN`, `applyFinish`, triplanar), catalog (`CATALOG`), stats.
+- `rider/` — rider (`sculptGeo`, `helmetDeform`, `riderKit`, `riderMats`, `buildRider`, `makeFigure`), ik (`ik2`), riderModel (unused Mixamo loader path — can delete or reuse for an imported model).
+- `audio/` — synth (WebAudio voices/kits), clock (tempo map, `now`, `beatAt`, `timeAt`, acts), songs (`SONGS`, hit sounds, step scheduler).
+- `game/` — path (sphere path: `posAt`/`qAt`/turns), freeride, objects (player, other riders), chart (`genBarNotes`, notes DOM), judging (`press`/`release`/`miss`), boost (NOS), perks, progress (arena unlocks), save (garage save), run (`start`, pause, quit), loop (`frame`).
+- `input/` — keys, controls (swipe gestures + handlebar HUD).
+- `ui/` — hud (judge/toast/balance), menus (home, levels, settings), garage (screen + 3D showroom), leaderboard, tutorial.
+- `platform/ads.js` — test-ad placeholder; the Capacitor/AdMob hook goes here.
+- `assets/crowd-atlas.png` — crowd sprites (byte-identical to the old embedded base64). Source sheets live in `art/`.
+`window.__god` is a debug hook (press, release, state, fillBoost, useBoost, timeAt, now) used by headless tests.
 
 ## Testing approach that worked
+- `npm test` (`tests/smoke.mjs`): perfect-timing bot, idle bot and free ride against the dev server.
+- `tests/parity.mjs urlA urlB outDir` + `python3 tests/imgdiff.py outDir`: screenshots two builds with seeded `Math.random` and a frozen clock and diffs pixels (used to prove the module split changed nothing). Serve `original/` with a local `three.min.js`; it has no charset tag, so "·"/"…" show garbled there — expected. `ONLY=ride,menu` limits scenes.
+- `tests/rider-shot.mjs out.png [style]` and `tests/outfits-shot.mjs out.png`: close-up contact sheets of bike+rider and of every outfit/finish (set `URL=` for another dev server).
 - Headless Chromium (Playwright) with SwiftShader; serve the folder over `python3 -m http.server` (file:// blocks loading extra files). Replace the three.js CDN URL with a local `three.min.js` (r128) for offline tests.
 - Synthetic `PointerEvent`s dispatched on `#touch` for gesture tests; `__god.press()` for timing bots. SwiftShader renders ~2 fps but the audio clock keeps real time.
 - Render bikes/riders standalone with a custom camera for close-up checks.
 
-## Assets in this folder
-- `globe-of-death.html` — the whole game (latest).
-- `crowd-sheet-1.png`, `crowd-sheet-2.png` — original crowd sprite sheets (10 cols × 20 rows, idle/cheer row pairs; sheet 2 had its checkerboard keyed out; characters 54, 62, 75, 87, 89 excluded). `crowd-atlas.png` — the combined 1280×2560 atlas that's embedded in the HTML as base64.
+## Assets
+- `art/crowd-sheet-1.png`, `art/crowd-sheet-2.png` — original crowd sprite sheets (10 cols × 20 rows, idle/cheer row pairs; sheet 2 had its checkerboard keyed out; characters 54, 62, 75, 87, 89 excluded). `art/crowd-atlas.png` — combined atlas source; the game uses `src/assets/crowd-atlas.png`.
 
 ## Suggested next steps (agree with the owner first)
-1. **Restructure** into a Vite + three.js project (ES modules: one file per system above, assets as files, not base64). Upgrade three.js from r128 when safe (note r128-specific APIs: `material.skinning`, `outputEncoding`, examples/js loaders). Add git.
-2. **Keep the game identical** after the split — verify with screenshots and the bot tests before changing behaviour.
+1. ~~Restructure into Vite + ES modules~~ (done: menus, levels, all 6 arenas and the garage render pixel-identical to `original/` apart from sub-pixel noise; the show ride matches; free ride matches step-for-step in game state — its screenshot is not deterministic even original-vs-original). Upgrade three.js from r128 when safe (r128-specific APIs: `material.skinning`, `outputEncoding`, examples/js loaders) — re-run the parity test against `original/` before/after.
+2. Further tidy-ups as we touch code: move more of `S` into owning modules, remove `rider/riderModel.js` if no imported model is planned.
 3. **Rider**: keep improving toward the reference race suits (owner will share images); or import a rigged rider model the owner downloads (`.glb`/`.fbx`) and pose it with the existing IK targets.
 4. **Mobile app**: wrap with Capacitor for iOS/Android; Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
 5. **Online leaderboards** (later): Google Play Games / Game Center, or a small backend.

@@ -1,0 +1,300 @@
+import { game } from '../core/state.js';
+import { crowd } from '../arenas/crowd.js';
+import { prog, saveProg } from './progress.js';
+import { arenaId } from '../arenas/current.js';
+import { _b } from '../render/trails.js';
+import { burst } from '../render/particles.js';
+import { ac, initAudio, sfxNoise } from '../audio/synth.js';
+import { FINAL, lat, now, timeAt } from '../audio/clock.js';
+import { freeSteer } from './freeride.js';
+import { player, pool } from './objects.js';
+import { DIRS } from './chart.js';
+import { addBal, ov, showJudge } from '../ui/hud.js';
+import { chargeBoost, useBoost } from './boost.js';
+import { addScore, awardTickets, gw, pk, pw } from './perks.js';
+import { countPlay, recordRun, showOver } from '../ui/leaderboard.js';
+import { tutEv } from '../ui/tutorial.js';
+import { resetInput } from './run.js';
+import { $, G, R, V3 } from '../core/constants.js';
+import { bst } from '../bikes/stats.js';
+import { hitSound } from '../audio/songs.js';
+
+function release(type) {
+  if (type === 'left' || type === 'ul' || type === 'dl') type = 'standl';
+  else if (type === 'right' || type === 'ur' || type === 'dr') type = 'standr';
+  if (type !== 'wheelie' && type !== 'nose' && type !== 'standl' && type !== 'standr') return;
+  if (type === 'wheelie') game.wheelieDown = false;
+  if (type === 'nose') game.noseDown = false;
+  const n = game.holdNote;
+  if (!n || game.over || n.type !== type) return;
+  game.holdNote = null;
+  n.el.classList.remove('holding');
+  const end = timeAt(n.beat + n.len),
+    t = now() - lat();
+  if (t >= end - gw(n.type)) finishHold(n);
+  else {
+    showJudge('m', 'DROPPED IT');
+    n.el.classList.add('miss');
+    tutEv('drop', n.type);
+  }
+}
+const ridersFor = a => Math.max(0, Math.min(a - 1, pool.length)),
+  missCost = () =>
+    Math.min(55, 18 + 4 * game.act) *
+    Math.max(0.35, 1 - 0.25 * pk('armor')) *
+    Math.max(0.5, 1 - (bst('grip') - 3) * 0.13);
+function finishHold(n) {
+  tutEv('hold', n.type);
+  if (n.auto) {
+    game.wheelieDown = false;
+    game.noseDown = false;
+  }
+  chargeBoost(15);
+  game.holdNote = null;
+  n.el.classList.remove('holding');
+  n.el.classList.add('ok');
+  const mult = 1 + Math.min(3, Math.floor(game.combo / 8));
+  addScore(400 * mult);
+  showJudge('p', n.type === 'nose' ? 'STOPPIE!' : n.type.startsWith('stand') ? 'SEAT STAND!' : 'WHEELIE!');
+  game.cheer = 1;
+  crowd.wave();
+  addBal(10 + 5 * pk('pleaser'));
+  sfxNoise(1.2, 1300, 0.22, 'cheer');
+}
+function press(type, tAt, soft) {
+  if (window.__presses) window.__presses.push(type);
+  initAudio();
+  if (!game.running || game.paused || game.over) return;
+  const t = tAt ?? now() - lat();
+  if (type === 'jump') player.hopT0 = t;
+  if (type === 'wheelie') game.wheelieDown = true;
+  if (type === 'nose') game.noseDown = true;
+  if (game.FREE) {
+    if (type === 'jump') hitSound('jump');
+    return;
+  }
+  let best = null,
+    bd = 9;
+  for (const n of game.notes) {
+    if (n.judged) continue;
+    const d = Math.abs(timeAt(n.beat) - t);
+    if (d < bd) {
+      bd = d;
+      best = n;
+    }
+  }
+  const isL = type === 'left' || type === 'ul' || type === 'dl',
+    isR = type === 'right' || type === 'ur' || type === 'dr',
+    okT = n =>
+      n &&
+      (n.type === type ||
+        (n.type === 'standl' && isL) ||
+        (n.type === 'standr' && isR) ||
+        (game.holdNote &&
+          !n.len &&
+          ((isL && (n.type === 'ul' || n.type === 'dl')) || (isR && (n.type === 'ur' || n.type === 'dr')))));
+  const W = soft ? 1.5 : 1;
+  if (soft && !(best && bd <= gw(best.type) * W && okT(best))) return;
+  if (best && bd <= gw(best.type) * W && okT(best)) {
+    const g = bd <= pw(best.type) * W ? 'p' : 'g';
+    best.judged = g;
+    best.el.classList.add('ok');
+    game.combo++;
+    game.stats.maxCombo = Math.max(game.stats.maxCombo, game.combo);
+    const mult = 1 + Math.min(3, Math.floor(game.combo / 8)),
+      both = game.holdNote && !best.len;
+    addScore((g === 'p' ? 300 : 120) * mult * (both ? 2 : 1));
+    game.stats[g === 'p' ? 'perfect' : 'good']++;
+    addBal(g === 'p' ? 7 : 3);
+    chargeBoost(g === 'p' ? 14 : 7);
+    if (best.type === 'jump') {
+      game.cheer = 1;
+      crowd.wave();
+      addBal(5 * pk('pleaser'));
+      sfxNoise(1.1, 1500, 0.2, 'cheer');
+    }
+    showJudge(g, both ? 'DOUBLE!' : g === 'p' ? 'PERFECT!' : 'GOOD');
+    tutEv(both ? 'double' : 'hit', best.type);
+    if (both) tutEv('hit', best.type);
+    if (both) {
+      game.cheer = 1;
+      crowd.wave();
+    }
+    if (best.len) {
+      game.holdNote = best;
+      best.el.classList.remove('ok');
+      best.el.classList.add('holding');
+      best.lastTick = best.beat;
+    }
+    hitSound(best.type, 0, g);
+    if (game.combo % 8 === 0) {
+      game.cheer = 1;
+      sfxNoise(1.1, 1400, 0.18, 'cheer');
+    }
+  } else if (best && bd <= gw(best.type)) {
+    game.combo = 0;
+    showJudge('m', 'WRONG BUTTON');
+    addBal(-(6 + game.act));
+    if (DIRS.includes(type)) freeSteer(type, t);
+  } else if (DIRS.includes(type)) {
+    freeSteer(type, t);
+    game.combo = 0;
+    game.score = Math.max(0, game.score - 100);
+    addBal(-4);
+    showJudge('m', 'OFF SCRIPT -100');
+  } else if (type !== 'wheelie' && type !== 'nose') {
+    if (game.combo > 0) showJudge('m', 'OFF BEAT');
+    game.combo = 0;
+    addBal(-5);
+  }
+}
+function miss(n) {
+  tutEv('miss', n.type);
+  n.judged = 'm';
+  n.el.classList.add('miss');
+  game.combo = 0;
+  if (n.len) {
+    showJudge(
+      'm',
+      n.type === 'nose' ? 'MISSED STOPPIE' : n.type.startsWith('stand') ? 'MISSED SEAT STAND' : 'MISSED WHEELIE',
+    );
+    return;
+  }
+  if (game.netLeft > 0) {
+    game.netLeft--;
+    showJudge('g', 'SAFETY NET');
+    if (n.slot && n.type === 'jump') player.hopT0 = now() - lat() - 0.2;
+    return;
+  }
+  game.stats.miss++;
+  showJudge('m', 'MISS');
+  player.shake = 0.5;
+  $('#vig').style.opacity = 0.9;
+  setTimeout(() => ($('#vig').style.opacity = 0), 250);
+  if (n.type === 'jump' && n.slot) {
+    const s = n.slot;
+    burst(n.M.clone().multiplyScalar(R - 0.3), 140, 5);
+    sfxNoise(0.8, 600, 0.7, 'crash');
+    s.state = 'tumble';
+    s.cp = n.M.clone().multiplyScalar(R - 0.2);
+    s.cv = n.c.clone().multiplyScalar(5).addScaledVector(n.M, -3);
+    s.sa = new V3(1, 0.3, 0.2).normalize();
+    s.sw = 10;
+  } else sfxNoise(0.4, 300, 0.4, 'crash');
+  addBal(-missCost());
+}
+function holdClock() {
+  if (game.heldAt == null) game.heldAt = now();
+  if (game.engineOsc && ac) game.engineOsc.g.gain.setTargetAtTime(0, ac.currentTime, 0.05);
+}
+function freeClock() {
+  if (ac && ac.state !== 'running') ac.resume().catch(() => {});
+  if (game.heldAt == null) return;
+  const d = now() - game.heldAt;
+  game.heldAt = null;
+  game.tempos.forEach(x => (x.time += d));
+  game.boostEnd += d;
+  player.hopT0 += d;
+  if (game.engineOsc && ac) game.engineOsc.g.gain.setTargetAtTime(0.035, ac.currentTime, 0.1);
+}
+function finale() {
+  resetInput();
+  game.paused = true;
+  holdClock();
+  game.cheer = 1;
+  crowd.wave();
+  ov.hidden = false;
+  ov.innerHTML = `<div class="card"><h1><small>Act ${FINAL} complete</small>Show stopper!</h1><p>You rode all ten acts without going down. The crowd wants more.</p>
+  <div class="res"><div><span>Score</span><b>${Math.floor(game.score).toLocaleString()}</b></div><div><span>Best combo</span><b>${game.stats.maxCombo}</b></div><div><span>Perfect</span><b>${game.stats.perfect}</b></div></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="enc">Encore</button><button class="go" id="bow" style="background:transparent;color:var(--ink);border:1px solid var(--line)">Take a bow</button></div>
+  <div class="best">Encore keeps going at top speed until you crash.</div></div>`;
+  $('#enc').onclick = () => {
+    game.encore = true;
+    game.paused = false;
+    ov.hidden = true;
+    freeClock();
+  };
+  $('#bow').onclick = () => {
+    game.paused = false;
+    game.over = { score: Math.floor(game.score), win: true };
+    countPlay();
+    prog.won = true;
+    prog.maxAct = Math.max(prog.maxAct, FINAL);
+    saveProg();
+    recordRun();
+    game.over.tickets = awardTickets(true);
+    game.over.newBest = game.over.score > game.best;
+    if (game.over.newBest) {
+      game.best = game.over.score;
+      try {
+        localStorage.setItem('god-beat-best', game.best);
+      } catch (e) {}
+    }
+    if (game.engineOsc) {
+      try {
+        game.engineOsc.o.stop();
+      } catch (e) {}
+      game.engineOsc = null;
+    }
+    freeClock();
+    showOver();
+  };
+}
+function gameOver() {
+  game.over = { score: Math.floor(game.score) };
+  countPlay();
+  if (!game.FREE && !game.TUT) {
+    prog.maxAct = Math.max(prog.maxAct, game.act);
+    saveProg();
+  }
+  recordRun();
+  game.over.tickets = awardTickets(false);
+  game.over.newBest = game.over.score > game.best;
+  if (game.over.newBest) {
+    game.best = game.over.score;
+    try {
+      localStorage.setItem('god-beat-best', game.best);
+    } catch (e) {}
+  }
+  game.slow = 1.8;
+  player.cp = player.p.clone().multiplyScalar(R);
+  player.cv = player.t
+    .clone()
+    .multiplyScalar(6)
+    .add(new V3(0, 2, 0));
+  player.sa = new V3(0.3, 1, 0.2).normalize();
+  player.sw = 9;
+  burst(player.cp.clone());
+  sfxNoise(1.4, 700, 0.9, 'crash');
+  player.trail.visible = false;
+  if (game.engineOsc) {
+    try {
+      game.engineOsc.o.stop();
+    } catch (e) {}
+    game.engineOsc = null;
+  }
+}
+function tumble(b, dt) {
+  b.cv.y -= G * (arenaId === 'moon' ? 0.35 : 1) * dt;
+  b.cp.addScaledVector(b.cv, dt);
+  const L = b.cp.length(),
+    lim = R - 0.35;
+  if (L > lim) {
+    const n = _b.copy(b.cp).divideScalar(L);
+    b.cp.copy(n).multiplyScalar(lim);
+    const vn = b.cv.dot(n);
+    if (vn > 0) b.cv.addScaledVector(n, -1.35 * vn);
+    b.cv.multiplyScalar(0.985);
+    b.sw *= 0.985;
+  }
+}
+
+export function initJudging() {
+  game.heldAt = null;
+  /* ---------- input ---------- */
+  addEventListener('keydown', e => {
+    if (e.code === 'KeyB') useBoost();
+  });
+}
+
+export { finale, finishHold, freeClock, gameOver, holdClock, miss, press, release, ridersFor, tumble };

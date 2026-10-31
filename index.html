@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#07060a">
+<title>Globe of Death</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="/src/style.css">
+<script>
+function bootFail(msg){var m=document.getElementById('bootMsg');if(!m){var o=document.getElementById('ov');o.hidden=false;o.innerHTML='<div class="card"><h1>Globe of Death</h1><p id="bootMsg"></p></div>';m=document.getElementById('bootMsg')}m.textContent=msg}
+window.addEventListener('error',function(e){bootFail('Something broke while starting: '+(e.message||'unknown error')+'. Tell Claude this message so it can be fixed.')});
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="c" aria-label="3D view of the steel globe"></canvas>
+  <div id="vig"></div>
+  <div class="touch" id="touch" aria-label="Swipe anywhere: left, right and diagonals steer; pull back for a wheelie; push forward and hold for a stoppie; flick forward to jump"><div class="stick hint" id="joyGhost"><svg viewBox="0 0 156 156" aria-hidden="true"><circle cx="78" cy="78" r="50" fill="rgba(10,10,14,.55)" stroke="rgba(111,211,255,.7)" stroke-width="2"/><path class="chev" d="M133.5 85.8 L142.0 78.0 L133.5 70.2"/><circle class="led" id="led0" cx="150.0" cy="78.0" r="3.6"/><path class="chev" d="M122.7 44.3 L123.3 32.7 L111.7 33.3"/><circle class="led" id="led1" cx="128.9" cy="27.1" r="3.6"/><path class="chev" d="M85.8 22.5 L78.0 14.0 L70.2 22.5"/><circle class="led" id="led2" cx="78.0" cy="6.0" r="3.6"/><path class="chev" d="M44.3 33.3 L32.7 32.7 L33.3 44.3"/><circle class="led" id="led3" cx="27.1" cy="27.1" r="3.6"/><path class="chev" d="M22.5 70.2 L14.0 78.0 L22.5 85.8"/><circle class="led" id="led4" cx="6.0" cy="78.0" r="3.6"/><path class="chev" d="M33.3 111.7 L32.7 123.3 L44.3 122.7"/><circle class="led" id="led5" cx="27.1" cy="128.9" r="3.6"/><path class="chev" d="M70.2 133.5 L78.0 142.0 L85.8 133.5"/><circle class="led" id="led6" cx="78.0" cy="150.0" r="3.6"/><path class="chev" d="M111.7 122.7 L123.3 123.3 L122.7 111.7"/><circle class="led" id="led7" cx="128.9" cy="128.9" r="3.6"/></svg><div class="knob" id="joyKnob"></div><span class="hintTxt" style="top:auto;bottom:-34px">SWIPE ANYWHERE</span><span class="sx up">PUSH: JUMP / STOPPIE</span><span class="sx dn">PULL: WHEELIE</span></div></div>
+  <div class="swipeHint" id="swipeHint">SWIPE ANYWHERE<small>sides &amp; diagonals steer · pull back wheelie · push forward stoppie · flick forward jump</small></div>
+  <header class="hud" id="hud">
+    <div class="row">
+      <div class="st"><span class="k">Score</span><b id="score">0</b></div>
+      <div class="st"><span class="k">Combo</span><b id="combo">0</b></div>
+      <div class="st"><span class="k">Act</span><b id="act">1</b></div>
+      <div class="st rid"><span class="k">Riders</span><b id="riders">0</b></div>
+      <div class="st"><span class="k">Balance</span><div class="bal"><i id="balBar"></i></div></div>
+      <div class="btns">
+        <button class="ib" id="camBtn" title="Switch camera (C)"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg><span id="camName">Outside</span></button>
+        <button class="ib tog" id="sndBtn" aria-pressed="true" aria-label="Sound" title="Sound"><svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg></button>
+        <button class="ib" id="pauseBtn" aria-label="Pause" title="Pause (P)"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      </div>
+    </div>
+    <div id="tut" hidden></div><div class="track" id="track"><div class="bars" id="bars"></div><div class="boostband" id="boostband" hidden><span>NOS</span></div><div class="actline" id="actline"><span id="actlineTxt">PERK</span></div><div class="hit" id="hit"></div><div id="notes"></div></div>
+  </header>
+  <div id="judge"></div>
+  <div id="toast"></div>
+  <div class="keys">Arrows + Q E Z X nudge · Space jump · hold Shift wheelie · hold N stoppie · B boost · C camera</div>
+  <div class="hbackdrop" aria-hidden="true"></div>
+  <div class="hbars" id="hbars"><svg class="hbar" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="chr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6f7f9"/><stop offset=".45" stop-color="#a9adb5"/><stop offset=".55" stop-color="#6d717a"/><stop offset="1" stop-color="#2c2f35"/></linearGradient></defs><path d="M-10 72 C 90 66, 140 40, 200 40 C 260 40, 310 66, 410 72" fill="none" stroke="#0c0d10" stroke-width="26" opacity=".6"/><path d="M-10 70 C 90 64, 140 38, 200 38 C 260 38, 310 64, 410 70" fill="none" stroke="url(#chr)" stroke-width="20"/></svg>
+    <div class="zone L"><div class="lever"></div><div class="hgrip"></div>
+      </div>
+    <div class="zone R"><div class="lever" id="blever"></div><div class="hgrip" id="grip"></div></div>
+    <div class="console" id="console"><svg class="tacho" viewBox="0 0 120 88" aria-hidden="true"><line class="tk b" x1="20.2" y1="87.0" x2="26.2" y2="83.5"/><line class="tk b" x1="14.7" y1="72.0" x2="18.6" y2="71.3"/><line class="tk b" x1="14.7" y1="56.0" x2="18.6" y2="56.7"/><line class="tk b" x1="20.2" y1="41.0" x2="26.2" y2="44.5"/><line class="tk b" x1="30.4" y1="28.8" x2="33.0" y2="31.8"/><line class="tk b" x1="44.3" y1="20.8" x2="45.6" y2="24.5"/><line class="tk" x1="60.0" y1="18.0" x2="60.0" y2="25.0"/><line class="tk" x1="75.7" y1="20.8" x2="74.4" y2="24.5"/><line class="tk" x1="89.6" y1="28.8" x2="87.0" y2="31.8"/><line class="tk" x1="99.8" y1="41.0" x2="93.8" y2="44.5"/><line class="tk" x1="105.3" y1="56.0" x2="101.4" y2="56.7"/><line class="tk r" x1="105.3" y1="72.0" x2="101.4" y2="71.3"/><line class="tk r" x1="99.8" y1="87.0" x2="93.8" y2="83.5"/><path id="tArc" class="sweet" d="" stroke="#ffc23d"/><text x="22" y="82">BRAKE</text><text x="74" y="82">REVS</text><line id="tNeedle" class="ndl" x1="60" y1="64" x2="60" y2="24"/><circle class="hub" cx="60" cy="64" r="4.5"/></svg><button id="boost" aria-label="Nitro boost">NOS<small id="boostTxt">0%</small></button></div>
+  </div>
+  <div id="ov"><div class="card"><h1>Globe of Death</h1><p id="bootMsg">Loading the arena…</p></div></div>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
