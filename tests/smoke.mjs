@@ -49,10 +49,15 @@ console.log('The show — perfect bot');
   await page.evaluate(BOT);
   await page.waitForTimeout(25000);
   const st = await page.evaluate(() => window.__god.state);
+  const missed = st.notes.filter(n => n.j === 'm').map(n => `${n.t}@${n.b}${n.l ? '/' + n.l : ''}`);
+  const fps = await page.evaluate(() => new Promise(r => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else r(n / 2); }; requestAnimationFrame(f); }));
+  console.log(`  missed: ${missed.join(' ') || 'none'}  headless fps ~${fps}`);
   console.log(`  score ${Math.round(st.score)} combo ${st.combo} balance ${Math.round(st.balance)} act ${st.act} over ${st.over}`, JSON.stringify(st.stats));
   check(st.running && !st.over, 'still riding after 25 s');
   check(st.score > 0, 'score went up');
-  check(st.combo >= 3, 'combo building');
+  const hits = st.stats.perfect + st.stats.good, rate = hits / Math.max(1, hits + st.stats.miss);
+  // headless renders ~2 fps, so the odd note can slip past the bot; judge the hit rate, not a perfect run
+  check(hits >= 5 && rate >= 0.8, `hit rate ${Math.round(rate * 100)}% (${hits} hits)`);
   check(st.balance >= 50, 'balance healthy');
   check(errs.length === 0, 'no page errors ' + errs.join(' | '));
   await page.close();

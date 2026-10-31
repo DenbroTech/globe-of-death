@@ -50,10 +50,14 @@ function sculptGeo(a, b, front, prof, ws = 16, hs = 18, k = 0.3, cfn = null) {
     for (let i = 0; i < P.count; i++) {
       n.set(N.getX(i), N.getY(i), N.getZ(i));
       p.set(P.getX(i), P.getY(i), P.getZ(i));
+      // cfn returns a grey multiplier (number) or a colour ({r,g,b}) for this vertex
       const c = cfn(T[i], n, p, X, Y, Z);
-      C[i * 3] = c;
-      C[i * 3 + 1] = c;
-      C[i * 3 + 2] = c;
+      if (typeof c === 'number') C[i * 3] = C[i * 3 + 1] = C[i * 3 + 2] = c;
+      else {
+        C[i * 3] = c.r;
+        C[i * 3 + 1] = c.g;
+        C[i * 3 + 2] = c.b;
+      }
     }
     g.setAttribute('color', new THREE.BufferAttribute(C, 3));
   }
@@ -84,8 +88,11 @@ function helmetDeform(g, r) {
   return g;
 }
 /* riding kit v3: one-piece race leathers (main colour + black side panels + white trims), armour sliders, hump, race boots, gauntlets, race helmet */
+/* panel codes returned by colour functions: MAIN suit colour, BLK black, SEC white/grey stripe, DIM shaded main */
 const BLK = 0.018,
-  MAIN = 1;
+  MAIN = 1,
+  SEC = 2,
+  DIM = 3;
 function riderKit(par, M) {
   const mesh = (geo, mat) => {
       const e = new THREE.Mesh(geo, mat);
@@ -94,7 +101,25 @@ function riderKit(par, M) {
       return e;
     },
     V = (x, y, z) => new V3(x, y, z);
-  const sc = (a, b, front, prof, mat, ws, hs, k, cfn) => mesh(sculptGeo(a, b, front, prof, ws, hs, k, cfn), mat);
+  const toneFn =
+    (pal, cfn) =>
+    (...a) => {
+      const c = cfn ? cfn(...a) : MAIN;
+      return c === MAIN
+        ? pal.main
+        : c === BLK
+          ? pal.blk
+          : c === SEC
+            ? pal.sec
+            : c === DIM
+              ? pal.dim
+              : pal.main.clone().multiplyScalar(c);
+    };
+  const sc = (a, b, front, prof, mat, ws, hs, k, cfn) => {
+    if (M.pal && mat === M.suit) cfn = toneFn(M.pal, cfn);
+    else if (M.hpal && mat === M.helm) cfn = toneFn(M.hpal, cfn);
+    return mesh(sculptGeo(a, b, front, prof, ws, hs, k, cfn), mat);
+  };
   const ball = (p, s, mat, seg = 14) => {
     const e = mesh(new THREE.SphereGeometry(1, seg, Math.max(8, (seg * 0.7) | 0)), mat);
     e.position.copy(p);
@@ -126,15 +151,20 @@ function riderKit(par, M) {
       const u = N.clone().sub(H).normalize(),
         L = H.distanceTo(N),
         X = new V3().crossVectors(u, f).normalize();
-      /* torso: V-shape, chest main colour, black side panels and collar, black lower back */
+      /* torso panels (race-suit layout): main-colour chest and back, white chevron front and back,
+         white shoulder yoke, black side panels under the arms, black collar and lower back */
       const tc = (t, n) => {
         const side = Math.abs(n.dot(X)),
+          lat = n.dot(X),
           fr = n.dot(f),
           up = n.dot(u);
         if (t > 0.91) return BLK;
-        if (t > 0.74 && up > 0.45) return BLK;
-        if (side > 0.5 && t < 0.86) return BLK;
-        if (fr < -0.3 && t < 0.36) return BLK;
+        if (t > 0.8 && up > 0.4) return SEC;
+        if (side > 0.62 && t > 0.22 && t < 0.86) return BLK;
+        if (fr > 0.45 && t > 0.5 && t < 0.8 && Math.abs(Math.abs(lat) - (t - 0.52) * 1.7) < 0.075) return SEC;
+        if (fr < -0.45 && t > 0.42 && t < 0.74 && Math.abs(Math.abs(lat) - (0.74 - t) * 1.5) < 0.08) return SEC;
+        if (fr < -0.3 && t < 0.34) return BLK;
+        if (t < 0.24 && side > 0.42) return BLK;
         return MAIN;
       };
       sc(
@@ -143,64 +173,61 @@ function riderKit(par, M) {
         f,
         [
           [0, 0.135, 0.105],
-          [0.1, 0.145, 0.11, 0.004],
-          [0.3, 0.122, 0.095, 0],
-          [0.52, 0.165, 0.115, 0.018],
-          [0.7, 0.198, 0.125, 0.018],
-          [0.82, 0.19, 0.115, 0.006],
-          [0.9, 0.15, 0.095],
+          [0.1, 0.142, 0.108, 0.004],
+          [0.3, 0.118, 0.094, 0],
+          [0.52, 0.162, 0.118, 0.02],
+          [0.72, 0.205, 0.13, 0.02],
+          [0.83, 0.196, 0.118, 0.006],
+          [0.9, 0.152, 0.096],
           [0.96, 0.09, 0.075],
           [1, 0.06, 0.06],
         ],
         M.suit,
-        26,
-        28,
+        48,
+        44,
         0.26,
         tc,
       );
+      /* pelvis/seat: black with main-colour front */
       sc(
         H.clone().addScaledVector(u, -0.12).addScaledVector(f, -0.015),
         H.clone().addScaledVector(u, 0.13),
         f,
         [
           [0, 0.11, 0.09],
-          [0.35, 0.158, 0.128, -0.014],
-          [0.7, 0.15, 0.118],
-          [1, 0.138, 0.105],
+          [0.35, 0.156, 0.126, -0.014],
+          [0.7, 0.148, 0.116],
+          [1, 0.136, 0.104],
         ],
         M.suit,
-        22,
-        16,
+        32,
+        20,
         0.3,
-        (t, n) => (Math.abs(n.dot(X)) > 0.6 ? BLK : MAIN),
+        (t, n) => (n.dot(f) > 0.4 && t > 0.4 && Math.abs(n.dot(X)) < 0.6 ? MAIN : BLK),
       );
-      /* white trims: chest V and waist band */
-      const P = (x, y, z) => H.clone().addScaledVector(X, x).addScaledVector(u, y).addScaledVector(f, z);
-      [1, -1].forEach(s =>
-        trim([P(s * 0.16, L * 0.86, 0.06), P(s * 0.1, L * 0.7, 0.115), P(s * 0.03, L * 0.48, 0.122)], 0.007, M.accent),
-      );
-      trim([P(-0.15, L * 0.18, 0.095), P(0, L * 0.17, 0.118), P(0.15, L * 0.18, 0.095)], 0.006, M.accent);
-      /* aero hump */
+      /* aero hump: main colour, white spine stripe, black flanks */
       sc(
-        N.clone().addScaledVector(u, -0.24).addScaledVector(f, -0.1),
-        N.clone().addScaledVector(u, 0.05).addScaledVector(f, -0.07),
+        N.clone().addScaledVector(u, -0.27).addScaledVector(f, -0.1),
+        N.clone().addScaledVector(u, 0.06).addScaledVector(f, -0.07),
         f.clone().negate(),
         [
-          [0, 0.07, 0.025],
-          [0.35, 0.105, 0.075],
-          [0.8, 0.09, 0.07],
+          [0, 0.075, 0.03],
+          [0.35, 0.112, 0.082],
+          [0.78, 0.096, 0.074],
           [1, 0.05, 0.03],
         ],
         M.suit,
-        16,
-        12,
+        32,
+        22,
         0.3,
-        (t, n) => (Math.abs(n.dot(X)) > 0.6 ? BLK : MAIN),
+        (t, n) => {
+          const s = Math.abs(n.dot(X));
+          return s > 0.62 ? BLK : s < 0.17 && t > 0.15 && t < 0.92 ? SEC : MAIN;
+        },
       );
-      trim([P(0, L * 0.62, -0.165), P(0, L * 0.85, -0.175), P(0, L * 1.0, -0.14)], 0.008, M.accent);
       /* zip + collar */
       line(
-        H.clone().addScaledVector(u, 0.14).addScaledVector(f, 0.121),
+        H.clone().addScaledVector(u, 0.14).addScaledVector(f, 0.124),
         H.clone()
           .addScaledVector(u, L * 0.9)
           .addScaledVector(f, 0.1),
@@ -227,7 +254,7 @@ function riderKit(par, M) {
         X = new V3().crossVectors(u, f).normalize(),
         orient = new THREE.Matrix4().makeBasis(X, u, f).setPosition(hc);
       /* shell with graphics: helmet colour, black chin and lower rim, dark centre stripe */
-      const shell = helmetDeform(new THREE.SphereGeometry(r, 36, 28), r);
+      const shell = helmetDeform(new THREE.SphereGeometry(r, 56, 40), r);
       {
         const Pp = shell.attributes.position,
           C = new Float32Array(Pp.count * 3);
@@ -235,11 +262,20 @@ function riderKit(par, M) {
           const x = Pp.getX(i) / r,
             y = Pp.getY(i) / r,
             z = Pp.getZ(i) / r;
-          let c = MAIN;
-          if (y < -0.55) c = BLK;
-          else if (Math.abs(x) < 0.11 && y > 0.25 && z < 0.6) c = 0.22;
-          else if (Math.abs(x) > 0.72 && y < 0.15 && y > -0.3 && z < 0.3) c = 0.3;
-          C[i * 3] = C[i * 3 + 1] = C[i * 3 + 2] = c;
+          /* race-helmet graphics: main shell, white centre stripe and side swoosh, black lower rim */
+          const hp = M.hpal || {
+            main: { r: 1, g: 1, b: 1 },
+            sec: { r: 0.22, g: 0.22, b: 0.22 },
+            blk: { r: BLK, g: BLK, b: BLK },
+          };
+          let c = hp.main;
+          if (y < -0.55) c = hp.blk;
+          else if (Math.abs(x) < 0.13 && y > 0.18 && z < 0.7) c = hp.sec;
+          else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.085) c = hp.sec;
+          else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.13) c = hp.blk;
+          C[i * 3] = c.r;
+          C[i * 3 + 1] = c.g;
+          C[i * 3 + 2] = c.b;
         }
         shell.setAttribute('color', new THREE.BufferAttribute(C, 3));
       }
@@ -262,7 +298,6 @@ function riderKit(par, M) {
       const Pp = (x, y, z) => hc.clone().addScaledVector(X, x).addScaledVector(u, y).addScaledVector(f, z);
       [1, -1].forEach(s => {
         puck(Pp(s * 0.147, -0.01, 0.075), X, 0.02, 0.006, M.blk);
-        trim([Pp(s * 0.035, 0.128, 0.105), Pp(s * 0.045, 0.147, 0), Pp(s * 0.04, 0.124, -0.12)], 0.005, M.accent);
       });
       const cv = mesh(new THREE.BoxGeometry(0.05, 0.02, 0.012), M.blk);
       cv.position.copy(Pp(0, -0.112, 0.178));
@@ -317,93 +352,64 @@ function riderKit(par, M) {
       const d1 = el.clone().sub(sh).normalize(),
         d2 = wr.clone().sub(el).normalize(),
         out = V(sx, 0, 0);
-      const oc = (t, n) => (n.dot(out) > 0.15 && t > 0.12 ? MAIN : BLK),
-        fc = (t, n) => (n.dot(YAX) > 0.3 && t < 0.82 ? MAIN : BLK);
+      /* upper arm: main outside with a white stripe, black inside; forearm: main on top, black underneath.
+         Segments overlap at the elbow (no ball joint), the elbow slider covers the bend. */
+      const oc = (t, n) => {
+          const o = n.dot(out);
+          return o > 0.72 && t > 0.1 ? SEC : o > -0.15 && t > 0.08 ? MAIN : BLK;
+        },
+        fc = (t, n) => (n.dot(YAX) > 0.15 && t < 0.86 ? MAIN : BLK);
       sc(
         sh,
-        el,
+        el.clone().addScaledVector(d1, 0.035),
         f,
         [
-          [0, 0.06],
-          [0.12, 0.066, 0.062],
-          [0.45, 0.062, 0.058],
-          [0.85, 0.05, 0.048],
-          [1, 0.045],
+          [0, 0.062],
+          [0.12, 0.068, 0.064],
+          [0.45, 0.063, 0.059],
+          [0.82, 0.051, 0.049],
+          [1, 0.044],
         ],
         M.suit,
-        16,
-        14,
+        26,
+        22,
         0.3,
         oc,
       );
       sc(
-        el,
+        el.clone().addScaledVector(d2, -0.04),
         wr,
         f,
         [
-          [0, 0.047],
-          [0.22, 0.054, 0.05],
+          [0, 0.046],
+          [0.2, 0.053, 0.05],
           [0.6, 0.046, 0.043],
           [1, 0.036, 0.033],
         ],
         M.suit,
-        16,
-        14,
+        24,
+        20,
         0.3,
         fc,
       );
-      ball(el, [0.047, 0.047, 0.047], M.suit, 12);
-      const o1 = out.clone().addScaledVector(d1, -out.dot(d1)).normalize(),
-        o2 = out.clone().addScaledVector(d2, -out.dot(d2)).normalize();
-      trim(
-        [
-          sh.clone().lerp(el, 0.05).addScaledVector(o1, 0.064),
-          sh.clone().lerp(el, 0.5).addScaledVector(o1, 0.064),
-          sh.clone().lerp(el, 0.95).addScaledVector(o1, 0.05),
-        ],
-        0.006,
-        M.accent,
-      );
-      trim(
-        [
-          el.clone().lerp(wr, 0.08).addScaledVector(o2, 0.05),
-          el.clone().lerp(wr, 0.5).addScaledVector(o2, 0.05),
-          el.clone().lerp(wr, 0.82).addScaledVector(o2, 0.04),
-        ],
-        0.005,
-        M.accent,
-      );
-      /* shoulder armour: two shells + slider */
+      const o1 = out.clone().addScaledVector(d1, -out.dot(d1)).normalize();
+      /* shoulder armour: one moulded cap, white on top, black underneath, with a slider */
       sc(
-        sh.clone().add(V(-sx * 0.02, 0.045, 0)),
-        sh.clone().add(V(sx * 0.08, -0.04, 0)),
+        sh.clone().add(V(-sx * 0.02, 0.05, 0)),
+        sh.clone().add(V(sx * 0.085, -0.075, 0)),
         f,
         [
           [0, 0.03, 0.05],
-          [0.5, 0.042, 0.066],
-          [1, 0.026, 0.045],
+          [0.45, 0.046, 0.068],
+          [1, 0.03, 0.048],
         ],
         M.suit,
-        16,
+        18,
         12,
-        0.5,
-        () => MAIN,
+        0.45,
+        (t, n) => (n.dot(YAX) > 0.1 ? SEC : BLK),
       );
-      sc(
-        sh.clone().add(V(sx * 0.03, -0.01, 0)),
-        sh.clone().add(V(sx * 0.075, -0.09, 0)),
-        f,
-        [
-          [0, 0.025, 0.045],
-          [0.5, 0.034, 0.055],
-          [1, 0.022, 0.038],
-        ],
-        M.pad,
-        14,
-        10,
-        0.5,
-      );
-      puck(sh.clone().add(V(sx * 0.078, -0.035, 0)), out, 0.028, 0.008, M.slider);
+      puck(sh.clone().add(V(sx * 0.082, -0.045, 0)), out, 0.024, 0.008, M.slider);
       /* elbow slider */
       puck(
         el
@@ -412,7 +418,7 @@ function riderKit(par, M) {
           .addScaledVector(o1, 0.045)
           .add(V(0, -0.02, 0)),
         o1,
-        0.032,
+        0.03,
         0.014,
         M.slider,
       );
@@ -426,11 +432,11 @@ function riderKit(par, M) {
           [0.6, 0.056, 0.052],
           [1, 0.05, 0.048],
         ],
-        M.glove,
+        M.suit,
         14,
         10,
         0.3,
-        (t, n) => (n.dot(out) > 0.3 && t > 0.4 ? MAIN : BLK),
+        (t, n) => (n.dot(out) > 0.2 && t > 0.3 ? MAIN : BLK),
       );
       if (grip) {
         const gc = grip,
@@ -561,75 +567,70 @@ function riderKit(par, M) {
       const thighFront = V(0, 0.3, 1)
         .addScaledVector(dth, -V(0, 0.3, 1).dot(dth))
         .normalize();
+      /* thigh: main front, white stripe down the outside, black inside and seat */
       sc(
         hip,
-        kn,
+        kn.clone().addScaledVector(dth, 0.035),
         V(0, 0.3, 1),
         [
-          [0, 0.092, 0.098],
-          [0.22, 0.096, 0.105, 0.01],
-          [0.6, 0.082, 0.088, 0.006],
-          [0.9, 0.066, 0.064],
-          [1, 0.058],
+          [0, 0.094, 0.1],
+          [0.22, 0.099, 0.108, 0.01],
+          [0.6, 0.084, 0.09, 0.006],
+          [0.88, 0.066, 0.064],
+          [1, 0.056],
         ],
         M.suit,
-        18,
-        16,
+        30,
+        26,
         0.3,
         (t, n) => {
           const fr = n.dot(thighFront),
             o = n.dot(out);
-          return fr > -0.1 && o > -0.4 && o < 0.72 && t > 0.06 ? MAIN : BLK;
+          if (o > 0.74 && t > 0.06 && t < 0.92) return SEC;
+          if (o < -0.5 || t < 0.06) return BLK; // inner thigh grip panel
+          return fr > -0.55 || t > 0.4 ? MAIN : BLK; // seat panel stays black
         },
       );
+      /* shin: main front, black calf; overlaps the knee (no ball joint) */
       sc(
-        kn,
+        kn.clone().addScaledVector(dsh, -0.035),
         an,
         fwd,
         [
-          [0, 0.058],
+          [0, 0.056],
           [0.2, 0.064, 0.07, -0.012],
           [0.45, 0.06, 0.064, -0.01],
           [0.8, 0.048, 0.048],
           [1, 0.044],
         ],
         M.suit,
-        16,
-        16,
+        26,
+        22,
         0.3,
-        (t, n) => (n.dot(fwd) > 0.25 && t < 0.7 ? MAIN : BLK),
-      );
-      ball(kn, [0.06, 0.06, 0.06], M.blk, 12);
-      const o1 = out.clone().addScaledVector(dth, -out.dot(dth)).normalize();
-      trim(
-        [
-          hip.clone().lerp(kn, 0.08).addScaledVector(o1, 0.095),
-          hip.clone().lerp(kn, 0.5).addScaledVector(o1, 0.092),
-          hip.clone().lerp(kn, 0.92).addScaledVector(o1, 0.068),
-        ],
-        0.0065,
-        M.accent,
+        (t, n) => (t < 0.74 && n.dot(out) > -0.55 ? MAIN : BLK),
       );
       /* knee armour + big slider */
       const kd = dth.clone().add(dsh).normalize(),
         kf = fwd.clone().addScaledVector(kd, -fwd.dot(kd)).normalize();
       sc(
-        kn.clone().addScaledVector(kd, -0.075).addScaledVector(kf, 0.058),
-        kn.clone().addScaledVector(kd, 0.075).addScaledVector(kf, 0.058),
+        kn.clone().addScaledVector(kd, -0.08).addScaledVector(kf, 0.056),
+        kn.clone().addScaledVector(kd, 0.08).addScaledVector(kf, 0.056),
         kf,
         [
-          [0, 0.05, 0.02],
-          [0.5, 0.066, 0.032],
-          [1, 0.05, 0.02],
+          [0, 0.05, 0.022],
+          [0.5, 0.068, 0.034],
+          [1, 0.05, 0.022],
         ],
-        M.pad,
-        16,
-        10,
+        M.suit,
+        18,
+        12,
+        0.3,
+        () => BLK,
       );
       const ko = out.clone().addScaledVector(kf, -out.dot(kf)).normalize();
       puck(kn.clone().addScaledVector(ko, 0.068).addScaledVector(kf, 0.01), ko, 0.045, 0.022, M.slider);
       puck(kn.clone().addScaledVector(ko, 0.08).addScaledVector(kf, 0.01), ko, 0.032, 0.01, M.blk);
-      /* race boot: tall shaft with main-colour shin plate, sole, toe slider, heel cup */
+      /* race boot: black shaft with a main-colour shin plate and white top band, sole, toe slider, heel cup */
       const ankle = an,
         sole0 = ankle.clone().add(V(0, -0.075, -0.07)),
         toe = ankle.clone().add(V(0, -0.08, 0.17));
@@ -642,23 +643,23 @@ function riderKit(par, M) {
           [0.4, 0.067, 0.07],
           [1, 0.064, 0.066],
         ],
-        M.boot,
-        16,
+        M.suit,
+        18,
         12,
         0.3,
-        (t, n) => (n.dot(fwd) > 0.55 && t < 0.85 ? 0.85 : t > 0.92 ? 0.6 : 1),
+        t => (t > 0.86 ? SEC : BLK),
       );
       sc(
-        ankle.clone().addScaledVector(dsh, -0.28).addScaledVector(fwd, 0.06),
-        ankle.clone().addScaledVector(fwd, 0.07),
+        ankle.clone().addScaledVector(dsh, -0.26).addScaledVector(fwd, 0.062),
+        ankle.clone().addScaledVector(fwd, 0.072),
         fwd,
         [
           [0, 0.036, 0.012],
-          [0.5, 0.048, 0.018],
-          [1, 0.036, 0.012],
+          [0.5, 0.05, 0.019],
+          [1, 0.04, 0.014],
         ],
         M.suit,
-        12,
+        14,
         8,
         0.3,
         () => MAIN,
@@ -673,9 +674,11 @@ function riderKit(par, M) {
           [0.75, 0.046, 0.04],
           [1, 0.03, 0.022],
         ],
-        M.boot,
+        M.suit,
         16,
         12,
+        0.3,
+        (t, n) => (t > 0.55 && n.dot(YAX) > 0.2 ? MAIN : BLK),
       );
       sc(
         sole0.clone().add(V(0, 0, -0.012)),
@@ -692,13 +695,6 @@ function riderKit(par, M) {
       );
       ball(toe.clone().add(V(sx * 0.035, 0.02, -0.025)), [0.018, 0.026, 0.04], M.slider, 10);
       ball(sole0.clone().add(V(0, 0.05, -0.005)), [0.045, 0.045, 0.03], M.slider, 10);
-      [0, 1, 2].forEach(k => {
-        const p = ankle.clone().addScaledVector(dsh, -0.05 - k * 0.09);
-        const bk = mesh(new THREE.TorusGeometry(0.068, 0.005, 4, 18), M.slider);
-        bk.position.copy(p);
-        bk.quaternion.setFromUnitVectors(V(0, 0, 1), dsh);
-        bk.scale.set(1, 1.05, 1);
-      });
     },
   };
   return K;
@@ -707,7 +703,7 @@ function riderMats(o, C, P) {
   const SM = (c, r, mt, x = {}) =>
     new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: mt }, x));
   const suit = new THREE.MeshStandardMaterial({
-    color: o.suitHex ?? (o.suit ? findItem('paint', o.suit).c : C.suit),
+    color: o.suitHex ?? (o.suit ? findItem('paint', o.suit).c : (C.suit ?? P.c)),
     roughness: C.metal ? 0.25 : 0.4,
     metalness: C.metal ? 0.9 : 0.18,
     vertexColors: true,
@@ -729,9 +725,21 @@ function riderMats(o, C, P) {
   if (o.helmet) applyFinish(helm, findItem('paint', o.helmet));
   const base = suit.userData.neon != null ? new THREE.Color(suit.userData.neon) : suit.color,
     light = base.getHSL({}).l > 0.75;
+  /* colour-blocked leathers: the material is white and each panel carries its own colour
+     (main / secondary stripe / black), like real race suits. Neon keeps one glowing colour. */
+  const tones = mat => {
+    const neon = mat.userData.neon != null,
+      main = mat.map ? new THREE.Color(0xffffff) : mat.color.clone(),
+      hsl = (neon ? new THREE.Color(mat.userData.neon) : main).getHSL({}),
+      sec = new THREE.Color(hsl.l > 0.72 || (mat.map && !neon) ? 0x34373e : 0xf2f2f0);
+    if (!neon) mat.color.set(0xffffff);
+    return { main, sec, blk: new THREE.Color(0x111115), dim: main.clone().multiplyScalar(0.55) };
+  };
   return {
     suit,
     helm,
+    pal: tones(suit),
+    hpal: tones(helm),
     pad: SM(0x1e2026, 0.38, 0.3),
     blk: SM(0x111114, 0.6, 0.15),
     visor: SM(0x1a3550, 0.04, 0.95, { emissive: 0x0a1a2a, emissiveIntensity: 0.3 }),

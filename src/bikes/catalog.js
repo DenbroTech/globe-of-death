@@ -53,7 +53,7 @@ const CATALOG = {
   ],
 
   costume: [
-    { id: 'leathers', name: 'Leathers', price: 0, suit: 0x1d1c22 },
+    { id: 'leathers', name: 'Leathers', price: 0 }, // suit follows the bike paint
     { id: 'daredevil', name: 'Daredevil', price: 150, suit: 0xf4f4f4, stripe: 0xe63946, stars: 1, helmet: 0xf4f4f4 },
     {
       id: 'clown',
