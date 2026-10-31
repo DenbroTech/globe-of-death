@@ -7,7 +7,7 @@ import { arenaOpen, prog, saveProg } from './progress.js';
 import { arenaId, arenaTick } from '../arenas/current.js';
 import { _a, _b, _c, aimRing, fillTrail, pushTrail } from '../render/trails.js';
 import { PN, burst, flash, pGeo, pMat, pPos, pVel } from '../render/particles.js';
-import { ac } from '../audio/synth.js';
+import { ac, ambienceTick } from '../audio/synth.js';
 import { ACT_START, FINAL, INTRO, LOOK, actOfBar, beatAt, bpmOfAct, lat, now, timeAt } from '../audio/clock.js';
 import { normalAt, orientOnWall, posAt, tanAt } from './path.js';
 import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy } from './freeride.js';
@@ -23,7 +23,7 @@ import { gBike, gFig, showroom } from '../ui/garage.js';
 import { showOver } from '../ui/leaderboard.js';
 import { tutGen } from '../ui/tutorial.js';
 import { $, G, R, V3, clamp } from '../core/constants.js';
-import { hitSound, scheduleStep } from '../audio/songs.js';
+import { hitSound, menuMusic, scheduleStep } from '../audio/songs.js';
 
 let barsEl, hitEl, trackEl, el;
 
@@ -374,6 +374,8 @@ function frame(nowMs) {
   game.cheer = Math.max(0, game.cheer - dt * 0.7);
   crowd.update(game.cheer, clock, dt);
   arenaTick(clock);
+  menuMusic();
+  ambienceTick(dt);
   game.crowdLight +=
     ((game.running && !game.over && !game.paused ? 0.08 : 0.6) - game.crowdLight) * Math.min(1, dt * 2);
   if (game.curCrowd) {

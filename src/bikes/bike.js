@@ -1481,6 +1481,7 @@ function makeBike(o) {
     glow,
     flutter: R_.flutter,
     trick: R_.trick,
+    limbs: R_.limbs,
     poseTrick: R_.poseTrick,
     riderArgs: RA,
     riderBase: rider.position.clone(),

@@ -2,7 +2,7 @@ import { game } from '../core/state.js';
 import { app } from '../render/renderer.js';
 import { crowd } from '../arenas/crowd.js';
 import { _c, fillTrail } from '../render/trails.js';
-import { ac, initAudio, master } from '../audio/synth.js';
+import { ac, initAudio, master, sfxBus } from '../audio/synth.js';
 import { bpmOfAct, now } from '../audio/clock.js';
 import { orientOnWall, posAt, tanAt } from './path.js';
 import { fStick, freeReset } from './freeride.js';
@@ -97,7 +97,7 @@ function start() {
     o.frequency.value = 55;
     o.connect(lp);
     lp.connect(g);
-    g.connect(master);
+    g.connect(sfxBus);
     o.start();
     game.engineOsc = { o, g };
   }

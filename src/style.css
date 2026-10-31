@@ -209,7 +209,6 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .lb .sc{grid-row:1/span 2;grid-column:3;font-weight:800;font-size:18px;font-variant-numeric:tabular-nums;align-self:center}
 .lbempty{color:var(--mute);font-size:15px;padding:14px 4px}
 .nameit{display:flex;gap:8px;align-items:center;font-size:15px;color:var(--mute)}
-.nameit input{flex:1;min-width:0;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--ink);font:600 16px inherit;padding:0 12px}
 .note.holding{scale:1.04 1.32;transform-origin:20px 50%;transition:scale .12s ease-out}
 .note.wheelie,.note.nose,.note.standl,.note.standr{transition:scale .2s}
 #actline span{display:none}
@@ -268,3 +267,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .adbox b{font-size:28px}.adbox span{font-size:14px;opacity:.85}
 .adtag{position:absolute;top:calc(env(safe-area-inset-top,0px) + 16px);left:16px;background:#ffd23f;color:#000;font-weight:800;font-size:12px;padding:3px 8px;border-radius:4px}
 .adx{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font:700 17px inherit;border:0}.adx:disabled{opacity:.6}
+
+/* tutorial: pulsing ring on the camera button during the camera step */
+.ib.hint{animation:hintPulse 1s ease-in-out infinite;border-color:var(--amber)}
+@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.7)}50%{box-shadow:0 0 0 7px rgba(255,179,71,0)}}

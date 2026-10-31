@@ -9,7 +9,7 @@ import { ARENAS, grad, sky, sun } from './arenas.js';
 import { bubbleMat } from './sealife.js';
 import { arenaOpen } from '../game/progress.js';
 import { NEON_T } from '../render/neon.js';
-import { ac, moodLP } from '../audio/synth.js';
+import { ac, applyArenaAudio, moodLP } from '../audio/synth.js';
 import { R, V3, YAX } from '../core/constants.js';
 import { LIFE } from './people.js';
 
@@ -70,7 +70,7 @@ function setArena(id) {
   cageParts.forEach(m => (m.visible = !E.bubble));
   if (game.bubbleMesh) game.bubbleMesh.visible = !!E.bubble;
   globe.rotation.set(0, 0, 0);
-  if (moodLP) moodLP.frequency.setTargetAtTime((ARENAS[id].kit || {}).lp || 20000, ac.currentTime, 0.05);
+  if (moodLP) applyArenaAudio(id);
 }
 function arenaTick(t) {
   NEON_T.value = t;

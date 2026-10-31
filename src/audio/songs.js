@@ -3,6 +3,8 @@ import { ARENAS } from '../arenas/arenas.js';
 import { arenaId } from '../arenas/current.js';
 import {
   ac,
+  bass,
+  comp,
   conga,
   hat,
   kick,
@@ -11,14 +13,17 @@ import {
   nz,
   osc,
   rim,
+  setMusicLevel,
+  sfx,
   shaker,
   snare,
   stadiumChant,
   stadiumStomp,
+  tom,
   tone,
   voice,
 } from './synth.js';
-import { actOfBar, beatAt, lat, now, timeAt } from './clock.js';
+import { actOfBar, beatAt, bpmOfAct, lat, now, timeAt } from './clock.js';
 
 /* ---------- songs: one per act, rotating; each arena starts on its own ---------- */
 const SONGS = [
@@ -196,6 +201,9 @@ function songRoot() {
 }
 function hitSound(type, step, g) {
   if (!ac) return;
+  sfx(() => hitSound_(type, step, g));
+}
+function hitSound_(type, step, g) {
   const t = ac.currentTime,
     r = songRoot() + 24,
     K = kit(),
@@ -237,6 +245,30 @@ function clap(t) {
   nz(t + 0.012, 'bandpass', 1100, 0.3, 0.09);
   nz(t + 0.024, 'bandpass', 1200, 0.28, 0.14);
 }
+/* one 8th-note step of a song: drums, bass, lead, the arena's chord comping and pad */
+function playStep(S, k, bar, a, t, spb) {
+  if (S.kick.includes(k) || (a >= 5 && k === 7 && S.kick.length < 4)) kick(t);
+  if (S.snare && S.snare.includes(k)) snare(t);
+  if (S.clap && S.clap.includes(k)) clap(t);
+  if (S.hat === 8 || (S.hat === 4 && k % 2 === 0)) hat(t, false);
+  if (S.open && S.open.includes(k)) hat(t, true);
+  const K = kit(),
+    root = S.prog[bar % 4],
+    bn = S.bass[k];
+  if (bn != null) bass(t, mid(root + bn), S);
+  if (S.lead && bar >= 3) {
+    const ln = S.lead[k];
+    if (ln != null) voice(K.lead || 'tri', t, root + ln + 12, S.lv * 1.3, (S.ldec || 0.16) + 0.08);
+  }
+  if (S.stab && S.stab.includes(k)) [12, 16, 19].forEach(i => voice(K.stab || 'organ', t, root + i, 0.03, 0.14));
+  if (S.chord && S.chord.includes(k)) [12, S.maj ? 16 : 15, 19].forEach(i => voice(K.stab || 'tri', t, root + i, 0.028, 0.16));
+  comp(t, root, k, S.maj, spb);
+  // stadium: tom fill rolling into every 4th bar
+  if (K.toms && bar % 4 === 3 && k >= 5) tom(t, [196, 164, 130][k - 5]);
+  if (S.rim && S.rim.includes(k)) rim(t);
+  if (S.shk && S.shk.includes(k)) shaker(t);
+  if (S.conga && S.conga.includes(k)) conga(t, k % 2 === 1);
+}
 function scheduleStep(s) {
   if (!ac) return;
   const B = s / 2,
@@ -249,65 +281,67 @@ function scheduleStep(s) {
     if (k % 4 === 0) kick(t);
     hat(t, false);
   } else {
-    if (S.kick.includes(k) || (a >= 5 && k === 7 && S.kick.length < 4)) kick(t);
-    if (S.snare && S.snare.includes(k)) snare(t);
-    if (S.clap && S.clap.includes(k)) clap(t);
-    if (S.hat === 8 || (S.hat === 4 && k % 2 === 0)) hat(t, false);
-    if (S.open && S.open.includes(k)) hat(t, true);
-    const root = S.prog[bar % 4],
-      bn = S.bass[k];
-    if (bn != null) tone(t, mid(root + bn), S.bw, 0.15, S.bdec || 0.22, S.bcut || 700);
-    const K = kit();
-    if (S.lead && bar >= 3) {
-      const ln = S.lead[k];
-      if (ln != null) {
-        if (K.lead) voice(K.lead, t, root + ln + 12, S.lv * 1.3, (S.ldec || 0.16) + 0.08);
-        else tone(t, mid(root + ln + 12), S.lw, S.lv, S.ldec || 0.16, 2600);
-      }
-    }
-    if (S.stab && S.stab.includes(k))
-      [12, 16, 19].forEach(i =>
-        K.stab ? voice(K.stab, t, root + i, 0.03, 0.14) : tone(t, mid(root + i), 'square', 0.035, 0.1, 1800),
-      );
-    if (S.chord && S.chord.includes(k))
-      [12, S.maj ? 16 : 15, 19].forEach(i => voice(K.stab || 'tri', t, root + i, 0.028, 0.16));
+    playStep(S, k, bar, a, t, 30 / bpmOfAct(a));
     if (arenaId === 'stadium' && game.running && !game.FREE && k === 0 && bar >= 6 && !game.paused) {
       if (bar % 16 === 8) stadiumChant(bar * 4);
       else if (bar % 16 === 0) stadiumStomp(bar * 4);
     }
-    if (S.rim && S.rim.includes(k)) rim(t);
-    if (S.shk && S.shk.includes(k)) shaker(t);
-    if (S.conga && S.conga.includes(k)) conga(t, k % 2 === 1);
   }
   if (bar === 1 && k >= 6) snare(t);
   if (bar === 1 && k % 2 === 0) tone(t, k === 6 ? 1320 : 660, 'square', 0.12, 0.12);
+  // move cues one bar ahead: short sfx blips
   for (const n of game.notes)
-    if (n.beat === B + 4) {
-      const f = {
-        up: 1046,
-        down: 698,
-        left: 784,
-        right: 880,
-        ul: 988,
-        ur: 932,
-        dl: 740,
-        dr: 659,
-        jump: 392,
-        wheelie: 523,
-      }[n.type];
-      if (n.type === 'standl' || n.type === 'standr') {
-        tone(t, 587, 'sine', 0.1, 0.12);
-        tone(t + 0.08, 880, 'sine', 0.1, 0.18);
-      } else if (n.type === 'nose') {
-        tone(t, 784, 'triangle', 0.08, 0.1);
-        tone(t + 0.08, 659, 'triangle', 0.08, 0.1);
-        tone(t + 0.16, 523, 'triangle', 0.08, 0.18);
-      } else if (n.type === 'wheelie') {
-        tone(t, 523, 'triangle', 0.08, 0.1);
-        tone(t + 0.08, 659, 'triangle', 0.08, 0.1);
-        tone(t + 0.16, 784, 'triangle', 0.08, 0.18);
-      } else tone(t, f, n.type === 'jump' ? 'sawtooth' : 'triangle', 0.09, 0.11, n.type === 'jump' ? 1600 : 0);
-    }
+    if (n.beat === B + 4)
+      sfx(() => {
+        const f = {
+          up: 1046,
+          down: 698,
+          left: 784,
+          right: 880,
+          ul: 988,
+          ur: 932,
+          dl: 740,
+          dr: 659,
+          jump: 392,
+          wheelie: 523,
+        }[n.type];
+        if (n.type === 'standl' || n.type === 'standr') {
+          tone(t, 587, 'sine', 0.08, 0.12);
+          tone(t + 0.08, 880, 'sine', 0.08, 0.18);
+        } else if (n.type === 'nose') {
+          tone(t, 784, 'triangle', 0.07, 0.1);
+          tone(t + 0.08, 659, 'triangle', 0.07, 0.1);
+          tone(t + 0.16, 523, 'triangle', 0.07, 0.18);
+        } else if (n.type === 'wheelie') {
+          tone(t, 523, 'triangle', 0.07, 0.1);
+          tone(t + 0.08, 659, 'triangle', 0.07, 0.1);
+          tone(t + 0.16, 784, 'triangle', 0.07, 0.18);
+        } else tone(t, f, n.type === 'jump' ? 'sawtooth' : 'triangle', 0.08, 0.11, n.type === 'jump' ? 1600 : 0);
+      });
+}
+/* menus: the arena's first song loops quietly (music bus at half volume) */
+const menu = { t: 0, step: 0, on: false };
+function menuMusic() {
+  if (!ac || ac.state !== 'running') return;
+  const inRide = game.running && !game.over;
+  setMusicLevel(inRide ? 1 : 0.5);
+  if (inRide || game.paused) {
+    menu.on = false;
+    return;
+  }
+  const spb = 30 / bpmOfAct(1);
+  if (!menu.on) {
+    menu.on = true;
+    menu.step = 24; // start at bar 3 so the melody comes straight in
+    menu.t = ac.currentTime + 0.1;
+  }
+  while (menu.t < ac.currentTime + 0.2) {
+    const bar = Math.floor(menu.step / 8),
+      S = SONGS[songFor(1 + (Math.floor(bar / 16) % 2))];
+    playStep(S, menu.step % 8, bar, 1, menu.t, spb);
+    menu.step++;
+    menu.t += spb;
+  }
 }
 
-export { SONGS, clap, hitSound, scheduleStep, songFor };
+export { SONGS, clap, hitSound, menuMusic, scheduleStep, songFor };

@@ -6,6 +6,7 @@ import { boostActive } from '../game/boost.js';
 import { G0, showroom } from '../ui/garage.js';
 import { clock } from '../game/loop.js';
 import { $, GY, R, V3, YAX, clamp } from '../core/constants.js';
+import { tutEv } from '../ui/tutorial.js';
 
 let cam, ptr, tp, tl, tu, gpos;
 
@@ -15,6 +16,7 @@ const MODES = ['outside', 'chase', 'centre', 'chest', 'arena'],
 function cycleCam() {
   cam.mode = MODES[(MODES.indexOf(cam.mode) + 1) % MODES.length];
   $('#camName').textContent = NAMES[cam.mode];
+  tutEv('cam');
   try {
     localStorage.setItem('god-cam4', cam.mode);
   } catch (e) {}

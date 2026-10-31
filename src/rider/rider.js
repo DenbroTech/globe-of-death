@@ -828,6 +828,12 @@ function buildRider(rider, S, st, C, o, P, X) {
     hf = V(0, 0, 1).lerp(f, 0.3).normalize();
   K.helmet(hc, hu, hf, { mx: st === 'dirt' });
   const arms = [];
+  /* each side's riding arm + leg is its own group, so the seat-stand pose can hide them on that side */
+  const limbs = {};
+  [1, -1].forEach(sx => {
+    limbs[sx] = new THREE.Group();
+    rider.add(limbs[sx]);
+  });
   [1, -1].forEach(sx => {
     const sh = N.clone()
         .add(V(sx * 0.175, -0.05, 0))
@@ -837,14 +843,14 @@ function buildRider(rider, S, st, C, o, P, X) {
         .add(V(-sx * 0.05, 0, 0)),
       wr = gc.clone().add(V(-sx * 0.05, 0.025, -0.045));
     const el = ik2(sh, wr, 0.31, 0.29, V(sx * 0.7, -0.45, -0.35));
-    K.arm(sh, el, wr, sx, f, gc);
+    riderKit(limbs[sx], M).arm(sh, el, wr, sx, f, gc);
     arms.push({ sh });
   });
   [1, -1].forEach(sx => {
     const hip = Hp.clone().add(V(sx * 0.1, -0.02, 0)),
       an = V(sx * 0.17, S.peg[0] + 0.1, S.peg[1] - 0.02);
     const kn = ik2(hip, an, 0.42, 0.42, V(sx * 0.18, 0.6, 1));
-    K.leg(hip, kn, an, sx, V(0, 0, 1));
+    riderKit(limbs[sx], M).leg(hip, kn, an, sx, V(0, 0, 1));
   });
   costumeExtras(K.mesh, C, Hp.clone().addScaledVector(u, 0.3), f, u, hc);
   const trick = new THREE.Group();
@@ -897,8 +903,10 @@ function buildRider(rider, S, st, C, o, P, X) {
     };
   }
   mergeGroup(G);
+  mergeGroup(limbs[1]);
+  mergeGroup(limbs[-1]);
   mergeGroup(trick);
-  return { trick, flutter };
+  return { trick, flutter, limbs };
 }
 function makeFigure(cid, paintHex, suitHex, suitId, helmId) {
   if (RIDER_GLTF)

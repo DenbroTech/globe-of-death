@@ -1,10 +1,12 @@
 import { game } from '../core/state.js';
-import { ac } from './synth.js';
+import { ac, initAudio } from './synth.js';
 import { toast } from '../ui/hud.js';
 
 let pauseAcc = 0,
   pauseAt = 0;
 const wakeAudio = () => {
+  // first touch anywhere starts the sound (browsers only allow audio after a gesture): menu music begins here
+  if (!ac) initAudio();
   if (ac && ac.state !== 'running') ac.resume().catch(() => {});
 };
 const now = () => (ac ? ac.currentTime : performance.now() / 1000 - pauseAcc);

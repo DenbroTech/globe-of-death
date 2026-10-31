@@ -14,7 +14,7 @@ const page = await browser.newPage({ viewport: { width: 400, height: 400 } });
 page.on('pageerror', e => console.log('PAGEERROR', e.message));
 await page.goto(url);
 await page.waitForFunction(() => window.__god);
-const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER]) => {
+const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND]) => {
   // import the exact module instances the game loaded (dev server may tag them with ?t=…)
   const loaded = performance.getEntriesByType('resource').map(e => e.name);
   const imp = p => import(loaded.filter(u => new URL(u).pathname === p).pop() || p);
@@ -31,6 +31,12 @@ const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER]) => {
   const bike = makeBike({ style, paint: PAINT, costume: 'leathers', suit: SUIT });
   scene.add(bike.g || bike);
   if (NORIDER && bike.rider) bike.rider.visible = false;
+  if (STAND) {
+    // seat-stand pose, as input/controls.js sets it at full extension
+    bike.rider.position.y += 0.32; bike.rider.position.x += 0.08; bike.rider.rotation.z = -0.42;
+    bike.trick.visible = true; bike.trick.children.forEach(c => (c.visible = true));
+    if (bike.limbs) bike.limbs[1].visible = false;
+  }
   const fig = makeFigure('leathers', 0xe63946, null, SUIT, null);
   fig.position.set(-2.4, 0, 0); scene.add(fig);
   const W = 400, H = 400, views = [
@@ -53,7 +59,7 @@ const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER]) => {
   });
   renderer.setPixelRatio(pr); renderer.setSize(prev.x, prev.y, false);
   return sheet.toDataURL('image/png');
-}, [style, process.env.PAINT || 'red', process.env.SUIT || null, !!process.env.NORIDER]);
+}, [style, process.env.PAINT || 'red', process.env.SUIT || null, !!process.env.NORIDER, !!process.env.STAND]);
 fs.writeFileSync(out, Buffer.from(data.split(',')[1], 'base64'));
 await browser.close();
 console.log('wrote', out);

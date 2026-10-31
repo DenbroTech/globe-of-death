@@ -1,6 +1,6 @@
 import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
-import { ac, initAudio, tone } from '../audio/synth.js';
+import { ac, initAudio, sfx, tone } from '../audio/synth.js';
 import { beatAt, lat, now, timeAt } from '../audio/clock.js';
 import { player } from './objects.js';
 import { addBal, toast } from '../ui/hud.js';
@@ -17,7 +17,7 @@ function chargeBoost(v) {
   if ((game.balance < 100 && !pk('hot')) || boostActive()) return;
   game.boostCharge = Math.min(
     100,
-    game.boostCharge + v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2) * (game.balance < 100 ? 0.5 : 1),
+    game.boostCharge + 0.5 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2) * (game.balance < 100 ? 0.5 : 1),
   );
 }
 const boostActive = () => now() < game.boostEnd;
@@ -40,8 +40,10 @@ function useBoost() {
   crowd.wave();
   if (ac) {
     const t = ac.currentTime;
-    tone(t, 220, 'sawtooth', 0.2, 0.5, 2400);
-    tone(t + 0.05, 440, 'sawtooth', 0.12, 0.45, 3000);
+    sfx(() => {
+      tone(t, 220, 'sawtooth', 0.2, 0.5, 2400);
+      tone(t + 0.05, 440, 'sawtooth', 0.12, 0.45, 3000);
+    });
   }
 }
 function autoHit(n) {

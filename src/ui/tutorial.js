@@ -37,6 +37,14 @@ const TUT_STEPS = [
     gen: b => addNote(b * 4, 'right'),
   },
   {
+    t: 'Camera',
+    d: 'Tap the camera button at the top to switch view: Outside, Chase, Centre, Chest and Arena. Try a few and keep your favourite.',
+    need: 3,
+    ev: 'cam',
+    cam: true,
+    gen: () => {}, // no moves: just ride and look around
+  },
+  {
     t: 'Veers and hard turns',
     d: 'Diagonal arrows: up-left and up-right are gentle veers, down-left and down-right are hard turns. Swipe the way the arrow points.',
     need: 3,
@@ -108,10 +116,13 @@ const TUT_STEPS = [
 function tutDraw(pop) {
   const S = TUT_STEPS[game.tutI];
   if (!S) {
+    $('#camBtn').classList.remove('hint');
     tutEl.hidden = true;
     return;
   }
   tutEl.hidden = false;
+  // point at the camera button while that step is up
+  $('#camBtn').classList.toggle('hint', !!S.cam);
   tutEl.innerHTML = `<div class="tk"><span>Tutorial · ${game.tutI + 1} of ${TUT_STEPS.length}</span><button id="tutSkip">Skip</button></div><h3>${S.t}</h3><p>${S.d}</p><div class="dots">${[...Array(S.need)].map((_, i) => `<i class="${i < game.tutN ? 'on' : ''}"></i>`).join('')}</div><div class="tip" id="tutTip"></div>`;
   $('#tutSkip').onclick = () => tutFinish(true);
   if (pop) {
@@ -170,6 +181,7 @@ function tutFinish(skipped) {
     localStorage.setItem('god-tut', '1');
   } catch (e) {}
   tutEl.hidden = true;
+  $('#camBtn').classList.remove('hint');
   if (!game.running) return;
   resetInput();
   game.paused = true;

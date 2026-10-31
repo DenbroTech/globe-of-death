@@ -57,36 +57,21 @@ function boardRows(mode, hi) {
   const L = board[mode];
   if (!L.length)
     return `<p class="lbempty">No runs yet. ${mode === 'free' ? 'Go for a free ride' : 'Ride the show'} and your best ${mode === 'combo' ? 'combo' : 'run'} will land here.</p>`;
+  // scores live on this phone, so rows show the run itself rather than a name
+  const what = e =>
+    mode === 'free' ? `${e.near} near misses` : e.win ? 'Full show' : e.encore ? 'Encore' : 'Act ' + e.act + ' of ' + FINAL;
+  const day = e => new Date(e.d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return `<ol class="lb">${L.map(
-    (
-      e,
-      i,
-    ) => `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${esc(e.n)}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
-    <span class="sub">${mode === 'free' ? `${e.near} near misses · ${e.riders} riders` : e.win ? 'Full show' : e.encore ? 'Encore' : 'Act ' + e.act + ' of ' + FINAL}${mode === 'show' ? ' · combo ' + e.combo : mode === 'combo' ? ' · ' + (e.score || 0).toLocaleString() + ' pts' : ''} · ${new Date(e.d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span></li>`,
+    (e, i) =>
+      `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${what(e)}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
+    <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : e.riders + ' riders · '}${day(e)}</span></li>`,
   ).join('')}</ol>`;
 }
 function nameBox() {
   if (!game.lastEntry) return '';
-  return `<div class="nameit"><span>#${game.lastEntry.rank} on the board ·</span><input id="lbname" maxlength="16" value="${esc(game.lastEntry.e.n)}" aria-label="Name on the leaderboard" enterkeyhint="done"></div>`;
+  return `<div class="nameit"><span>#${game.lastEntry.rank} on the board</span></div>`;
 }
-function wireNameBox() {
-  const el = $('#lbname');
-  if (!el || !game.lastEntry) return;
-  el.oninput = () => {
-    const v = el.value.trim() || 'Rider';
-    game.lastEntry.e.n = v;
-    if (game.lastEntry.ce) game.lastEntry.ce.n = v;
-    riderName = v;
-    saveBoard();
-    try {
-      localStorage.setItem('god-name', v);
-    } catch (e) {}
-  };
-  el.onkeydown = e => {
-    if (e.key === 'Enter') el.blur();
-  };
-  el.onfocus = () => el.select();
-}
+function wireNameBox() {}
 function showBoard(back) {
   app.classList.add('menu');
   ov.hidden = false;

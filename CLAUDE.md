@@ -13,7 +13,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 **Modes**
 - **The show** (main): moves scroll right-to-left along a top "conveyor" track and must be hit as they reach the circle. 10 acts + finale/encore. Act lengths vary (16, 18, 20… bars, max 36). Between acts: pick 1 of 3 perks. Balance bar = health; misses cost balance, hits restore it; empty = crash. Difficulty ramps gently (act 1: 1 move per bar … act 9–10: 4–5 with half-beats). BPM rises +3 per act (96 → 130 max). Act N has N−1 other riders who cut across (you jump them).
 - **Free ride**: analog thumb stick (steer + throttle, speed persists), wheelies/stoppies, dodge riders, too slow over the top = fall. Survive as long as possible.
-- **Tutorial**: 9 steps, each must be performed before the next (left, right, diagonals, jump, wheelie, stoppie, seat stand, steer during wheelie, NOS). No crash possible.
+- **Tutorial**: 10 steps, each must be performed before the next (left, right, camera button ×3, diagonals, jump, wheelie, stoppie, seat stand, steer during wheelie, NOS). No crash possible.
 
 **Controls (swipe anywhere, multi-touch)**
 - Left/right swipe = turn; diagonals: up-left/up-right = gentle veer, down-left/down-right = hard turn. Turns are real heading changes on the sphere (quaternion path), not just loop rotation.
@@ -27,7 +27,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Home: title, The show / Free ride chips, Ride, icon row (Level · Garage · Scores · Learn · Settings).
 - Levels list (status: Selected / Unlocked / requirement). Unlock order when not testing: Big Top (start), Beach (act 2), Stadium (act 3), Sky crane (act 5), Underwater (act 7), Moon (finish all 10 acts).
 - Garage: Bike / Rider tabs. 6 bikes in a grid (classic, dirt, chopper, vintage, sport, rocket) with stats that affect play. Paint groups: Solid, Metallic, Patterns, Animal, Neon. Rider: outfits grid + Suit/Helmet colour picker.
-- Leaderboard (on-phone, localStorage): Show points, Best combo, Free ride time; top 10 with editable name.
+- Leaderboard (on-phone, localStorage): Show points, Best combo, Free ride time; top 10. No names (it's your phone): rows show rank, the run (act / near misses), score, date.
 - Settings: sound, touch ring, unlock all, replay tutorial.
 - Test ads: full-screen placeholder after acts 3, 6, 9, closable after 5 s.
 - Crowd grows with games played (7 fans first game, ×1.5 per game) — full crowd while "Unlock all" is on.
@@ -47,7 +47,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Studio env-map reflections on bikes/riders (`envify`). Spotlight shadows are OFF (they caused crawling cage-shadow flicker on floors). Logarithmic depth buffer on.
 - First-person handlebars HUD at the bottom (DOM/SVG): bars steer and lift with stunts, throttle grip has an orange marker that rolls with throttle, tacho + NOS button.
 
-**Audio**: WebAudio drum machine + bass + lead scheduled on the beat; tempo map supports pausing by shifting tempo times (`holdClock`/`freeClock`). Hit sounds are musical (in key, per-arena instrument). The game clock is the AudioContext clock — it's resumed on every touch and when returning to the app (iOS suspends audio).
+**Audio**: WebAudio, all synthesised. `audio/synth.js`: voices -> music/sfx/ambience buses -> reverb (generated IR per arena) + tempo echo sends -> compressor -> master (mute) -> muffle LP. `audio/themes.js`: per-arena sound world (lead/stab/hit/jump voices, bass, kick/snare flavour, chord comping, pad, room, echo, ambience bed + one-off events like gulls/sirens/bubbles/radio beeps). Music bus = 1 in a ride, 0.5 in menus; `menuMusic()` loops the arena song in menus; audio starts on the first touch anywhere. `sfx(fn)` routes hit sounds/crashes to the sfx bus. Drum machine + bass + lead scheduled on the beat; tempo map supports pausing by shifting tempo times (`holdClock`/`freeClock`). Hit sounds are musical (in key, per-arena instrument). The game clock is the AudioContext clock — it's resumed on every touch and when returning to the app (iOS suspends audio).
 
 ## Code map (`src/`)
 - `main.js` — boot: calls every module's `initX()` in the original order, then starts the frame loop. Modules only declare things at load time; anything that touches the scene, DOM or storage runs inside `initX()`, so import order never matters.

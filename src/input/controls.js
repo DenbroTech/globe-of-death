@@ -121,6 +121,11 @@ function trickTick(dt) {
   if (b.poseTrick) b.poseTrick(P.tr, trickSide || 1);
   b.trick.visible = P.tr > 0.15;
   b.trick.scale.set(trickSide || 1, 1, 1);
+  // hide the riding arm + leg on the side that swings out, so there are never two
+  if (b.limbs) {
+    b.limbs[1].visible = !(b.trick.visible && (trickSide || 1) === 1);
+    b.limbs[-1].visible = !(b.trick.visible && trickSide === -1);
+  }
   const k = Math.max(0.01, P.tr);
   b.trick.children.forEach(c => {
     c.visible = k > 0.15;
