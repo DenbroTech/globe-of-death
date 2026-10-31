@@ -1,14 +1,14 @@
 {
   "expo": {
     "name": "Globe of Death",
-    "slug": "globe-of-death",
+    "slug": "globeofdeath-app",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#07060a",
     "android": {
-      "package": "com.denbro.globeofdeath",
+      "package": "com.denbro.globeofdeath.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07060a",

@@ -29,7 +29,7 @@ First time: log in with your Expo account, say **yes** to creating the project a
 The build runs on Expo's servers (~10–20 min) and ends with a link / QR code: open it on the phone to install.
 `--profile production` makes the `.aab` for the Play Store.
 
-App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.denbro.globeofdeath`, icons, splash),
+App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.denbro.globeofdeath.app`, icons, splash),
 `mobile/eas.json` (build profiles), `src/platform/app.js` (game side: back button, pause on background; AdMob/"Remove ads" will hook in here).
 Icon/splash sources (rendered from the game) are in `assets/`.
 
