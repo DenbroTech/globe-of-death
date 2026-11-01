@@ -190,12 +190,36 @@ const songFor = a => {
   const L = ARENAS[arenaId].songs;
   return L[(a - 1 + L.length * 99) % L.length];
 };
-const PENTA = { left: 0, dl: 3, ul: 5, right: 7, dr: 10, ur: 12, up: 12, down: 0 };
+/* move sounds are little tunes in the song's key, built on the chord that's playing, so a run of
+   moves makes a melody. Degrees are scale steps (0 = chord root, 2 = third, 4 = fifth, 7 = octave),
+   played as quick 16th notes. Each direction has its own shape:
+   left "Drop" 5-3 · right "Lift" 3-5 · up-left "Sigh" 2-1 · up-right "Resolve" 7-8
+   down-left "Dive" 8-5-1 · down-right "Rocket" 1-5-8 */
+const MOTIF = {
+  left: [4, 2],
+  right: [2, 4],
+  ul: [1, 0],
+  ur: [6, 7],
+  dl: [7, 4, 0],
+  dr: [0, 4, 7],
+  up: [2, 4],
+  down: [4, 2],
+};
+const SCALE = { maj: [0, 2, 4, 5, 7, 9, 11], min: [0, 2, 3, 5, 7, 8, 10] };
+const deg = (d, maj) => {
+  const sc = maj ? SCALE.maj : SCALE.min,
+    o = Math.floor(d / 7);
+  return sc[((d % 7) + 7) % 7] + 12 * o;
+};
+function songNow() {
+  const B = beatAt(now() - lat()),
+    bar = Math.max(0, Math.floor(B / 4));
+  return SONGS[songFor(actOfBar(Math.max(bar, 3)))];
+}
 function songRoot() {
   const B = beatAt(now() - lat()),
-    bar = Math.max(0, Math.floor(B / 4)),
-    S = SONGS[songFor(actOfBar(Math.max(bar, 3)))];
-  return S.prog[bar % 4];
+    bar = Math.max(0, Math.floor(B / 4));
+  return songNow().prog[bar % 4];
 }
 function hitSound(type, step, g) {
   if (!ac) return;
@@ -228,15 +252,29 @@ function hitSound_(type, step, g) {
     [0, 7, 12, 19].forEach((iv, i) => voice(V, t + i * 0.045, r + iv, 0.08 - i * 0.012, 0.4 - i * 0.05));
     return;
   }
-  if (type === 'wheelie' || type === 'nose' || type === 'standl' || type === 'standr' || type === 'stand') {
-    const up = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24, 26, 28],
-      m = r + up[Math.min(up.length - 1, step || 0)] + (type === 'nose' ? -5 : 0);
-    voice(V, t, m, type.startsWith('stand') ? 0.1 : 0.085, 0.38);
-    if (V === 'tri') tone(t, mid(m + 12), type === 'wheelie' ? 'square' : 'sawtooth', 0.03, 0.25, 2000);
+  const S = songNow(),
+    maj = !!S.maj,
+    s16 = 15 / bpmOfAct(game.act || 1);
+  if (type === 'wheelie' || type === 'nose') {
+    // wheelie "Staircase": climbs the scale a step per beat; stoppie "Waterfall": walks down it
+    const k = step || 0,
+      d = type === 'wheelie' ? Math.min(k, 9) : 7 - Math.min(k, 9);
+    voice(V, t, r + deg(d, maj), 0.085, 0.38);
     return;
   }
-  const m = r + (PENTA[type] ?? 0);
-  voice(V, t, m, g === 'p' ? 0.15 : 0.1, 0.28);
+  if (type.startsWith('stand')) {
+    // seat stand: two-note chord stabs; left "Low chords" step down, right "High chords" step up
+    const k = Math.min(step || 0, 6),
+      d = type === 'standl' ? 4 - k : k;
+    [0, 2].forEach(i => voice(V, t, r - 12 + deg(d + i, maj), 0.075, 0.42));
+    voice(V, t + s16, r + deg(d + 4, maj), 0.05, 0.3);
+    return;
+  }
+  const M = MOTIF[type] || [0],
+    v = g === 'p' ? 0.14 : 0.1,
+    soft = type === 'ul' || type === 'ur' ? 0.7 : 1,
+    hard = type === 'dl' || type === 'dr';
+  M.forEach((d, i) => voice(V, t + i * s16, r + deg(d, maj), v * soft * (hard && i === 0 ? 1.15 : 1) * (i ? 0.85 : 1), 0.26));
 }
 function clap(t) {
   nz(t, 'bandpass', 1300, 0.35, 0.06);
