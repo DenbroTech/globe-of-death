@@ -195,8 +195,8 @@ const songFor = a => {
    Pentatonic steps above the key root (major: 0 2 4 7 9, minor: 0 3 5 7 10, next octave 12…):
    down-left 0 · wheelie 1 · left 2 · up-left 3 · up-right 4 · right 5 · down-right 7 · jump 8 ·
    stoppie -2 · seat stand left = chord on 0+2 · seat stand right = chord on 3+5.
-   The same move pressed again and again climbs: octave, octave+5th, 2 octaves, 2 octaves+3rd (up to 5
-   in a row), back to its normal note once another move breaks the run. */
+   The same note twice in a row goes up an octave each time (normal, +1 octave, +2 octaves, then round
+   again), so it's never the same note back to back; another move resets it. Held moves' beat ticks too. */
 const NOTE = { dl: 0, wheelie: 1, left: 2, ul: 3, ur: 4, right: 5, dr: 7, jump: 8, nose: -2, up: 5, down: 2 };
 const PENT = { maj: [0, 2, 4, 7, 9], min: [0, 3, 5, 7, 10] };
 const pent = (i, maj) => {
@@ -205,7 +205,7 @@ const pent = (i, maj) => {
   return P[((i % 5) + 5) % 5] + 12 * o;
 };
 const mel = { last: null, rep: 0 };
-const REP_UP = [0, 12, 19, 24, 28];
+const OCT = k => 12 * (k % 3);
 function resetMelody() {
   mel.last = null;
   mel.rep = 0;
@@ -239,20 +239,20 @@ function hitSound_(type, step, g) {
     maj = !!S.maj;
   if (type === 'wheelie' || type === 'nose') {
     mel.last = null;
-    voice(V, t, key + pent(NOTE[type], maj), step ? 0.07 : 0.09, 0.38);
+    voice(V, t, key + pent(NOTE[type], maj) + OCT(step || 0), step ? 0.07 : 0.09, 0.38);
     return;
   }
   if (type.startsWith('stand')) {
     mel.last = null;
     const [a, b] = type === 'standr' ? [3, 5] : [0, 2];
-    voice(V, t, key + pent(a, maj), 0.07, 0.42);
-    voice(V, t, key + pent(b, maj), 0.07, 0.42);
+    voice(V, t, key + pent(a, maj) + OCT(step || 0), 0.07, 0.42);
+    voice(V, t, key + pent(b, maj) + OCT(step || 0), 0.07, 0.42);
     return;
   }
-  if (type === mel.last) mel.rep = Math.min(mel.rep + 1, REP_UP.length - 1);
+  if (type === mel.last) mel.rep++;
   else mel.rep = 0;
   mel.last = type;
-  const m = key + pent(NOTE[type] ?? 5, maj) + REP_UP[mel.rep],
+  const m = key + pent(NOTE[type] ?? 5, maj) + OCT(mel.rep),
     v = g === 'p' ? 0.14 : 0.1,
     soft = type === 'ul' || type === 'ur',
     hard = type === 'dl' || type === 'dr';
