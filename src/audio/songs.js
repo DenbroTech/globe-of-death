@@ -197,7 +197,9 @@ const songFor = a => {
    jump leaps +4 (bright, with an octave shimmer) · wheelie climbs a step per beat · stoppie walks down ·
    seat stand plays two-note chords stepping down (left) / up (right). The line bounces off its range. */
 const STEP = { left: -1, right: 1, ul: -2, ur: 2, dl: -3, dr: 3, up: 1, down: -1, jump: 4 };
-const mel = { d: 2 };
+const mel = { d: 2, last: null, rep: 0 };
+// the same move again and again climbs: octave, octave+5th, 2 octaves, 2 octaves+3rd (5 in a row)
+const REP_UP = [0, 12, 19, 24, 28];
 const LO = -2,
   HI = 11;
 function walk(step) {
@@ -208,6 +210,8 @@ function walk(step) {
 }
 function resetMelody() {
   mel.d = 2;
+  mel.last = null;
+  mel.rep = 0;
 }
 const SCALE = { maj: [0, 2, 4, 5, 7, 9, 11], min: [0, 2, 3, 5, 7, 8, 10] };
 const deg = (d, maj) => {
@@ -235,6 +239,7 @@ function hitSound_(type, step, g) {
     K = kit(),
     V = K.hit || 'tri',
     maj = !!songNow().maj;
+  if (type === 'wheelie' || type === 'nose' || type.startsWith('stand')) mel.last = null;
   if (type === 'wheelie' || type === 'nose') {
     const d = walk(type === 'wheelie' ? 1 : -1);
     voice(V, t, r + deg(d, maj), 0.09, 0.38);
@@ -246,8 +251,12 @@ function hitSound_(type, step, g) {
     voice(V, t, r + deg(d - 2, maj), 0.06, 0.42);
     return;
   }
-  const d = walk(STEP[type] ?? 1),
-    m = r + deg(d, maj),
+  // repeats of the same move hold the note and climb in octaves; a different move breaks the run
+  if (type === mel.last) mel.rep = Math.min(mel.rep + 1, REP_UP.length - 1);
+  else mel.rep = 0;
+  mel.last = type;
+  const d = mel.rep ? mel.d : walk(STEP[type] ?? 1),
+    m = r + deg(d, maj) + REP_UP[mel.rep],
     v = g === 'p' ? 0.14 : 0.1,
     soft = type === 'ul' || type === 'ur';
   if (type === 'jump') {
