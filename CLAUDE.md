@@ -17,7 +17,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 
 **Controls (swipe anywhere, multi-touch)**
 - Left/right swipe = turn; diagonals: up-left/up-right = gentle veer, down-left/down-right = hard turn. Turns are real heading changes on the sphere: `game/path.js` integrates a body-frame rate (π/2 round the loop + heading rate), each turn split into 12 constant-curvature arcs over one beat, then dead straight round the new great circle.
-- Pull back (swipe down) and hold = wheelie; push forward and hold = stoppie; flick forward and release = jump (210 ms pending decision between jump and stoppie).
+- Pull back (swipe down) and hold = wheelie; push forward and hold = stoppie; flick forward and release = jump (210 ms pending decision between jump and stoppie; skipped — stoppie fires instantly — when a stoppie note is due and no jump is near).
 - Hold a side swipe = seat stand.
 - During a held wheelie/stoppie, sliding the same thumb sideways ~24 px fires a turn (soft press: ignored if no matching note; wider window). A second finger also works.
 - NOS button on the handlebars: when charged (needs full balance), next moves auto-play; the blue NOS band on the track extends to the end of any long press it overlaps.

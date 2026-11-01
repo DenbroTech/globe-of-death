@@ -1,7 +1,8 @@
 import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
 import { initAudio } from '../audio/synth.js';
-import { lat, now } from '../audio/clock.js';
+import { lat, now, timeAt } from '../audio/clock.js';
+import { gw } from '../game/perks.js';
 import { turnRate } from '../game/path.js';
 import { fStick, fx, fy } from '../game/freeride.js';
 import { player } from '../game/objects.js';
@@ -329,7 +330,18 @@ export function initControls() {
           game.stuntHold = true;
           outT = 0;
         } else {
-          const pend = (game.stPend = { t: now() - lat() });
+          // push forward: normally wait 210 ms to tell a stoppie (hold) from a jump (flick). When the move
+          // that's due is a stoppie and no jump is near, start it at once so it pops like a wheelie does
+          const tn = now() - lat(),
+            due = game.FREE ? [] : game.notes.filter(n => !n.judged && Math.abs(timeAt(n.beat) - tn) <= gw(n.type) * 1.2);
+          if (due.some(n => n.type === 'nose') && !due.some(n => n.type === 'jump')) {
+            press('nose', tn);
+            game.stuntState = 'nose';
+            game.stuntHold = true;
+            outT = 0;
+            return;
+          }
+          const pend = (game.stPend = { t: tn });
           game.stuntState = 'pend';
           setTimeout(() => {
             if (game.stPend === pend && game.stuntState === 'pend') {
