@@ -33,6 +33,6 @@ The build runs on Expo's servers (~10–20 min) and ends with a link / QR code: 
 
 App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.denbro.globeofdeath.app`, icons, splash),
 `mobile/eas.json` (build profiles), `src/platform/app.js` (game side: back button, pause on background; AdMob/"Remove ads" will hook in here).
-App icon source: `art/app-icon-source.jpg` (cleaned 1024px: `art/app-icon-1024.png`); the icon/adaptive/splash files in `mobile/assets/` are made from it.
+App icon: `python tools/make-icons.py <square artwork>` makes every icon/splash file (launcher + Android 12 splash are circle-masked to the middle 2/3, so the art is shrunk into that safe circle over a blurred copy). Current source: `art/app-icon-1024.png`.
 
 See `CLAUDE.md` for the game design, code map and working notes. `original/globe-of-death.html` is the single-file version this project was split from.
