@@ -287,3 +287,5 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .gmsg .lk{width:13px;height:13px;vertical-align:-1px;margin-right:4px;color:var(--amber)}
 /* over screen: what this run unlocked */
 .unl{font-size:15px;color:var(--ink);background:rgba(255,194,61,.12);border:1px solid rgba(255,194,61,.35);border-radius:10px;padding:8px 12px}.unl b{color:var(--gold);margin-right:6px}
+#app.menu .hud .btns{visibility:hidden}
+.go.wide{align-self:stretch;width:100%}

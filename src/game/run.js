@@ -3,12 +3,12 @@ import { sanitizeSel } from './unlocks.js';
 import { garage } from './save.js';
 import { app } from '../render/renderer.js';
 import { crowd } from '../arenas/crowd.js';
-import { _c, fillTrail } from '../render/trails.js';
+import { _c, fillTrail, resetRibbon } from '../render/trails.js';
 import { ac, initAudio, master, sfxBus } from '../audio/synth.js';
 import { bpmOfAct, now } from '../audio/clock.js';
 import { orientOnWall, posAt, tanAt } from './path.js';
 import { fStick, freeReset } from './freeride.js';
-import { myRing, nextRing, player, pool } from './objects.js';
+import { myRing, player, pool } from './objects.js';
 import { drawHearts, ov, toast } from '../ui/hud.js';
 import { freeClock, holdClock } from './judging.js';
 import { endStunt, gestures, heldKeys, jk } from '../input/controls.js';
@@ -85,6 +85,7 @@ function start() {
   player.trail.visible = true;
   posAt(0, player.p);
   fillTrail(player.trail, _c.copy(player.p).multiplyScalar(R - 0.04));
+  resetRibbon(myRing, player.p);
   if (ac) {
     if (game.engineOsc)
       try {
@@ -141,7 +142,7 @@ function quitToMenu() {
     s.mark.visible = false;
   });
   player.trail.visible = false;
-  myRing.visible = nextRing.visible = false;
+  myRing.visible = false;
   $('#vig').style.opacity = 0;
   warnHide();
   posAt(0, player.p);

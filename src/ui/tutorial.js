@@ -3,6 +3,7 @@ import { crowd } from '../arenas/crowd.js';
 import { beatAt, lat, now } from '../audio/clock.js';
 import { addNote } from '../game/chart.js';
 import { ov, showJudge } from './hud.js';
+import { offerPerks } from '../game/perks.js';
 import { boostActive } from '../game/boost.js';
 import { holdClock } from '../game/judging.js';
 import { quitToMenu, resetInput, start } from '../game/run.js';
@@ -38,7 +39,7 @@ const TUT_STEPS = [
   },
   {
     t: 'Camera',
-    d: 'Tap the camera button at the top to switch view: Outside, Chase, Centre, Chest and Arena. Try a few and keep your favourite.',
+    d: 'Tap the camera button at the top to switch view: Centre, Chase, Chest, Outside and Arena. Try a few and keep your favourite.',
     need: 3,
     ev: 'cam',
     cam: true,
@@ -112,7 +113,24 @@ const TUT_STEPS = [
       if (!boostActive()) game.boostCharge = 100;
     },
   },
+  {
+    t: 'Perks',
+    d: 'The yellow line marks the end of an act. Ride through it and pick a perk to help you in the next one.',
+    need: 1,
+    ev: 'perk',
+    gen: b => {
+      if (game.tutLine == null) game.tutLine = b * 4;
+    },
+  },
 ];
+// the yellow act line only shows in the Perks step: when it reaches the circle, a perk pick pops up
+function tutTick(B) {
+  if (game.tutLine != null && B >= game.tutLine) {
+    game.tutLine = -1e4;
+    tutEl.hidden = true;
+    offerPerks(0, true);
+  }
+}
 function tutDraw(pop) {
   const S = TUT_STEPS[game.tutI];
   if (!S) {
@@ -188,7 +206,7 @@ function tutFinish(skipped) {
   holdClock();
   ov.hidden = false;
   ov.innerHTML = `<div class="card"><h1><small>Tutorial ${skipped ? 'skipped' : 'complete'}</small>${skipped ? 'Ready when you are' : 'You know every move'}</h1>
-  <p>One last thing: the bar at the top is your balance. Misses knock it down and hits win it back. If it empties, you crash. Between acts you pick a perk, and ten acts finish the show.</p>
+  <p>The bar at the top is your balance. Misses knock it down, hits win it back. Empty means crash. Ten acts finish the show.</p>
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="tutGo">Start the show</button><button class="go ghost" id="tutMenu">Menu</button></div></div>`;
   $('#tutGo').onclick = () => {
     game.TUT = false;
@@ -202,6 +220,7 @@ function tutFinish(skipped) {
 }
 function startTutorial() {
   game.tutPending = true;
+  game.tutLine = null;
   game.gameMode = 'show';
   start();
 }
@@ -214,4 +233,4 @@ export function initTutorial() {
   tutEl = $('#tut');
 }
 
-export { startTutorial, tutDone, tutDraw, tutEl, tutEv, tutGen };
+export { startTutorial, tutDone, tutDraw, tutEl, tutEv, tutGen, tutTick };

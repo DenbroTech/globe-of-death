@@ -11,14 +11,14 @@ import { tutEv } from '../ui/tutorial.js';
 let cam, ptr, tp, tl, tu, gpos;
 
 /* ---------- camera ---------- */
-const MODES = ['outside', 'chase', 'centre', 'chest', 'arena'],
+const MODES = ['centre', 'chase', 'chest', 'outside', 'arena'],
   NAMES = { outside: 'Outside', chest: 'Chest', chase: 'Chase', centre: 'Centre', arena: 'Arena' };
 function cycleCam() {
   cam.mode = MODES[(MODES.indexOf(cam.mode) + 1) % MODES.length];
   $('#camName').textContent = NAMES[cam.mode];
   tutEv('cam');
   try {
-    localStorage.setItem('god-cam4', cam.mode);
+    localStorage.setItem('god-cam5', cam.mode);
   } catch (e) {}
 }
 let pinch = 0;
@@ -150,7 +150,7 @@ function resize() {
 export function initCamera() {
   cam = {
     oaz: 0,
-    mode: 'outside',
+    mode: 'centre',
     az: 0.7,
     el: 0.3,
     zoom: 1,
@@ -161,7 +161,7 @@ export function initCamera() {
     snap: false,
   };
   try {
-    const m = localStorage.getItem('god-cam4');
+    const m = localStorage.getItem('god-cam5');
     if (MODES.includes(m)) cam.mode = m;
   } catch (e) {}
   $('#camName').textContent = NAMES[cam.mode];

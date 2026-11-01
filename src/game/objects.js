@@ -1,10 +1,10 @@
 import { globe } from '../arenas/globe.js';
 import { makeBike } from '../bikes/bike.js';
 import { garage } from './save.js';
-import { glowSprite, makeRing, makeTrail } from '../render/trails.js';
+import { glowSprite, makeRibbon, makeTrail } from '../render/trails.js';
 import { V3 } from '../core/constants.js';
 
-let player, myRing, nextRing, pool;
+let player, myRing, pool;
 
 const RIDERS = [
   ['Dario', 0xf4b400],
@@ -34,9 +34,7 @@ export function initObjects() {
   player = { bike: makeBike(garage.sel), p: new V3(), t: new V3(), hopT0: -9, shake: 0, wh: 0 };
   globe.add(player.bike.g);
   player.trail = makeTrail(0xe63946);
-  myRing = makeRing(0xffffff, 0.014, 0.28, false);
-  nextRing = makeRing(0x6fd3ff, 0.04, 0.6, true);
-  myRing.visible = nextRing.visible = false;
+  myRing = makeRibbon(0xffffff, 0.022, 0.5);
   pool = CROSS.map(([name, hex], i) => {
     const costume = RCOS[(i * 3 + 1) % 7];
     // riders in plain leathers wear their bike's colour, so the field stays varied
@@ -61,4 +59,4 @@ export function initObjects() {
   });
 }
 
-export { myRing, nextRing, player, pool };
+export { myRing, player, pool };

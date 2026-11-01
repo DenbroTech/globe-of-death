@@ -12,7 +12,6 @@ import { orientOnWall, posAt, tanAt } from '../game/path.js';
 import { player } from '../game/objects.js';
 import { ov } from './hud.js';
 import { cam } from '../render/camera.js';
-import { start } from '../game/run.js';
 import { $, R, V3 } from '../core/constants.js';
 import { finishCss } from '../bikes/finishes.js';
 import { CATALOG, findItem } from '../bikes/catalog.js';
@@ -160,7 +159,7 @@ function showGarage(msg) {
       <div class="seg"><button data-part="suit" aria-pressed="${gPart === 'suit'}">Suit</button><button data-part="helmet" aria-pressed="${gPart === 'helmet'}">Helmet</button></div><div class="glabel">${gPart === 'suit' ? 'Suit' : 'Helmet'} colour <b>${pname(gPart)}</b></div>${palette(gPart, 1)}`
     }
     ${msg ? `<p class="gmsg">${msg}</p>` : ''}
-    <div style="display:flex;gap:10px"><button class="go" id="ride">Ride</button><button class="go ghost" id="back">Back</button></div></div>`;
+    <button class="go wide" id="back">Back to menu</button></div>`;
   ov.querySelectorAll('[data-hs]').forEach(e => {
     if (keep[e.dataset.hs] != null) e.scrollLeft = keep[e.dataset.hs];
     else {
@@ -210,10 +209,6 @@ function showGarage(msg) {
   };
   ov.querySelectorAll('.item').forEach(b => (b.onclick = () => pick(b.dataset.k, b.dataset.id)));
   ov.querySelectorAll('.swb').forEach(b => (b.onclick = () => pick(b.dataset.sw, b.dataset.id)));
-  $('#ride').onclick = () => {
-    leaveGarage();
-    start();
-  };
   $('#back').onclick = () => {
     leaveGarage();
     showStart();

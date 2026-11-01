@@ -12,11 +12,11 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 ## Game overview
 **Modes**
 - **The show** (main): moves scroll right-to-left along a top "conveyor" track and must be hit as they reach the circle. 10 acts + finale/encore. Act lengths vary (16, 18, 20… bars, max 36). Between acts: pick 1 of 3 perks. Balance bar = health; misses cost balance, hits restore it; empty = crash. Difficulty ramps gently (act 1: 1 move per bar … act 9–10: 4–5 with half-beats). BPM rises +3 per act (96 → 130 max). Act N has N−1 other riders who cut across (you jump them).
-- **Free ride**: analog thumb stick (steer + throttle, speed persists), wheelies/stoppies, dodge riders, too slow over the top = fall. Survive as long as possible.
-- **Tutorial**: 10 steps, each must be performed before the next (left, right, camera button ×3, diagonals, jump, wheelie, stoppie, seat stand, steer during wheelie, NOS). No crash possible.
+- **Free ride**: analog thumb stick (steer + throttle, speed persists), wheelies/stoppies, dodge riders, too slow over the top = fall. Survive as long as possible. Riders join at 20 s, then +30, +40…; "<name> incoming!" 3 s before, then they ride as a 50%-opacity ghost (no collision) for 5 s.
+- **Tutorial** ("Lesson" on the home screen): 11 steps, each must be performed before the next (left, right, camera button ×3, diagonals, jump, wheelie, stoppie, seat stand, steer during wheelie, NOS, perks). The yellow act line only appears in the last step; when it reaches the circle a perk pick pops up. No crash possible.
 
 **Controls (swipe anywhere, multi-touch)**
-- Left/right swipe = turn; diagonals: up-left/up-right = gentle veer, down-left/down-right = hard turn. Turns are real heading changes on the sphere (quaternion path), not just loop rotation.
+- Left/right swipe = turn; diagonals: up-left/up-right = gentle veer, down-left/down-right = hard turn. Turns are real heading changes on the sphere: `game/path.js` integrates a body-frame rate (π/2 round the loop + heading rate), each turn split into 12 constant-curvature arcs over one beat, then dead straight round the new great circle.
 - Pull back (swipe down) and hold = wheelie; push forward and hold = stoppie; flick forward and release = jump (210 ms pending decision between jump and stoppie).
 - Hold a side swipe = seat stand.
 - During a held wheelie/stoppie, sliding the same thumb sideways ~24 px fires a turn (soft press: ignored if no matching note; wider window). A second finger also works.
@@ -29,7 +29,9 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Levels list (status: Selected / Unlocked / requirement).
 - Garage (buttons have a 50% dark backing, chosen one solid): Bike / Rider tabs. 6 bikes in a grid (classic, dirt, chopper, vintage, sport, rocket) with stats that affect play. Paint groups: Solid, Metallic, Patterns, Animal, Neon. Rider: outfits grid + Suit/Helmet colour picker.
 - Leaderboard (on-phone, localStorage): Show points, Best combo, Free ride time; top 10. No names (it's your phone): rows show rank, the run (act / near misses), score, date.
-- Settings: sound, touch ring, unlock all, replay tutorial.
+- Settings: sound, touch ring, unlock all. Camera/mute/pause buttons only show in a ride. Garage has a single "Back to menu" button.
+- Camera starts on Centre (zoomed-out rider view); order Centre, Chase, Chest, Outside, Arena (saved in `god-cam5`).
+- Trails: a white ribbon of where you've ridden (behind you only, `makeRibbon`), and coloured rider trails computed from each rider's path (`arcTrail`), never frame-sampled (that drew chords across the globe on frame hitches).
 - Test ads: full-screen placeholder after acts 3, 6, 9, closable after 5 s.
 - Crowd grows with games played (7 fans first game, ×1.5 per game) — full crowd while "Unlock all" is on.
 

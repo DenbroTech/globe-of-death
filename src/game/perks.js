@@ -8,6 +8,7 @@ import { resetInput } from './run.js';
 import { kindOf, statMul } from '../bikes/stats.js';
 import { SONGS, songFor } from '../audio/songs.js';
 import { showAd } from '../platform/ads.js';
+import { tutEv } from '../ui/tutorial.js';
 
 /* ---------- perks (picked between acts, reset every run) ---------- */
 const PERKS = [
@@ -46,8 +47,8 @@ function offerPerks(a, skipAd) {
     .sort(() => Math.random() - 0.5)
     .slice(0, 3);
   ov.hidden = false;
-  ov.innerHTML = `<div class="card"><h1><small>Act ${a - 1} complete</small>Pick a perk</h1>
-    <div class="nextup"><span>Act ${a}</span><span>${ridersFor(a) ? '+' + ridersFor(a) + ' rider' + (ridersFor(a) > 1 ? 's' : '') : 'Solo'}</span><span>${bpmOfAct(a)} BPM</span></div>
+  ov.innerHTML = `<div class="card"><h1><small>${game.TUT ? 'Act complete' : `Act ${a - 1} complete`}</small>Pick a perk</h1>
+    ${game.TUT ? '' : `<div class="nextup"><span>Act ${a}</span><span>${ridersFor(a) ? '+' + ridersFor(a) + ' rider' + (ridersFor(a) > 1 ? 's' : '') : 'Solo'}</span><span>${bpmOfAct(a)} BPM</span></div>`}
     <div class="perks">${pool3.map(p => `<button class="perk" data-id="${p.id}"><b>${p.name}</b><span>${p.desc}</span>${pk(p.id) ? `<i>You have ${pk(p.id)}</i>` : ''}</button>`).join('')}</div></div>`;
   ov.querySelectorAll('.perk').forEach(
     b =>
@@ -63,6 +64,7 @@ function offerPerks(a, skipAd) {
         game.paused = false;
         ov.hidden = true;
         freeClock();
+        if (game.TUT) return tutEv('perk');
         toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
       }),
   );

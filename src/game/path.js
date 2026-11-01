@@ -18,13 +18,47 @@ const baseAt = (B, out) => {
   const th = TH0 + (Math.PI / 2) * B;
   return out.set(Math.sin(th), 0, Math.cos(th));
 };
-function rebakeTurns(from) {
-  for (let i = from; i < game.turns.length; i++) {
-    const t = game.turns[i],
-      prev = i ? game.turns[i - 1].C : IDQ;
-    t.ax = baseAt(t.beat, new V3()).applyQuaternion(prev).normalize();
-    t.C = new THREE.Quaternion().setFromAxisAngle(t.ax, t.rad).multiply(prev);
+/* The bike's frame Q(B) (Z = where it is on the sphere, Y = its loop's axis) turns at a body-frame rate
+   (0, pi/2, wh): pi/2 per beat round the loop plus a heading rate wh about its own position. Between
+   turns wh = 0, so it runs dead straight round a great circle; a turn spreads its angle over one beat
+   (smoothstep, K constant-rate slices), so each slice is an exact constant-curvature arc: no wobble. */
+const K = 12,
+  WF = Math.PI / 2,
+  _ax = new V3(),
+  _qr = new THREE.Quaternion(),
+  _qy = new THREE.Quaternion();
+let knots = [],
+  bakedFor = null,
+  bakedN = -1;
+function rebakeTurns() {
+  const ev = [];
+  for (const t of game.turns)
+    for (let k = 0; k < K; k++) {
+      const w = t.rad * (smooth((k + 1) / K) - smooth(k / K)) * K;
+      ev.push([t.beat + k / K, w], [t.beat + (k + 1) / K, -w]);
+    }
+  ev.sort((a, b) => a[0] - b[0]);
+  knots = [];
+  let wh = 0;
+  for (const [beat, dw] of ev) {
+    const last = knots[knots.length - 1];
+    if (last && beat - last.beat < 1e-6) {
+      last.wh = wh += dw;
+      continue;
+    }
+    const Q = last ? advance(last, beat, new THREE.Quaternion()) : new THREE.Quaternion().setFromAxisAngle(YAX, WF * beat);
+    wh += dw;
+    knots.push({ beat, Q, wh });
   }
+  for (const k of knots) if (Math.abs(k.wh) < 1e-9) k.wh = 0;
+  bakedFor = game.turns;
+  bakedN = game.turns.length;
+}
+function advance(k, B, out) {
+  const dt = B - k.beat;
+  _ax.set(0, WF, k.wh);
+  const w = _ax.length();
+  return out.copy(k.Q).multiply(_qr.setFromAxisAngle(_ax.divideScalar(w), w * dt));
 }
 function addTurn(beat, type) {
   const deg = TURN_ANG[type];
@@ -34,19 +68,21 @@ function addTurn(beat, type) {
   let k = game.turns.length;
   while (k > 0 && game.turns[k - 1].beat > beat) k--;
   game.turns.splice(k, 0, t);
-  rebakeTurns(k);
+  bakedN = -1;
 }
+// C(B): the rotation applied to the plain starting loop, so posAt = C · baseAt
 function qAt(B, out) {
-  let m = game.turns.length - 1;
-  while (m >= 0 && game.turns[m].beat > B) m--;
-  let j = m;
-  while (j >= 0 && B - game.turns[j].beat < 1) j--;
-  out.copy(j >= 0 ? game.turns[j].C : IDQ);
-  for (let i = j + 1; i <= m; i++) {
-    const t = game.turns[i];
-    out.premultiply(_q1.setFromAxisAngle(t.ax, t.rad * smooth(clamp(B - t.beat, 0, 1))));
+  if (bakedFor !== game.turns || bakedN !== game.turns.length) rebakeTurns();
+  let lo = 0,
+    hi = knots.length - 1;
+  if (hi < 0 || B < knots[0].beat) return out.identity();
+  while (lo < hi) {
+    const m = (lo + hi + 1) >> 1;
+    if (knots[m].beat <= B) lo = m;
+    else hi = m - 1;
   }
-  return out;
+  advance(knots[lo], B, out);
+  return out.multiply(_qy.setFromAxisAngle(YAX, -WF * B));
 }
 function turnRate(B) {
   let r = 0;

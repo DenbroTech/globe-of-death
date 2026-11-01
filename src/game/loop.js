@@ -6,13 +6,13 @@ import { ARENAS, turntable } from '../arenas/arenas.js';
 import { prog, saveProg } from './progress.js';
 import { reachAct } from './unlocks.js';
 import { arenaId, arenaTick } from '../arenas/current.js';
-import { _a, _b, _c, aimRing, fillTrail, pushTrail } from '../render/trails.js';
+import { TRAIL_STEP, _a, _b, _c, arcTrail, fillTrail, pushRibbon, resetRibbon } from '../render/trails.js';
 import { PN, burst, flash, pGeo, pMat, pPos, pVel } from '../render/particles.js';
 import { ac, ambienceTick } from '../audio/synth.js';
 import { ACT_START, FINAL, INTRO, LOOK, actOfBar, beatAt, bpmOfAct, lat, now, timeAt } from '../audio/clock.js';
-import { normalAt, orientOnWall, posAt, tanAt } from './path.js';
+import { orientOnWall, posAt, tanAt } from './path.js';
 import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy } from './freeride.js';
-import { myRing, nextRing, player, pool } from './objects.js';
+import { myRing, player, pool } from './objects.js';
 import { genBarNotes } from './chart.js';
 import { addBal, showJudge, toast } from '../ui/hud.js';
 import { autoHit, boostActive, boostB0, boostBtn, chargeBoost } from './boost.js';
@@ -22,7 +22,7 @@ import { updateCamera } from '../render/camera.js';
 import { addScore, gw, offerPerks, pk } from './perks.js';
 import { gBike, gFig, showroom } from '../ui/garage.js';
 import { showOver } from '../ui/leaderboard.js';
-import { tutGen } from '../ui/tutorial.js';
+import { tutGen, tutTick } from '../ui/tutorial.js';
 import { $, G, R, V3, clamp } from '../core/constants.js';
 import { hitSound, menuMusic, scheduleStep } from '../audio/songs.js';
 
@@ -49,7 +49,11 @@ function frame(nowMs) {
       B = beatAt(T - lat());
     // keep the chart 3 bars ahead and the music scheduled
     if (!game.FREE) {
-      if (game.TUT) while (game.genBar <= Math.floor(B / 4) + 2) tutGen(game.genBar++);
+      if (game.TUT) {
+        while (game.genBar <= Math.floor(B / 4) + 2) tutGen(game.genBar++);
+        tutTick(B);
+        if (game.paused) return;
+      }
       else while (game.genBar <= Math.floor(B / 4) + 3) genBarNotes(game.genBar++);
     }
     while (timeAt(game.schedStep / 2) < T + 0.15) scheduleStep(game.schedStep++);
@@ -160,22 +164,17 @@ function frame(nowMs) {
     P.bike.m.rotation.x = -0.55 * P.wh + 0.42 * P.nw;
     P.bike.m.position.y = 0.18 * P.wh + 0.2 * P.nw;
     P.bike.m.position.z = -0.1 * P.wh + 0.16 * P.nw;
-    pushTrail(P.trail, _c.copy(P.p).multiplyScalar(R - 0.04));
     P.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
-    myRing.visible = B >= INTRO;
+    // ribbon of where you've been (starts once you're up on the wall)
+    if (B >= INTRO) {
+      if (!myRing.visible) resetRibbon(myRing, P.p);
+      myRing.visible = true;
+      pushRibbon(myRing, P.p);
+    } else myRing.visible = false;
     if (game.FREE && P.fInit) {
-      _c.crossVectors(P.p, P.t).normalize();
-    } else {
-      normalAt(B, _c);
-    }
-    aimRing(myRing, _c);
-    const nt = game.notes.find(n => n.to && n.beat > B - 0.3 && n.beat < B + LOOK);
-    nextRing.visible = !!nt;
-    if (nt) {
-      normalAt(nt.beat + 1.01, _c);
-      aimRing(nextRing, _c);
-      nextRing.material.opacity = 0.35 + 0.35 * clamp(1 - (nt.beat - B) / LOOK, 0, 1);
-    }
+      const pts = myRing.userData.pts;
+      arcTrail(P.trail, (i, o) => o.copy(pts[Math.min(i, pts.length - 1)]));
+    } else arcTrail(P.trail, (i, o) => posAt(B - (i * TRAIL_STEP) / (Math.PI / 2), o));
     if (game.FREE) freeTick(dt, T, B);
     else {
       // riders cutting across
@@ -204,7 +203,7 @@ function frame(nowMs) {
           _a.copy(n.M).applyAxisAngle(n.A, ang);
           _b.copy(n.c).applyAxisAngle(n.A, ang);
           orientOnWall(s.bike.g, _a, _b, 0);
-          pushTrail(s.trail, _c.copy(_a).multiplyScalar(R - 0.04));
+          arcTrail(s.trail, (i, o) => o.copy(n.M).applyAxisAngle(n.A, ang - Math.sign(n.w) * i * TRAIL_STEP));
           s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
           for (let i = 0; i < s.dots.length; i++) {
             const d = s.dots[i];
@@ -302,7 +301,7 @@ function frame(nowMs) {
       }
       {
         const al = $('#actline'),
-          nb = (ACT_START[game.act] || 0) * 4,
+          nb = game.TUT ? (game.tutLine ?? -1e4) : (ACT_START[game.act] || 0) * 4,
           x = hx + (nb - B) * ppb,
           show = !game.FREE && B >= INTRO && x < w + 10 && x > -10;
         al.hidden = !show;
@@ -350,7 +349,7 @@ function frame(nowMs) {
     tumble(player, dt * ts);
     P.bike.g.position.copy(player.cp);
     P.bike.g.rotateOnAxis(player.sa, player.sw * dt * ts);
-    myRing.visible = nextRing.visible = false;
+    myRing.visible = false;
     for (const s of pool) {
       s.mark.visible = false;
       if (s.state === 'tumble') {

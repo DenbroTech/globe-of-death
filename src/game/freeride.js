@@ -1,6 +1,6 @@
 import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
-import { _a, _b, _c, fillTrail, pushTrail } from '../render/trails.js';
+import { TRAIL_STEP, _a, _b, _c, arcTrail, fillTrail } from '../render/trails.js';
 import { INTRO, beatAt, timeAt } from '../audio/clock.js';
 import { _o2, addTurn, orientOnWall, posAt, tanAt } from './path.js';
 import { player, pool } from './objects.js';
@@ -17,12 +17,43 @@ let fr = [],
   frNear = 0,
   frChain = 0,
   frDanger = null,
-  frPredT = 0;
+  frPredT = 0,
+  frWarned = false;
+const GHOST = 5; // seconds a new rider rides as a see-through ghost before they can hit you
+/* see-through look for a newly arrived rider: swap in half-opacity copies of its materials */
+function setGhost(s, f) {
+  if (!s.ghost) {
+    s.ghost = new Map();
+    s.bike.g.traverse(o => {
+      if (!o.isMesh && !o.isSprite) return;
+      const list = Array.isArray(o.material) ? o.material : [o.material];
+      list.forEach(m => {
+        if (s.ghost.has(m)) return;
+        const c = m.clone();
+        c.transparent = true;
+        c.depthWrite = false;
+        c.userData.op = m.opacity;
+        s.ghost.set(m, c);
+      });
+      o.userData.mat0 = o.material;
+    });
+  }
+  s.bike.g.traverse(o => {
+    if (!o.userData.mat0) return;
+    const m0 = o.userData.mat0;
+    if (f >= 1) o.material = m0;
+    else {
+      o.material = Array.isArray(m0) ? m0.map(m => s.ghost.get(m)) : s.ghost.get(m0);
+      (Array.isArray(o.material) ? o.material : [o.material]).forEach(c => c && (c.opacity = c.userData.op * f));
+    }
+  });
+}
 let freeBest = 0;
 const fmtT = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
 function freeReset() {
   fr.forEach(r => {
     const s = r.s;
+    if (s.ghost) setGhost(s, 1);
     s.busy = false;
     s.state = null;
     s.bike.g.visible = false;
@@ -37,6 +68,7 @@ function freeReset() {
   frNear = 0;
   frChain = 0;
   frDanger = null;
+  frWarned = false;
 }
 const frPos = (r, th, out) => out.copy(r.u).multiplyScalar(Math.cos(th)).addScaledVector(r.w, Math.sin(th));
 function frHits(r, th, B, beats) {
@@ -65,7 +97,9 @@ function frSpawn(B) {
     om: (Math.PI / 2) * (0.75 + Math.random() * 0.45 + Math.min(0.5, frTime / 240)) * (Math.random() < 0.5 ? 1 : -1),
     th: 0,
     minD: 9,
+    ghost: GHOST,
   };
+  setGhost(s, 0.5);
   const pp = player.fInit ? player.fp.clone() : posAt(B, new V3());
   let bestTh = 0,
     bestD = -1;
@@ -85,7 +119,6 @@ function frSpawn(B) {
   s.trail.visible = true;
   fillTrail(s.trail, frPos(r, r.th, new V3()).multiplyScalar(R - 0.04));
   fr.push(r);
-  toast(`${s.name} rides in`, 1000);
   game.cheer = Math.max(game.cheer, 0.5);
 }
 function frPredict(B) {
@@ -94,7 +127,7 @@ function frPredict(B) {
     a = new V3(),
     b = new V3();
   for (const r of fr)
-    for (let k = 1; k <= 32; k++) {
+    for (let k = r.ghost > 0 ? 33 : 1; k <= 32; k++) {
       const db = k / 8;
       if (pts) a.copy(pts[k - 1]);
       else posAt(B + db, a);
@@ -117,8 +150,14 @@ function freeTick(dt, T, B) {
   game.score += (gain * 10 * (1 + fr.length * 0.3) * (P.fs || FR_CRUISE)) / FR_CRUISE;
   if (game.wheelieDown || game.noseDown) game.score += gain * 45;
   // riders join at 20 s, then after 30 s, 40 s, 50 s… (each wait 10 s longer)
+  if (!frWarned && frTime >= frNext - 3 && fr.length < pool.length) {
+    frWarned = true;
+    const s = pool.find(x => !x.busy);
+    if (s) toast(`${s.name} incoming!`, 1800);
+  }
   if (frTime >= frNext && fr.length < pool.length) {
     frSpawn(B);
+    frWarned = false;
     frNext = frTime + 20 + 10 * fr.length;
   }
   for (const r of fr) {
@@ -128,13 +167,19 @@ function freeTick(dt, T, B) {
     frPos(r, r.th, _a);
     _b.copy(r.u).multiplyScalar(-Math.sin(r.th)).addScaledVector(r.w, Math.cos(r.th)).multiplyScalar(Math.sign(r.om));
     orientOnWall(s.bike.g, _a, _b, 0);
-    pushTrail(s.trail, _c.copy(_a).multiplyScalar(R - 0.04));
+    arcTrail(s.trail, (i, o) => frPos(r, r.th - Math.sign(r.om) * i * TRAIL_STEP, o));
     s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
     for (let i = 0; i < s.dots.length; i++) {
       const d = s.dots[i];
       d.visible = true;
       frPos(r, r.th + r.om * (i + 1) * 0.16, d.position).multiplyScalar(R - 0.06);
       d.material.opacity = 0.7 - 0.045 * i;
+    }
+    if (r.ghost > 0) {
+      // ghost: no collisions or near misses yet, fades in over the last half second
+      r.ghost -= dt;
+      setGhost(s, r.ghost > 0 ? 0.5 + 0.5 * clamp(1 - r.ghost / 0.5, 0, 1) : 1);
+      continue;
     }
     const dist = _a.distanceTo(P.p) * R;
     if (dist < HIT) {
