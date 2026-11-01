@@ -24,7 +24,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Long-press notes (wheelie/stoppie/seat stand) are 2–6 beats; holds only end when the finger lifts.
 
 **Screens**
-- Home: title, The show / Free ride chips, Ride, icon row (Level · Garage · Scores · Learn · Settings).
+- Home: title, The show / Free ride chips, Ride, icon row (Level · Garage · Scores · Lesson · Settings).
 - Unlocks (`game/unlocks.js`): bikes, paints (also suit/helmet colours), outfits and arenas open by milestones from a lifetime `career` (acts reached, shows finished, show points, best combo, perfects, shows played, best free-ride time, near misses). One table, `UNLOCKS`; arenas accept a show OR free-ride milestone. Starters: Classic bike, Leathers, Fire red / Midnight / Pearl / Royal blue + Ice blue/Racing green-type solids listed as unlocks. Neon is last. Locked items show a lock + milestone; tapping says how to earn it; the over screen lists new unlocks; act unlocks toast mid-run. Tickets were removed.
 - Levels list (status: Selected / Unlocked / requirement).
 - Garage (buttons have a 50% dark backing, chosen one solid): Bike / Rider tabs. 6 bikes in a grid (classic, dirt, chopper, vintage, sport, rocket) with stats that affect play. Paint groups: Solid, Metallic, Patterns, Animal, Neon. Rider: outfits grid + Suit/Helmet colour picker.
