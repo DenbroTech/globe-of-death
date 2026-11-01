@@ -18,6 +18,7 @@ export function initSave() {
   } catch (e) {}
   if (garage.sel.helmet === undefined) garage.sel.helmet = null;
   if (garage.sel.suit === undefined) garage.sel.suit = null;
+  if (garage.sel.trim === undefined) garage.sel.trim = null;
 }
 
 export { garage, saveGarage };

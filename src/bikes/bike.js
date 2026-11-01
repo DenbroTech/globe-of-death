@@ -297,9 +297,12 @@ function mergeGroup(grp) {
     const P = new Float32Array(n * 3),
       N = new Float32Array(n * 3),
       U = new Float32Array(n * 2),
-      CC = new Float32Array(n * 3);
+      CC = new Float32Array(n * 3),
+      // optional per-vertex rider data (sharp suit chevron), zero where a part doesn't have it
+      CH = gs.some(g => g.attributes.chev) ? new Float32Array(n * 4) : null;
     let o = 0;
     gs.forEach(g => {
+      if (CH && g.attributes.chev) CH.set(g.attributes.chev.array.subarray(0, g.attributes.position.count * 4), o * 4);
       P.set(g.attributes.position.array, o * 3);
       N.set(g.attributes.normal.array, o * 3);
       U.set(g.attributes.uv.array.subarray(0, g.attributes.position.count * 2), o * 2);
@@ -312,6 +315,7 @@ function mergeGroup(grp) {
     G.setAttribute('normal', new THREE.BufferAttribute(N, 3));
     G.setAttribute('uv', new THREE.BufferAttribute(U, 2));
     G.setAttribute('color', new THREE.BufferAttribute(CC, 3));
+    if (CH) G.setAttribute('chev', new THREE.BufferAttribute(CH, 4));
     const me = new THREE.Mesh(G, m);
     me.castShadow = shadow !== false;
     me.receiveShadow = false;

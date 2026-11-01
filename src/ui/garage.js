@@ -36,6 +36,7 @@ function rebuildGarageFigure() {
     gs.suit ? findItem('paint', gs.suit).c : null,
     gs.suit,
     gs.helmet,
+    gs.trim,
   );
   gFig.position.set(-0.75, 0, 0.55);
   gFig.rotation.y = 0.35;
@@ -156,7 +157,7 @@ function showGarage(msg) {
         .join('')}</div>
       <div class="glabel">Paint <b>${findItem('paint', sel.paint).name}</b></div>${palette('paint')}`
         : `<div class="glabel">Outfit <b>${findItem('costume', sel.costume).name}</b></div>${cards('costume')}
-      <div class="seg"><button data-part="suit" aria-pressed="${gPart === 'suit'}">Suit</button><button data-part="helmet" aria-pressed="${gPart === 'helmet'}">Helmet</button></div><div class="glabel">${gPart === 'suit' ? 'Suit' : 'Helmet'} colour <b>${pname(gPart)}</b></div>${palette(gPart, 1)}`
+      <div class="seg"><button data-part="suit" aria-pressed="${gPart === 'suit'}">Suit</button><button data-part="helmet" aria-pressed="${gPart === 'helmet'}">Helmet</button><button data-part="trim" aria-pressed="${gPart === 'trim'}">Trim</button></div><div class="glabel">${{ suit: 'Suit', helmet: 'Helmet', trim: 'Trim' }[gPart]} colour <b>${pname(gPart)}</b></div>${palette(gPart, 1)}`
     }
     ${msg ? `<p class="gmsg">${msg}</p>` : ''}
     <button class="go wide" id="back">Back to menu</button></div>`;
@@ -190,7 +191,7 @@ function showGarage(msg) {
       }),
   );
   const pick = (k, id) => {
-    const kind = k === 'suit' || k === 'helmet' ? 'paint' : k;
+    const kind = k === 'suit' || k === 'helmet' || k === 'trim' ? 'paint' : k;
     if (id && !isUnlocked(kind, id)) {
       // locked: say how to earn it, don't select
       const it = CATALOG[kind].find(i => i.id === id);
@@ -199,7 +200,7 @@ function showGarage(msg) {
     }
     garage.sel[k] = id || null;
     // a new outfit starts in its own colours
-    if (k === 'costume') garage.sel.suit = garage.sel.helmet = null;
+    if (k === 'costume') garage.sel.suit = garage.sel.helmet = garage.sel.trim = null;
     saveGarage();
     rebuildPlayerBike();
     // bike tab changes only the bike; rider tab changes only the rider

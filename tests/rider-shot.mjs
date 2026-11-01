@@ -14,7 +14,7 @@ const page = await browser.newPage({ viewport: { width: 400, height: 400 } });
 page.on('pageerror', e => console.log('PAGEERROR', e.message));
 await page.goto(url);
 await page.waitForFunction(() => window.__god);
-const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND, COSTUME]) => {
+const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND, COSTUME, TRIM]) => {
   // import the exact module instances the game loaded (dev server may tag them with ?t=…)
   const loaded = performance.getEntriesByType('resource').map(e => e.name);
   const imp = p => import(loaded.filter(u => new URL(u).pathname === p).pop() || p);
@@ -28,7 +28,7 @@ const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND, COS
   scene.add(new THREE.HemisphereLight(0xfff4e8, 0x302020, 0.45));
   const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(3, 5, 4); scene.add(key);
   const rim = new THREE.DirectionalLight(0x99bbff, 0.8); rim.position.set(-4, 3, -3); scene.add(rim);
-  const bike = makeBike({ style, paint: PAINT, costume: COSTUME, suit: SUIT });
+  const bike = makeBike({ style, paint: PAINT, costume: COSTUME, suit: SUIT, trim: TRIM });
   scene.add(bike.g || bike);
   if (NORIDER && bike.rider) bike.rider.visible = false;
   if (STAND) {
@@ -37,7 +37,7 @@ const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND, COS
     bike.trick.visible = true; bike.trick.children.forEach(c => (c.visible = true));
     if (bike.limbs) bike.limbs[1].visible = false;
   }
-  const fig = makeFigure(COSTUME, 0xe63946, null, SUIT, null);
+  const fig = makeFigure(COSTUME, 0xe63946, null, SUIT, null, TRIM);
   fig.position.set(-2.4, 0, 0); scene.add(fig);
   const W = 400, H = 400, views = [
     [[2.8, 1.2, 0.3], [0, 0.7, 0]],    // side
@@ -59,7 +59,7 @@ const data = await page.evaluate(async ([style, PAINT, SUIT, NORIDER, STAND, COS
   });
   renderer.setPixelRatio(pr); renderer.setSize(prev.x, prev.y, false);
   return sheet.toDataURL('image/png');
-}, [style, process.env.PAINT || 'red', process.env.SUIT || null, !!process.env.NORIDER, !!process.env.STAND, process.env.COSTUME || 'leathers']);
+}, [style, process.env.PAINT || 'red', process.env.SUIT || null, !!process.env.NORIDER, !!process.env.STAND, process.env.COSTUME || 'leathers', process.env.TRIM || null]);
 fs.writeFileSync(out, Buffer.from(data.split(',')[1], 'base64'));
 await browser.close();
 console.log('wrote', out);

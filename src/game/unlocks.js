@@ -144,7 +144,7 @@ function sanitizeSel(sel) {
       sel[k] = STARTER[k];
       changed = true;
     }
-  for (const k of ['suit', 'helmet'])
+  for (const k of ['suit', 'helmet', 'trim'])
     if (sel[k] && !isUnlocked('paint', sel[k])) {
       sel[k] = null;
       changed = true;

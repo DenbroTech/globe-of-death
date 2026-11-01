@@ -160,22 +160,26 @@ function riderKit(par, M) {
         X = new V3().crossVectors(u, f).normalize();
       /* torso panels (race-suit layout): main-colour chest and back, white chevron front and back,
          white shoulder yoke, black side panels under the arms, black collar and lower back */
+      const cv = [];
       const tc = (t, n) => {
         const side = Math.abs(n.dot(X)),
           lat = n.dot(X),
           fr = n.dot(f),
           up = n.dot(u);
+        cv.push(lat, t, fr, 1);
         if (t > 0.91) return BLK;
         if (t > 0.8 && up > 0.4) return SEC;
         if (side > 0.62 && t > 0.22 && t < 0.86) return BLK;
-        if (fr > 0.45 && t > 0.5 && t < 0.8 && Math.abs(Math.abs(lat) - (t - 0.52) * 1.7) < 0.075) return SEC;
-        if (fr < -0.45 && t > 0.42 && t < 0.74 && Math.abs(Math.abs(lat) - (0.74 - t) * 1.5) < 0.08) return SEC;
+        if (!M.suit.userData.chev) {
+          if (fr > 0.45 && t > 0.5 && t < 0.8 && Math.abs(Math.abs(lat) - (t - 0.52) * 1.7) < 0.075) return SEC;
+          if (fr < -0.45 && t > 0.42 && t < 0.74 && Math.abs(Math.abs(lat) - (0.74 - t) * 1.5) < 0.08) return SEC;
+        }
         if (fr < -0.3 && t < 0.34) return BLK;
         if (t < 0.24 && side > 0.42) return BLK;
         return MAIN;
       };
       M.part = 'torso';
-      sc(
+      const tor = sc(
         H.clone().addScaledVector(u, -0.05),
         N,
         f,
@@ -196,6 +200,8 @@ function riderKit(par, M) {
         0.26,
         tc,
       );
+      if (cv.length === tor.geometry.attributes.position.count * 4)
+        tor.geometry.setAttribute('chev', new THREE.BufferAttribute(new Float32Array(cv), 4));
       /* pelvis/seat: black with main-colour front */
       M.part = 'pelvis';
       sc(
@@ -720,6 +726,35 @@ function riderKit(par, M) {
   };
   return K;
 }
+/* the suit's chest and back chevrons, drawn per pixel from per-vertex torso coordinates (lat, t, fr) so
+   the edges are crisp lines instead of the stair-steps vertex colours give */
+function sharpChevron(mat, pal) {
+  mat.userData.chev = true;
+  mat.extensions = Object.assign(mat.extensions || {}, { derivatives: true });
+  const prev = mat.onBeforeCompile,
+    prevKey = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+  mat.onBeforeCompile = (sh, r) => {
+    if (prev) prev(sh, r);
+    sh.uniforms.uSec = { value: pal.sec };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec4 chev;\nvarying vec4 vChev;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvChev = chev;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uSec;\nvarying vec4 vChev;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        if (vChev.w > 0.5) {
+          float t = vChev.y, fr = vChev.z, al = abs(vChev.x), d = 1e3;
+          if (fr > 0.45 && t > 0.5 && t < 0.8 && al < 0.62) d = abs(al - (t - 0.52) * 1.7) - 0.075;
+          if (fr < -0.45 && t > 0.42 && t < 0.74 && al < 0.62) d = abs(al - (0.74 - t) * 1.5) - 0.08;
+          float aa = max(fwidth(d), 1e-4);
+          diffuseColor.rgb = mix(diffuseColor.rgb, uSec, 1.0 - smoothstep(-aa, aa, d));
+        }`,
+      );
+  };
+  mat.customProgramCacheKey = () => prevKey + '|chev';
+}
 function riderMats(o, C, P) {
   const SM = (c, r, mt, x = {}) =>
     new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: r, metalness: mt }, x));
@@ -764,6 +799,10 @@ function riderMats(o, C, P) {
     if (D.pal.sec != null) pal.sec = new THREE.Color(D.pal.sec).convertSRGBToLinear();
     if (D.pal.blk != null) pal.blk = new THREE.Color(D.pal.blk).convertSRGBToLinear();
   }
+  // trim colour picked in the garage replaces the white/grey stripes
+  if (o.trim && suit.userData.neon == null) pal.sec = deep(findItem('paint', o.trim).c);
+  // chest/back chevron drawn per pixel (sharp edge) on plain leathers; see riderKit torso
+  if (!(D && D.design) && !C.ghost) sharpChevron(suit, pal);
   const CODE = { MAIN, SEC, BLK, DIM };
   return {
     suit,
@@ -951,7 +990,7 @@ function buildRider(rider, S, st, C, o, P, X) {
   mergeGroup(trick);
   return { trick, flutter, limbs };
 }
-function makeFigure(cid, paintHex, suitHex, suitId, helmId) {
+function makeFigure(cid, paintHex, suitHex, suitId, helmId, trimId) {
   if (RIDER_GLTF)
     try {
       return figureFromModel(cid, paintHex, suitHex, suitId, helmId);
@@ -961,7 +1000,7 @@ function makeFigure(cid, paintHex, suitHex, suitId, helmId) {
     body = new THREE.Group();
   f.add(body);
   const V = (x, y, z) => new V3(x, y, z);
-  const M = riderMats({ suitHex: suitHex ?? undefined, helmetHex: paintHex, suit: suitId, helmet: helmId }, C, {
+  const M = riderMats({ suitHex: suitHex ?? undefined, helmetHex: paintHex, suit: suitId, helmet: helmId, trim: trimId }, C, {
       c: paintHex,
     }),
     K = riderKit(body, M),
