@@ -190,21 +190,25 @@ const songFor = a => {
   const L = ARENAS[arenaId].songs;
   return L[(a - 1 + L.length * 99) % L.length];
 };
-/* move sounds are little tunes in the song's key, built on the chord that's playing, so a run of
-   moves makes a melody. Degrees are scale steps (0 = chord root, 2 = third, 4 = fifth, 7 = octave),
-   played as quick 16th notes. Each direction has its own shape:
-   left "Drop" 5-3 · right "Lift" 3-5 · up-left "Sigh" 2-1 · up-right "Resolve" 7-8
-   down-left "Dive" 8-5-1 · down-right "Rocket" 1-5-8 */
-const MOTIF = {
-  left: [4, 2],
-  right: [2, 4],
-  ul: [1, 0],
-  ur: [6, 7],
-  dl: [7, 4, 0],
-  dr: [0, 4, 7],
-  up: [2, 4],
-  down: [4, 2],
-};
+/* move sounds: ONE note per press, but every press continues a single melody line. A pointer walks the
+   song's scale (degrees, 0 = chord root); each move steps it its own way, so every move sounds different
+   and consecutive moves (straight after or seconds apart) join up into a tune:
+   left -1 · right +1 · up-left -2 · up-right +2 · down-left -3 (accent) · down-right +3 (accent) ·
+   jump leaps +4 (bright, with an octave shimmer) · wheelie climbs a step per beat · stoppie walks down ·
+   seat stand plays two-note chords stepping down (left) / up (right). The line bounces off its range. */
+const STEP = { left: -1, right: 1, ul: -2, ur: 2, dl: -3, dr: 3, up: 1, down: -1, jump: 4 };
+const mel = { d: 2 };
+const LO = -2,
+  HI = 11;
+function walk(step) {
+  let d = mel.d + step;
+  if (d > HI) d = mel.d - Math.abs(step); // bounce back into range
+  if (d < LO) d = mel.d + Math.abs(step);
+  return (mel.d = Math.max(LO, Math.min(HI, d)));
+}
+function resetMelody() {
+  mel.d = 2;
+}
 const SCALE = { maj: [0, 2, 4, 5, 7, 9, 11], min: [0, 2, 3, 5, 7, 8, 10] };
 const deg = (d, maj) => {
   const sc = maj ? SCALE.maj : SCALE.min,
@@ -229,52 +233,32 @@ function hitSound_(type, step, g) {
   const t = ac.currentTime,
     r = songRoot() + 24,
     K = kit(),
-    V = K.hit || 'tri';
-  if (type === 'jump') {
-    const J = K.jump;
-    if (J === 'slide') {
-      osc(t, mid(r), 'sine', 0.11, 0.4, mid(r + 19));
-      osc(t, mid(r + 12), 'triangle', 0.03, 0.3, mid(r + 31));
-      return;
-    }
-    if (J === 'horn') {
-      [0, 4, 7].forEach(i => voice('brass', t, r + i - 12, 0.06, 0.55));
-      return;
-    }
-    if (J === 'swoop') {
-      [0, 7, 12].forEach((iv, i) => voice('theremin', t + i * 0.07, r + iv + 12, 0.07, 0.3));
-      return;
-    }
-    if (J === 'bubbles') {
-      [0, 3, 7, 10, 12, 15].forEach((iv, i) => voice('bubble', t + i * 0.04, r + 12 + iv, 0.07, 0.18));
-      return;
-    }
-    [0, 7, 12, 19].forEach((iv, i) => voice(V, t + i * 0.045, r + iv, 0.08 - i * 0.012, 0.4 - i * 0.05));
-    return;
-  }
-  const S = songNow(),
-    maj = !!S.maj,
-    s16 = 15 / bpmOfAct(game.act || 1);
+    V = K.hit || 'tri',
+    maj = !!songNow().maj;
   if (type === 'wheelie' || type === 'nose') {
-    // wheelie "Staircase": climbs the scale a step per beat; stoppie "Waterfall": walks down it
-    const k = step || 0,
-      d = type === 'wheelie' ? Math.min(k, 9) : 7 - Math.min(k, 9);
-    voice(V, t, r + deg(d, maj), 0.085, 0.38);
+    const d = walk(type === 'wheelie' ? 1 : -1);
+    voice(V, t, r + deg(d, maj), 0.09, 0.38);
     return;
   }
   if (type.startsWith('stand')) {
-    // seat stand: two-note chord stabs; left "Low chords" step down, right "High chords" step up
-    const k = Math.min(step || 0, 6),
-      d = type === 'standl' ? 4 - k : k;
-    [0, 2].forEach(i => voice(V, t, r - 12 + deg(d + i, maj), 0.075, 0.42));
-    voice(V, t + s16, r + deg(d + 4, maj), 0.05, 0.3);
+    const d = walk(type === 'standl' ? -1 : 1);
+    voice(V, t, r + deg(d, maj), 0.08, 0.42);
+    voice(V, t, r + deg(d - 2, maj), 0.06, 0.42);
     return;
   }
-  const M = MOTIF[type] || [0],
+  const d = walk(STEP[type] ?? 1),
+    m = r + deg(d, maj),
     v = g === 'p' ? 0.14 : 0.1,
-    soft = type === 'ul' || type === 'ur' ? 0.7 : 1,
-    hard = type === 'dl' || type === 'dr';
-  M.forEach((d, i) => voice(V, t + i * s16, r + deg(d, maj), v * soft * (hard && i === 0 ? 1.15 : 1) * (i ? 0.85 : 1), 0.26));
+    soft = type === 'ul' || type === 'ur';
+  if (type === 'jump') {
+    // a bright, longer note on the melody, with a quiet octave shimmer in the arena's jump voice
+    voice(V, t, m, v * 1.1, 0.5);
+    voice(K.jump && !['slide', 'horn', 'swoop', 'bubbles'].includes(K.jump) ? K.jump : V, t, m + 12, v * 0.35, 0.35);
+    return;
+  }
+  voice(V, t, m, v * (soft ? 0.75 : type === 'dl' || type === 'dr' ? 1.2 : 1), soft ? 0.22 : 0.28);
+  // hard turns: the same note doubled an octave down underneath, so they hit harder (still one note)
+  if (type === 'dl' || type === 'dr') voice(V, t, m - 12, v * 0.5, 0.3);
 }
 function clap(t) {
   nz(t, 'bandpass', 1300, 0.35, 0.06);
@@ -376,4 +360,4 @@ function menuMusic() {
   }
 }
 
-export { SONGS, clap, hitSound, menuMusic, scheduleStep, songFor };
+export { SONGS, clap, hitSound, resetMelody, menuMusic, scheduleStep, songFor };

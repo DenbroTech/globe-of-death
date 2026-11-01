@@ -11,6 +11,7 @@ import { fStick, freeReset } from './freeride.js';
 import { myRing, player, pool } from './objects.js';
 import { drawHearts, ov, toast } from '../ui/hud.js';
 import { awardFans } from '../ui/leaderboard.js';
+import { resetMelody } from '../audio/songs.js';
 import { freeClock, holdClock } from './judging.js';
 import { endStunt, gestures, heldKeys, jk } from '../input/controls.js';
 import { cam } from '../render/camera.js';
@@ -20,6 +21,7 @@ import { $, R } from '../core/constants.js';
 import { showStart } from '../ui/menus.js';
 
 function start() {
+  resetMelody();
   if (sanitizeSel(garage.sel)) rebuildPlayerBike();
   crowd.sync();
   game.TUT = game.tutPending;
