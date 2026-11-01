@@ -212,7 +212,6 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .note.holding{scale:1.04 1.32;transform-origin:20px 50%;transition:scale .12s ease-out}
 .note.wheelie,.note.nose,.note.standl,.note.standr{transition:scale .2s}
 #actline span{display:none}
-.R .hgrip::before{content:"";position:absolute;left:10%;right:3%;height:6px;border-radius:3px;top:calc(50% - 3px - var(--roll));background:linear-gradient(90deg,#ff8a1a,#ffc23d);box-shadow:0 0 8px rgba(255,138,26,.8);transition:top .06s linear}
 .R .hgrip{overflow:visible}
 .chip.lock{opacity:.5;display:inline-flex;align-items:center;gap:5px}.chip .lk{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2}
 .chip.mini{height:28px;font-size:12px;padding:0 10px;opacity:.75}

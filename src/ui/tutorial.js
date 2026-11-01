@@ -105,7 +105,7 @@ const TUT_STEPS = [
   },
   {
     t: 'NOS',
-    d: 'NOS charges while your balance is full. It is charged now. Tap the red NOS button on the handlebars and the next few moves ride themselves.',
+    d: 'NOS plays the next few moves for you automatically. It charges while your balance is full, and it is full now: tap the red NOS button on the handlebars.',
     need: 1,
     ev: 'nos',
     gen: b => {
@@ -119,14 +119,15 @@ const TUT_STEPS = [
     need: 1,
     ev: 'perk',
     gen: b => {
-      if (game.tutLine == null) game.tutLine = b * 4;
+      // the yellow act line arrives a couple of bars later, once the NOS has finished
+      if (game.tutLine == null && !boostActive()) game.tutLine = b * 4 + 4;
     },
   },
 ];
 // the yellow act line only shows in the Perks step: when it reaches the circle, a perk pick pops up
 function tutTick(B) {
   if (game.tutLine != null && B >= game.tutLine) {
-    game.tutLine = -1e4;
+    game.tutLine = Infinity; // shown once: never triggers again
     tutEl.hidden = true;
     offerPerks(0, true);
   }
