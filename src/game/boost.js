@@ -17,7 +17,7 @@ function chargeBoost(v) {
   if ((game.balance < 100 && !pk('hot')) || boostActive()) return;
   game.boostCharge = Math.min(
     100,
-    game.boostCharge + 0.5 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2) * (game.balance < 100 ? 0.5 : 1),
+    game.boostCharge + 0.4 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2) * (game.balance < 100 ? 0.5 : 1),
   );
 }
 const boostActive = () => now() < game.boostEnd;
