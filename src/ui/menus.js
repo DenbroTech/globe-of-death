@@ -41,7 +41,8 @@ function showStart() {
         showStart();
       }),
   );
-  $('#start').onclick = () => start();
+  // first time ever: Ride opens the Lesson (any mode); after that it's the normal ride
+  $('#start').onclick = () => (tutDone() ? start() : startTutorial());
   $('#tutBtn').onclick = startTutorial;
   $('#gar').onclick = () => showGarage();
   $('#lbbtn').onclick = () => {
