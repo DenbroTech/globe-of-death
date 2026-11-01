@@ -102,11 +102,11 @@ function showBoard(back) {
     };
   }
 }
-/* fans earned this run: 10 for every act cleared (a finished show clears them all), 1 per 30 s of free ride */
+/* fans earned this run: 1 for every act cleared (a finished show clears them all), 1 per 30 s of free ride */
 function fansEarned(win) {
   if (game.TUT) return 0;
   if (game.FREE) return Math.floor(frTime / 30);
-  return 10 * Math.max(0, win ? FINAL : Math.min(FINAL, game.act - 1));
+  return Math.max(0, win ? FINAL : Math.min(FINAL, game.act - 1));
 }
 function awardFans(win) {
   const n = fansEarned(win);
@@ -141,7 +141,7 @@ function showOver() {
     };
   };
   const got = game.over.unlocked || [],
-    crowdLine = (game.over.fansUp ? `<div class="unl"><b>+${game.over.fansUp}</b> fans in the stands</div>` : '') + (got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '');
+    crowdLine = (got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '');
   if (game.FREE) {
     ov.innerHTML = `<div class="card home"><h1><small>Free ride</small>${game.over.fell ? 'Fell off!' : 'Crash!'}</h1>
     <div class="res"><div><span>Time</span><b>${fmtT(frTime)}</b></div><div><span>Near misses</span><b>${frNear}</b></div><div><span>Score</span><b>${Math.floor(game.score).toLocaleString()}</b></div></div>

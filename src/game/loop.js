@@ -14,7 +14,8 @@ import { orientOnWall, posAt, tanAt } from './path.js';
 import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy } from './freeride.js';
 import { myRing, player, pool } from './objects.js';
 import { genBarNotes } from './chart.js';
-import { addBal, showJudge, toast } from '../ui/hud.js';
+import { addBal, ov, showJudge, toast } from '../ui/hud.js';
+import { setPause } from './run.js';
 import { autoHit, boostActive, boostB0, boostBtn, chargeBoost } from './boost.js';
 import { finale, finishHold, miss, ridersFor, tumble } from './judging.js';
 import { stuntTick } from '../input/controls.js';
@@ -36,6 +37,12 @@ function frame(nowMs) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (nowMs - game.lastT) / 1000);
   game.lastT = nowMs;
+  // safety net: a ride must never sit paused with no card on screen; show the pause menu instead
+  if (game.running && !game.over && game.paused && ov.hidden && game.slow <= 0) {
+    game.paused = false;
+    game.pauseMenu = false;
+    setPause(true);
+  }
   clock += dt;
   let ts = 1;
   if (game.slow > 0) {

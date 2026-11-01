@@ -71,6 +71,7 @@ function start() {
   });
   game.over = null;
   game.paused = false;
+  game.pauseMenu = false;
   game.score = 0;
   game.combo = 0;
   game.balance = 100;
@@ -117,14 +118,14 @@ function start() {
 function quitToMenu() {
   // quitting mid-run still keeps the fans you earned
   if (game.running && !game.over && !game.TUT) {
-    const n = awardFans(false);
-    if (n) setTimeout(() => toast(`+${n} fans`, 1600), 300);
+    awardFans(false);
   }
   resetInput();
   game.TUT = false;
   tutEl.hidden = true;
   game.running = false;
   game.paused = false;
+  game.pauseMenu = false;
   game.over = null;
   game.heldAt = null;
   game.slow = 0;
@@ -185,6 +186,9 @@ function resetInput() {
 }
 function setPause(p) {
   if (!game.running || game.over || p === game.paused) return;
+  // a perk pick, ad or finale card is up: that screen owns the pause, the pause button/back does nothing
+  if (!p && !game.pauseMenu) return;
+  game.pauseMenu = p;
   resetInput();
   game.paused = p;
   if (p) holdClock();

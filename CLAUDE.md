@@ -33,7 +33,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Camera starts on Centre (zoomed-out rider view); order Centre, Chase, Chest, Outside, Arena (saved in `god-cam5`).
 - Trails: a white ribbon of where you've ridden (behind you only, `makeRibbon`), and coloured rider trails computed from each rider's path (`arcTrail`), never frame-sampled (that drew chords across the globe on frame hitches).
 - Test ads: full-screen placeholder after acts 3, 6, 9, closable after 5 s.
-- Crowd: fans are earned and saved (`god-fans`): 10 per act cleared (finished show = all 10 acts), 1 per 30 s of free ride; kept on crash, finish or quit (not the Lesson). Start is 7. Over screen shows "+N fans". Full crowd while "Unlock all" is on.
+- Crowd: fans are earned and saved (`god-fans`): 1 per act cleared (finished show = all 10), 1 per 30 s of free ride; kept on crash, finish or quit (not the Lesson). Start is 7. No "+N fans" message (owner asked). Full crowd while "Unlock all" is on.
 
 **Arenas** (each with its own songs, instrument kit for music and move sounds, and animated "life")
 - Big Top (organ; trapeze artists, balloons with strings, confetti)
