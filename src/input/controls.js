@@ -278,12 +278,12 @@ export function initControls() {
         if (g.lo == null) g.lo = g.hi = x;
         g.lo = Math.min(g.lo, x);
         g.hi = Math.max(g.hi, x);
-        if (x - g.lo >= 24) {
+        if (x - g.lo >= 16) {
           press('right', undefined, true);
           game.steerKick = 7;
           g.lo = g.hi = x;
           lightLed(0);
-        } else if (g.hi - x >= 24) {
+        } else if (g.hi - x >= 16) {
           press('left', undefined, true);
           game.steerKick = -7;
           g.lo = g.hi = x;
@@ -307,7 +307,7 @@ export function initControls() {
       if (g.kind === 'steer') g.kind = null;
       return;
     }
-    if (d > (game.holdNote ? 20 : 28) && g.armed) {
+    if (d > (game.holdNote ? 14 : 28) && g.armed) {
       const sec = ((Math.round(Math.atan2(-dy, dx) / (Math.PI / 4)) % 8) + 8) % 8,
         dir = SECT[sec];
       g.armed = false;

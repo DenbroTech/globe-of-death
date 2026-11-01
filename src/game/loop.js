@@ -16,7 +16,7 @@ import { myRing, player, pool } from './objects.js';
 import { genBarNotes } from './chart.js';
 import { addBal, ov, showJudge, toast } from '../ui/hud.js';
 import { setPause } from './run.js';
-import { autoHit, boostActive, boostB0, boostBtn, chargeBoost } from './boost.js';
+import { autoHit, nosEnd, boostActive, boostB0, boostBtn, chargeBoost } from './boost.js';
 import { finale, finishHold, miss, ridersFor, tumble } from './judging.js';
 import { stuntTick } from '../input/controls.js';
 import { updateCamera } from '../render/camera.js';
@@ -281,15 +281,7 @@ function frame(nowMs) {
         game.notes.shift();
       }
       if (boostActive()) {
-        let moved = true;
-        while (moved) {
-          moved = false;
-          for (const n of game.notes)
-            if (n.len && n.beat < game.boostB1 - 0.01 && n.beat + n.len > game.boostB1 + 0.01) {
-              game.boostB1 = n.beat + n.len;
-              moved = true;
-            }
-        }
+        game.boostB1 = nosEnd(game.boostB1);
         game.boostEnd = Math.max(game.boostEnd, timeAt(game.boostB1) + lat() + 0.05);
       }
       {

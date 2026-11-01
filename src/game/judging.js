@@ -92,10 +92,11 @@ function press(type, tAt, soft) {
       (n.type === type ||
         (n.type === 'standl' && isL) ||
         (n.type === 'standr' && isR) ||
+        // while holding a long press, any left-ish swipe counts for any left move (same for right)
         (game.holdNote &&
           !n.len &&
-          ((isL && (n.type === 'ul' || n.type === 'dl')) || (isR && (n.type === 'ur' || n.type === 'dr')))));
-  const W = soft ? 1.5 : 1;
+          ((isL && ['left', 'ul', 'dl'].includes(n.type)) || (isR && ['right', 'ur', 'dr'].includes(n.type)))));
+  const W = soft ? 2 : game.holdNote ? 1.5 : 1;
   if (soft && !(best && bd <= gw(best.type) * W && okT(best))) return;
   if (best && bd <= gw(best.type) * W && okT(best)) {
     const g = bd <= pw(best.type) * W ? 'p' : 'g';

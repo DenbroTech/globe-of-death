@@ -21,20 +21,33 @@ function chargeBoost(v) {
   );
 }
 const boostActive = () => now() < game.boostEnd;
+/* where the NOS band ends: stretched to the end of any long press it overlaps, and over any single move
+   that would land within a beat after it, so there's always a clear gap after NOS */
+function nosEnd(b1) {
+  let moved = true;
+  while (moved) {
+    moved = false;
+    for (const n of game.notes) {
+      if (n.len && n.beat < b1 - 0.01 && n.beat + n.len > b1 + 0.01) {
+        b1 = n.beat + n.len;
+        moved = true;
+      } else if (!n.len && !n.judged && n.beat >= b1 - 0.01 && n.beat < b1 + 1) {
+        b1 = n.beat + 0.25;
+        moved = true;
+      }
+    }
+  }
+  return b1;
+}
 function useBoost() {
   initAudio();
   if (!game.running || game.paused || game.over || game.boostCharge < 100 || boostActive()) return;
   tutEv('nos');
   game.boostEnd = now() + 3 + 1.5 * pk('longBoost');
   game.boostCharge = 0;
-  {
-    const eb = beatAt(game.boostEnd - lat());
-    for (const n of game.notes)
-      if (n.len && n.beat < eb && n.beat + n.len > eb)
-        game.boostEnd = Math.max(game.boostEnd, timeAt(n.beat + n.len) + lat() + 0.05);
-    boostB0 = beatAt(now() - lat());
-    game.boostB1 = beatAt(game.boostEnd - lat());
-  }
+  boostB0 = beatAt(now() - lat());
+  game.boostB1 = nosEnd(beatAt(game.boostEnd - lat()));
+  game.boostEnd = Math.max(game.boostEnd, timeAt(game.boostB1) + lat() + 0.05);
   toast('BOOST!', 900);
   game.cheer = 1;
   crowd.wave();
@@ -84,4 +97,4 @@ export function initBoost() {
   });
 }
 
-export { autoHit, boostActive, boostB0, boostBtn, chargeBoost, useBoost };
+export { autoHit, nosEnd, boostActive, boostB0, boostBtn, chargeBoost, useBoost };
