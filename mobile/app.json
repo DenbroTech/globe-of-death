@@ -9,7 +9,6 @@
     "backgroundColor": "#07060a",
     "android": {
       "package": "com.denbro.globeofdeath.app",
-      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#07060a",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -32,6 +31,12 @@
     },
     "platforms": [
       "android"
-    ]
+    ],
+    "owner": "zseu",
+    "extra": {
+      "eas": {
+        "projectId": "0e447137-6391-4e9d-9eaa-55524b94a52b"
+      }
+    }
   }
 }
