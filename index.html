@@ -4,16 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#07060a">
-<title>Globe of Death</title>
+<title>Globe Riders</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Globe of Death">
+<meta name="apple-mobile-web-app-title" content="Globe Riders">
 <link rel="stylesheet" href="/src/style.css">
 <script>
-function bootFail(msg){var m=document.getElementById('bootMsg');if(!m){var o=document.getElementById('ov');o.hidden=false;o.innerHTML='<div class="card"><h1>Globe of Death</h1><p id="bootMsg"></p></div>';m=document.getElementById('bootMsg')}m.textContent=msg}
+function bootFail(msg){var m=document.getElementById('bootMsg');if(!m){var o=document.getElementById('ov');o.hidden=false;o.innerHTML='<div class="card"><h1>Globe Riders</h1><p id="bootMsg"></p></div>';m=document.getElementById('bootMsg')}m.textContent=msg}
 window.addEventListener('error',function(e){bootFail('Something broke while starting: '+(e.message||'unknown error')+'. Tell Claude this message so it can be fixed.')});
 </script>
 </head>
@@ -48,7 +48,7 @@ window.addEventListener('error',function(e){bootFail('Something broke while star
     <div class="zone R"><div class="lever" id="blever"></div><div class="hgrip" id="grip"></div></div>
     <div class="console" id="console"><svg class="tacho" viewBox="0 0 120 88" aria-hidden="true"><line class="tk b" x1="20.2" y1="87.0" x2="26.2" y2="83.5"/><line class="tk b" x1="14.7" y1="72.0" x2="18.6" y2="71.3"/><line class="tk b" x1="14.7" y1="56.0" x2="18.6" y2="56.7"/><line class="tk b" x1="20.2" y1="41.0" x2="26.2" y2="44.5"/><line class="tk b" x1="30.4" y1="28.8" x2="33.0" y2="31.8"/><line class="tk b" x1="44.3" y1="20.8" x2="45.6" y2="24.5"/><line class="tk" x1="60.0" y1="18.0" x2="60.0" y2="25.0"/><line class="tk" x1="75.7" y1="20.8" x2="74.4" y2="24.5"/><line class="tk" x1="89.6" y1="28.8" x2="87.0" y2="31.8"/><line class="tk" x1="99.8" y1="41.0" x2="93.8" y2="44.5"/><line class="tk" x1="105.3" y1="56.0" x2="101.4" y2="56.7"/><line class="tk r" x1="105.3" y1="72.0" x2="101.4" y2="71.3"/><line class="tk r" x1="99.8" y1="87.0" x2="93.8" y2="83.5"/><path id="tArc" class="sweet" d="" stroke="#ffc23d"/><text x="22" y="82">BRAKE</text><text x="74" y="82">REVS</text><line id="tNeedle" class="ndl" x1="60" y1="64" x2="60" y2="24"/><circle class="hub" cx="60" cy="64" r="4.5"/></svg><button id="boost" aria-label="Nitro boost">NOS<small id="boostTxt">0%</small></button></div>
   </div>
-  <div id="ov"><div class="card"><h1>Globe of Death</h1><p id="bootMsg">Loading the arena…</p></div></div>
+  <div id="ov"><div class="card"><h1>Globe Riders</h1><p id="bootMsg">Loading the arena…</p></div></div>
 </div>
 <script type="module" src="/src/main.js"></script>
 </body>

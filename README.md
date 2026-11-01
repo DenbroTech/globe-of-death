@@ -1,4 +1,6 @@
-# Globe of Death
+# Globe Riders
+
+(Formerly "Globe of Death"; renamed so it suits every age group. The repo, Play package `com.denbro.globeofdeath.app` and Expo slug keep the old name.)
 
 Phone-first 3D rhythm motorbike stunt game (three.js r128 + Vite), packaged as an Android app (Expo + WebView, built with EAS).
 

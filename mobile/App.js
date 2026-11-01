@@ -8,7 +8,7 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 
-/* Globe of Death app shell: the whole game is one HTML file (built from the web project with
+/* Globe Riders app shell: the whole game is one HTML file (built from the web project with
    `npm run mobile:sync` in the repo root) shown full screen in a WebView.
    Native bits: immersive mode, screen kept awake, Android back button and pausing when the app goes
    to the background (both handled inside the game via window.__nativeBack / __appPause / __appResume). */

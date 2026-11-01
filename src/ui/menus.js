@@ -26,7 +26,7 @@ function showStart() {
   parkBike();
   ov.hidden = false;
   ov.innerHTML = `<div class="card">
-  <h1><small>Ride</small>Globe of Death</h1>
+  <h1><small>Ride</small>Globe Riders</h1>
   <div class="arenas"><button class="chip" data-mode="show" aria-pressed="${game.gameMode === 'show'}">The show</button><button class="chip" data-mode="free" aria-pressed="${game.gameMode === 'free'}">Free ride</button></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="start">Ride</button></div>
   <div class="hicons five"><button id="lvBtn"><svg viewBox="0 0 24 24" class="hi"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/></svg><span>${ARENAS[arenaId].name}</span></button><button id="gar">${ICO('gar')}<span>Garage</span></button><button id="lbbtn">${ICO('lb')}<span>Scores</span></button><button id="tutBtn" class="${tutDone() ? '' : 'glow'}">${ICO('learn')}<span>Learn</span></button><button id="setBtn">${ICO('set')}<span>Settings</span></button></div>

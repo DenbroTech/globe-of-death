@@ -1,4 +1,4 @@
-# Globe of Death — project handover
+# Globe Riders (formerly Globe of Death) — project handover
 
 A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe of death" cage, hitting moves to the beat while a crowd watches. Built with three.js r128 + Vite, ES modules in `src/`. It started life as a single-file claude.ai artifact (kept in `original/globe-of-death.html` for comparison) and ships as an Android app: Expo shell in `mobile/` (WebView showing the single-file build `mobile/assets/game.html`), built in the cloud with EAS like the owner's Flippy Mat game.
 
@@ -7,7 +7,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Wants things to look good and feel polished. Dislikes: clutter and paragraphs of text on screens, anything that looks "AI generated", primitive-looking models ("spheres and cylinders"), pastel colours where they asked for bold.
 - Gives quick, informal feedback mid-task; act on it, keep replies short, show screenshots of what changed.
 - "Unlock all" (Settings) now defaults OFF: the owner is testing real progression. They found unlocks too fast, so milestones were made ~3× harder; neon needs finished shows.
-- Name is **Globe of Death** (not the Spanish one).
+- Name is **Globe Riders** (renamed from "Globe of Death" so it suits all ages / Play Families). The package `com.denbro.globeofdeath.app`, repo name and Expo slug keep the old name and must not change (Play upload key is tied to that package).
 
 ## Game overview
 **Modes**
