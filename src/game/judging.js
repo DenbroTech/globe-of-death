@@ -219,7 +219,7 @@ function finale() {
   $('#bow').onclick = () => {
     game.paused = false;
     game.over = { score: Math.floor(game.score), win: true };
-    countPlay();
+    countPlay(true);
     prog.won = true;
     prog.maxAct = Math.max(prog.maxAct, FINAL);
     saveProg();

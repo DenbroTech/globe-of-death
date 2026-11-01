@@ -10,6 +10,7 @@ import { orientOnWall, posAt, tanAt } from './path.js';
 import { fStick, freeReset } from './freeride.js';
 import { myRing, player, pool } from './objects.js';
 import { drawHearts, ov, toast } from '../ui/hud.js';
+import { awardFans } from '../ui/leaderboard.js';
 import { freeClock, holdClock } from './judging.js';
 import { endStunt, gestures, heldKeys, jk } from '../input/controls.js';
 import { cam } from '../render/camera.js';
@@ -114,6 +115,11 @@ function start() {
   if (game.TUT) tutDraw(true);
 }
 function quitToMenu() {
+  // quitting mid-run still keeps the fans you earned
+  if (game.running && !game.over && !game.TUT) {
+    const n = awardFans(false);
+    if (n) setTimeout(() => toast(`+${n} fans`, 1600), 300);
+  }
   resetInput();
   game.TUT = false;
   tutEl.hidden = true;

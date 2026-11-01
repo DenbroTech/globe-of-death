@@ -145,7 +145,7 @@ const crowd = {
     if (game.curCrowd) game.curCrowd.wave();
   },
   sync() {
-    if (game.curCrowd) game.curCrowd.setShown(game.unlockAll ? 1e9 : fansFor(game.plays));
+    if (game.curCrowd) game.curCrowd.setShown(game.unlockAll ? 1e9 : game.fans);
   },
 };
 
@@ -162,6 +162,12 @@ export function initCrowd() {
   game.plays = 0;
   try {
     game.plays = +localStorage.getItem('god-plays') || 0;
+  } catch (e) {}
+  // fans are earned (10 per act cleared, 1 per 30 s of free ride) and come back every time; start with 7
+  game.fans = Math.max(7, fansFor(game.plays));
+  try {
+    const f = localStorage.getItem('god-fans');
+    if (f !== null) game.fans = Math.max(7, +f || 0);
   } catch (e) {}
 }
 

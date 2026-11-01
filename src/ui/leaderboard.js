@@ -1,6 +1,6 @@
 import { game } from '../core/state.js';
 import { app } from '../render/renderer.js';
-import { fansFor } from '../arenas/crowd.js';
+import { crowd } from '../arenas/crowd.js';
 import { FINAL } from '../audio/clock.js';
 import { fmtT, fr, frNear, frTime, freeBest } from '../game/freeride.js';
 import { ov } from './hud.js';
@@ -102,15 +102,28 @@ function showBoard(back) {
     };
   }
 }
-function countPlay() {
+/* fans earned this run: 10 for every act cleared (a finished show clears them all), 1 per 30 s of free ride */
+function fansEarned(win) {
+  if (game.TUT) return 0;
+  if (game.FREE) return Math.floor(frTime / 30);
+  return 10 * Math.max(0, win ? FINAL : Math.min(FINAL, game.act - 1));
+}
+function awardFans(win) {
+  const n = fansEarned(win);
+  game.fans += n;
+  try {
+    localStorage.setItem('god-fans', game.fans);
+  } catch (e) {}
+  crowd.sync();
+  return n;
+}
+function countPlay(win) {
   if (game.TUT) return;
-  const tot = game.curCrowd ? game.curCrowd.total : 999;
-  game.over.fans = Math.min(tot, fansFor(game.plays));
   game.plays++;
   try {
     localStorage.setItem('god-plays', game.plays);
   } catch (e) {}
-  game.over.fansUp = Math.max(0, Math.min(tot, fansFor(game.plays)) - game.over.fans);
+  game.over.fansUp = awardFans(win);
 }
 function showOver() {
   app.classList.add('menu');
@@ -128,7 +141,7 @@ function showOver() {
     };
   };
   const got = game.over.unlocked || [],
-    crowdLine = got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '';
+    crowdLine = (game.over.fansUp ? `<div class="unl"><b>+${game.over.fansUp}</b> fans in the stands</div>` : '') + (got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '');
   if (game.FREE) {
     ov.innerHTML = `<div class="card home"><h1><small>Free ride</small>${game.over.fell ? 'Fell off!' : 'Crash!'}</h1>
     <div class="res"><div><span>Time</span><b>${fmtT(frTime)}</b></div><div><span>Near misses</span><b>${frNear}</b></div><div><span>Score</span><b>${Math.floor(game.score).toLocaleString()}</b></div></div>
@@ -158,4 +171,4 @@ export function initLeaderboard() {
   } catch (e) {}
 }
 
-export { countPlay, recordRun, showBoard, showOver };
+export { awardFans, countPlay, recordRun, showBoard, showOver };
