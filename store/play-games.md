@@ -11,10 +11,7 @@ across runs, the player sees progress). "Hidden" = shown as ??? until earned.
 | 1 | Show points | Best score in one show | Numeric | Higher is better |
 | 2 | Best combo | Longest combo in one show | Numeric | Higher is better |
 | 3 | Free ride time | Longest free ride | Time (seconds) | Higher is better |
-| 4 | Near misses | Most near misses in one free ride | Numeric | Higher is better |
-| 5 | Perfects | Most perfects in one show (New) | Numeric | Higher is better |
-
-Optional later: one "Show points" board per arena (Big Top, Beach, Stadium, Sky crane, Underwater, Moon base).
+| 4 | Perfects | Most perfects in one show (New) | Numeric | Higher is better |
 
 ## Achievements
 | # | Name | How to earn | XP | Type |
