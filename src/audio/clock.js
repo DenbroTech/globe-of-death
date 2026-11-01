@@ -66,4 +66,4 @@ export function initClock() {
   }
 }
 
-export { ACT_START, FINAL, GW, INTRO, LOOK, PW, actOfBar, beatAt, bpmOfAct, lat, now, timeAt };
+export { wakeAudio, ACT_START, FINAL, GW, INTRO, LOOK, PW, actOfBar, beatAt, bpmOfAct, lat, now, timeAt };

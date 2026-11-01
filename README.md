@@ -33,6 +33,6 @@ The build runs on Expo's servers (~10–20 min) and ends with a link / QR code: 
 
 App bits: `mobile/App.js` (WebView shell), `mobile/app.json` (name, package `com.denbro.globeofdeath.app`, icons, splash),
 `mobile/eas.json` (build profiles), `src/platform/app.js` (game side: back button, pause on background; AdMob/"Remove ads" will hook in here).
-Icon/splash sources (rendered from the game) are in `assets/`.
+App icon source: `art/app-icon-source.jpg` (cleaned 1024px: `art/app-icon-1024.png`); the icon/adaptive/splash files in `mobile/assets/` are made from it.
 
 See `CLAUDE.md` for the game design, code map and working notes. `original/globe-of-death.html` is the single-file version this project was split from.

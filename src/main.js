@@ -32,7 +32,7 @@ import { initSave } from './game/save.js';
 import { initTrails } from './render/trails.js';
 import { initParticles } from './render/particles.js';
 import { initSynth } from './audio/synth.js';
-import { initClock } from './audio/clock.js';
+import { initClock, wakeAudio } from './audio/clock.js';
 import { initPath } from './game/path.js';
 import { initFreeride } from './game/freeride.js';
 import { initObjects } from './game/objects.js';
@@ -137,3 +137,6 @@ function boot() {
 }
 boot();
 initApp();
+// start the menu music straight away: the app's WebView allows audio without a tap (a browser may
+// keep it suspended until the first touch, which wakeAudio also handles)
+wakeAudio();
