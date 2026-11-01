@@ -142,7 +142,7 @@ function genBarNotes(b) {
       ht = a < 2 ? 'wheelie' : hr < 0.4 ? 'wheelie' : hr < 0.7 ? 'nose' : Math.random() < 0.5 ? 'standl' : 'standr';
     addNote(b * 4, ht, len);
     slots =
-      a >= 5 ? (r < 0.5 ? [1, 2, len + 0.5] : [1.5, len + 0.5]).filter(x => x < 4) : slots.filter(s => s >= len + 0.5);
+      a >= 5 ? (r < 0.5 ? [1, 2, len + 1] : [1.5, len + 1]).filter(x => x < 4) : slots.filter(s => s >= len + 1);
   }
   for (const s of slots) {
     const B = b * 4 + s;
@@ -150,6 +150,8 @@ function genBarNotes(b) {
     // at most two single moves while a long press is held (holds can run into the next bar)
     const inHold = B > (game.holdStart ?? -9) && B < game.holdEnd;
     if (inHold && game.holdSingles >= 2) continue;
+    // keep a clear beat either side of where a long press ends, so it's never unclear if a move is in or out
+    if (Math.abs(B - game.holdEnd) < 1) continue;
     let type;
     const canJump =
         B - game.lastTiltBeat >= 1 &&

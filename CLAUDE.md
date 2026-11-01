@@ -21,7 +21,7 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 - Hold a side swipe = seat stand.
 - During a held wheelie/stoppie, sliding the same thumb sideways ~24 px fires a turn (soft press: ignored if no matching note; wider window). A second finger also works.
 - NOS button on the handlebars: when charged (needs full balance), next moves auto-play; the blue NOS band on the track extends to the end of any long press it overlaps.
-- Long-press notes (wheelie/stoppie/seat stand) are 2–6 beats; holds only end when the finger lifts.
+- Long-press notes (wheelie/stoppie/seat stand) are 2–6 beats; holds only end when the finger lifts. No single move within 1 beat either side of a long press end (owner found them ambiguous).
 
 **Screens**
 - Home: title, The show / Free ride chips, Ride, icon row (Level · Garage · Scores · Lesson · Settings).
