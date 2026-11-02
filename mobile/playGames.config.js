@@ -2,7 +2,7 @@
    While appId is empty, Play Games is switched off completely (the app builds and runs as before). */
 module.exports = {
   // "Project ID" / application ID: the number shown on the Play Games Services configuration page
-  appId: '',
+  appId: '404696304692',
   // leaderboard IDs (look like CgkI...EAIQAQ)
   leaderboards: {
     show: '', // Show points
