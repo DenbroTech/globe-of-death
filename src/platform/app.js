@@ -39,4 +39,12 @@ function initApp() {
   };
 }
 
-export { initApp, isApp, toNative };
+/* Google Play Games leaderboards (only when the app has Play Games switched on: window.__playGames) */
+const playGamesOn = () => isApp && !!window.__playGames;
+function submitScores(run) {
+  if (!playGamesOn()) return;
+  for (const [board, value] of Object.entries(run)) if (value > 0) toNative({ type: 'score', board, value: Math.floor(value) });
+}
+const showPlayLeaderboards = () => toNative({ type: 'leaderboards' });
+
+export { initApp, isApp, playGamesOn, showPlayLeaderboards, submitScores, toNative };

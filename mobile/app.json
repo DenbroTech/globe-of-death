@@ -24,7 +24,8 @@
           "imageWidth": 280,
           "backgroundColor": "#07060a"
         }
-      ]
+      ],
+      "./plugins/withPlayGames"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

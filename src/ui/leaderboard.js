@@ -7,6 +7,7 @@ import { ov } from './hud.js';
 import { showGarage } from './garage.js';
 import { quitToMenu, start } from '../game/run.js';
 import { $ } from '../core/constants.js';
+import { playGamesOn, showPlayLeaderboards, submitScores } from '../platform/app.js';
 import { ICO } from './menus.js';
 
 let board = { show: [], combo: [], free: [] },
@@ -19,6 +20,12 @@ const saveBoard = () => {
 const esc = t =>
   String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 function recordRun() {
+  if (!game.TUT)
+    submitScores(
+      game.FREE
+        ? { free: frTime * 1000 } // time leaderboard: milliseconds
+        : { show: game.score, combo: game.stats.maxCombo, perfects: game.stats.perfect },
+    );
   const free = game.FREE,
     list = free ? board.free : board.show,
     e = free
@@ -78,7 +85,7 @@ function showBoard(back) {
   ov.innerHTML = `<div class="card"><h1><small>On this phone</small>Leaderboard</h1>
   <div class="arenas"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride</button></div>
   ${boardRows(game.lbTab, game.lastEntry ? (game.lastEntry.mode === game.lbTab ? game.lastEntry.e : game.lbTab === 'combo' ? game.lastEntry.ce : null) : null)}
-  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${playGamesOn() ? '<button class="go ghost" id="lbplay">Google Play</button>' : ''}${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
   ov.querySelectorAll('[data-lb]').forEach(
     b =>
       (b.onclick = () => {
@@ -87,6 +94,7 @@ function showBoard(back) {
       }),
   );
   $('#lbback').onclick = back;
+  if ($('#lbplay')) $('#lbplay').onclick = showPlayLeaderboards;
   const c = $('#lbclear');
   if (c) {
     let armed = false;

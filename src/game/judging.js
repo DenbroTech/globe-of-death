@@ -5,7 +5,7 @@ import { arenaId } from '../arenas/current.js';
 import { _b } from '../render/trails.js';
 import { burst } from '../render/particles.js';
 import { ac, initAudio, sfxNoise } from '../audio/synth.js';
-import { FINAL, lat, now, timeAt } from '../audio/clock.js';
+import { FINAL, beatAt, lat, now, timeAt } from '../audio/clock.js';
 import { frNear, frTime, freeSteer } from './freeride.js';
 import { ARENAS } from '../arenas/arenas.js';
 import { player, pool } from './objects.js';
@@ -177,14 +177,8 @@ function miss(n) {
   $('#vig').style.opacity = 0.9;
   setTimeout(() => ($('#vig').style.opacity = 0), 250);
   if (n.type === 'jump' && n.slot) {
-    const s = n.slot;
-    burst(n.M.clone().multiplyScalar(R - 0.3), 140, 5);
-    sfxNoise(0.8, 600, 0.7, 'crash');
-    s.state = 'tumble';
-    s.cp = n.M.clone().multiplyScalar(R - 0.2);
-    s.cv = n.c.clone().multiplyScalar(5).addScaledVector(n.M, -3);
-    s.sa = new V3(1, 0.3, 0.2).normalize();
-    s.sw = 10;
+    // they never get knocked off: the other rider hops clear of you (you just lose balance)
+    n.slot.dodgeB = beatAt(now() - lat());
   } else sfxNoise(0.4, 300, 0.4, 'crash');
   addBal(-missCost());
 }

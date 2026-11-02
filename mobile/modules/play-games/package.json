@@ -1,0 +1,6 @@
+{
+  "name": "play-games",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Google Play Games Services (v2) for Globe Riders: sign-in, leaderboards, achievements"
+}

@@ -7,6 +7,12 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useKeepAwake } from 'expo-keep-awake';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import { requireOptionalNativeModule } from 'expo';
+import PG_CONFIG from './playGames.config.js';
+
+/* Google Play Games (leaderboards): native module in modules/play-games, switched on once the IDs are
+   filled in playGames.config.js */
+const PlayGames = PG_CONFIG.appId ? requireOptionalNativeModule('PlayGames') : null;
 
 /* Globe Riders app shell: the whole game is one HTML file (built from the web project with
    `npm run mobile:sync` in the repo root) shown full screen in a WebView.
@@ -51,6 +57,15 @@ function Game() {
       m = JSON.parse(e.nativeEvent.data);
     } catch (err) {}
     if (m.type === 'exit') BackHandler.exitApp();
+    if (!PlayGames) return;
+    if (m.type === 'score') {
+      const id = PG_CONFIG.leaderboards[m.board];
+      if (id && m.value > 0) PlayGames.submitScore(id, Math.floor(m.value)).catch(() => {});
+    }
+    if (m.type === 'leaderboards')
+      PlayGames.signIn()
+        .then(ok => ok && PlayGames.showLeaderboards())
+        .catch(() => {});
   };
 
   return (
@@ -77,7 +92,13 @@ function Game() {
           textZoom={100}
           webviewDebuggingEnabled
           onMessage={onMessage}
-          onLoadEnd={() => SplashScreen.hideAsync().catch(() => {})}
+          onLoadEnd={() => {
+            SplashScreen.hideAsync().catch(() => {});
+            if (PlayGames) {
+              call('window.__playGames=true;window.__pgReady&&window.__pgReady()');
+              PlayGames.signIn().catch(() => {});
+            }
+          }}
         />
       )}
     </View>

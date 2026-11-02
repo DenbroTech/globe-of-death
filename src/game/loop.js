@@ -274,6 +274,12 @@ function frame(nowMs) {
           riderPos(s, B, _a);
           riderPos(s, B + 0.02, _b).sub(_a).normalize();
           orientOnWall(s.bike.g, _a, _b, 0);
+          // dodging you: a quick hop off the wall
+          const dx = s.dodgeB != null ? (B - s.dodgeB) / 0.8 : 9;
+          if (dx >= 0 && dx < 1) {
+            s.bike.g.position.multiplyScalar((R - 1.1 * Math.sin(Math.PI * dx)) / R);
+            s.bike.g.rotateX(-0.3 * Math.sin(Math.PI * dx));
+          }
           arcTrail(s.trail, (i, o) => riderPos(s, B - (i * TRAIL_STEP) / s.path.w, o));
           s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
           setGhost(s, clamp((B - s.fadeB) / 0.8, 0, 1));
