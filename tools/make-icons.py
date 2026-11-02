@@ -9,11 +9,15 @@ from PIL import Image, ImageFilter, ImageDraw
 src = Image.open(sys.argv[1]).convert('RGB')
 W = 1024
 full = src.resize((W, W), Image.LANCZOS)
+# small-size version: darken and calm the busy edges so the rider in the middle stands out on a phone
+_v = Image.radial_gradient('L').resize((W, W)).point(lambda v: int(max(0, 255 - max(0, v - 45) * 1.6)))
+_calm = full.filter(ImageFilter.GaussianBlur(8)).point(lambda v: int(v * 0.35))
+small = Image.composite(full, _calm, _v)
 
 def framed(scale, blur=40, dim=0.55):
     bg = full.filter(ImageFilter.GaussianBlur(blur)).point(lambda v: int(v * dim))
     S = int(W * scale)
-    bg.paste(full.resize((S, S), Image.LANCZOS), ((W - S) // 2, (W - S) // 2))
+    bg.paste(small.resize((S, S), Image.LANCZOS), ((W - S) // 2, (W - S) // 2))
     return bg
 
 M = 'mobile/assets/'
@@ -24,13 +28,13 @@ full.resize((48, 48), Image.LANCZOS).save(M + 'favicon.png')
 for n, s in [('icon-192', 192), ('icon-512', 512), ('apple-touch-icon', 180)]:
     full.resize((s, s), Image.LANCZOS).save(f'public/{n}.png')
 # adaptive icon: background = blurred art, foreground = art inside the safe circle (66% of the canvas)
-SAFE = 0.64
+SAFE = 0.76
 full.filter(ImageFilter.GaussianBlur(40)).point(lambda v: int(v * 0.55)).save(M + 'android-icon-background.png')
 fg = Image.new('RGBA', (W, W), (0, 0, 0, 0))
 S = int(W * SAFE)
-fg.paste(full.resize((S, S), Image.LANCZOS), ((W - S) // 2, (W - S) // 2))
+fg.paste(small.resize((S, S), Image.LANCZOS), ((W - S) // 2, (W - S) // 2))
 fg.save(M + 'android-icon-foreground.png')
-lum = full.resize((S, S), Image.LANCZOS).convert('L').point(lambda v: max(0, min(255, int((v - 70) * 2.2))))
+lum = small.resize((S, S), Image.LANCZOS).convert('L').point(lambda v: max(0, min(255, int((v - 70) * 2.2))))
 mono = Image.new('RGBA', (W, W), (0, 0, 0, 0))
 wm = Image.new('RGBA', (S, S), (255, 255, 255, 255))
 wm.putalpha(lum)
