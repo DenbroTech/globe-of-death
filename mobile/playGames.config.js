@@ -5,9 +5,9 @@ module.exports = {
   appId: '404696304692',
   // leaderboard IDs (look like CgkI...EAIQAQ)
   leaderboards: {
-    show: '', // Show points
-    combo: '', // Best combo
-    free: '', // Free ride time (format: time; the game sends milliseconds)
-    perfects: '', // Perfects in one show
+    show: 'CgkItJiezuMLEAIQAA', // Show points
+    combo: 'CgkItJiezuMLEAIQAQ', // Best combo
+    free: 'CgkItJiezuMLEAIQAg', // Free ride time (format: time; the game sends milliseconds)
+    perfects: 'CgkItJiezuMLEAIQAw', // Perfects in one show
   },
 };

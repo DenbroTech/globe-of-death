@@ -21,12 +21,5 @@
     "ios": "expo start --ios",
     "web": "expo start --web"
   },
-  "private": true,
-  "expo": {
-    "autolinking": {
-      "exclude": [
-        "play-games"
-      ]
-    }
-  }
+  "private": true
 }
