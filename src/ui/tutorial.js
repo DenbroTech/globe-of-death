@@ -127,6 +127,16 @@ const TUT_STEPS = [
 ];
 // the yellow act line only shows in the Perks step: when it reaches the circle, a perk pick pops up
 function tutTick(B) {
+  // the Camera step has no moves: if the camera button isn't tapped 3 times within ~4 bars, move on anyway
+  // (testers thought the lesson had ended after Steer right)
+  const S = TUT_STEPS[game.tutI];
+  if (S && S.cam) {
+    if (game.tutCamB == null) game.tutCamB = B;
+    else if (B - game.tutCamB > 16) {
+      game.tutCamB = null;
+      while (TUT_STEPS[game.tutI] === S) tutEv('cam');
+    }
+  } else game.tutCamB = null;
   if (game.tutLine != null && B >= game.tutLine) {
     game.tutLine = Infinity; // shown once: never triggers again
     tutEl.hidden = true;
