@@ -48,8 +48,9 @@ const THEMES = {
   crane: {
     lead: 'synth',
     stab: 'metal',
-    hit: 'metal',
-    jump: 'metal',
+    hit: 'pluck', // punchy pluck so moves cut through the synth music
+    jump: 'pluck',
+    sfx: 1.25,
     bass: 'synth',
     kick: 'punch',
     snare: 'snare',
@@ -62,8 +63,9 @@ const THEMES = {
   under: {
     lead: 'bubble',
     stab: 'bubble',
-    hit: 'bubble',
-    jump: 'bubbles',
+    hit: 'drop', // bubbly marimba, pitched where the underwater muffle doesn't swallow it
+    jump: 'drop',
+    sfx: 1.5,
     bass: 'sub',
     kick: 'soft',
     snare: 'brush',
@@ -76,8 +78,9 @@ const THEMES = {
   moon: {
     lead: 'theremin',
     stab: 'glass',
-    hit: 'theremin',
-    jump: 'swoop',
+    hit: 'blip', // crisp blip; the theremin is the melody and smeared the moves
+    jump: 'blip',
+    sfx: 1.25,
     bass: 'sub',
     kick: 'soft',
     snare: 'snare',

@@ -29,30 +29,42 @@ const K = 12,
   _qy = new THREE.Quaternion();
 let knots = [],
   bakedFor = null,
-  bakedN = -1;
-function rebakeTurns() {
+  bakedN = -1,
+  dirtyFrom = Infinity;
+/* (re)build the knot list from beat `from` on: knots before it can't change (new turns are added ahead
+   of the rider), so only the tail is redone. A full rebuild is used for a new run or removed turns. */
+function rebakeTurns(from = -Infinity) {
+  let keep = 0;
+  if (from > -Infinity) while (keep < knots.length && knots[keep].beat < from) keep++;
+  knots.length = keep;
   const ev = [];
-  for (const t of game.turns)
+  for (const t of game.turns) {
+    if (t.beat + 1 < from) continue;
     for (let k = 0; k < K; k++) {
-      const w = t.rad * (smooth((k + 1) / K) - smooth(k / K)) * K;
-      ev.push([t.beat + k / K, w], [t.beat + (k + 1) / K, -w]);
+      const w = t.rad * (smooth((k + 1) / K) - smooth(k / K)) * K,
+        b0 = t.beat + k / K,
+        b1 = t.beat + (k + 1) / K;
+      if (b0 >= from) ev.push([b0, w]);
+      if (b1 >= from) ev.push([b1, -w]);
     }
+  }
   ev.sort((a, b) => a[0] - b[0]);
-  knots = [];
-  let wh = 0;
+  let wh = keep ? knots[keep - 1].wh : 0;
   for (const [beat, dw] of ev) {
     const last = knots[knots.length - 1];
     if (last && beat - last.beat < 1e-6) {
       last.wh = wh += dw;
+      if (Math.abs(last.wh) < 1e-9) last.wh = wh = 0;
       continue;
     }
     const Q = last ? advance(last, beat, new THREE.Quaternion()) : new THREE.Quaternion().setFromAxisAngle(YAX, WF * beat);
     wh += dw;
+    if (Math.abs(wh) < 1e-9) wh = 0;
     knots.push({ beat, Q, wh });
   }
-  for (const k of knots) if (Math.abs(k.wh) < 1e-9) k.wh = 0;
   bakedFor = game.turns;
   bakedN = game.turns.length;
+  dirtyFrom = Infinity;
 }
 function advance(k, B, out) {
   const dt = B - k.beat;
@@ -68,11 +80,12 @@ function addTurn(beat, type) {
   let k = game.turns.length;
   while (k > 0 && game.turns[k - 1].beat > beat) k--;
   game.turns.splice(k, 0, t);
-  bakedN = -1;
+  dirtyFrom = Math.min(dirtyFrom, beat);
 }
 // C(B): the rotation applied to the plain starting loop, so posAt = C · baseAt
 function qAt(B, out) {
-  if (bakedFor !== game.turns || bakedN !== game.turns.length) rebakeTurns();
+  if (bakedFor !== game.turns || game.turns.length < bakedN) rebakeTurns();
+  else if (dirtyFrom < Infinity) rebakeTurns(dirtyFrom);
   let lo = 0,
     hi = knots.length - 1;
   if (hi < 0 || B < knots[0].beat) return out.identity();

@@ -31,6 +31,7 @@ import { hitSound, menuMusic, scheduleStep } from '../audio/songs.js';
 let barsEl, hitEl, trackEl, el;
 
 const barLines = [];
+let audioStuck = 0;
 let clock = 0,
   hudT = 0,
   lastBeatInt = -1;
@@ -58,9 +59,10 @@ function makeNosFlame() {
     );
   };
   g.add(cone(0.2, 1.5, 0xff5a10), cone(0.1, 0.95, 0xfff0b0));
+  // the glow light is NOT inside the flame group: hiding a light changes the light count, which makes
+  // three.js recompile every material (that was the stutter when NOS started/ended). It stays on, at 0.
   const L = new THREE.PointLight(0xff7a20, 0, 6, 2);
-  L.position.z = -0.5;
-  g.add(L);
+  L.position.set(0, 0.42, -1.45);
   g.userData.light = L;
   g.position.set(0, 0.42, -0.95);
   g.visible = false;
@@ -97,6 +99,17 @@ function frame(nowMs) {
     game.pauseMenu = false;
     setPause(true);
   }
+  // the game clock IS the audio clock: if Android left the audio suspended (back from another app, or it
+  // never started) the ride freezes. Keep asking it to resume; if it won't within ~0.4 s, show the pause
+  // menu so the player's tap on Resume (a real touch) can restart it — instead of a frozen ride
+  if (game.running && !game.over && !game.paused && ac && ac.state !== 'running') {
+    ac.resume().catch(() => {});
+    audioStuck += dt;
+    if (audioStuck > 0.4) {
+      audioStuck = 0;
+      setPause(true);
+    }
+  } else audioStuck = 0;
   clock += dt;
   let ts = 1;
   if (game.slow > 0) {
@@ -256,15 +269,35 @@ function frame(nowMs) {
       });
       for (const n of game.notes) {
         if (n.type !== 'jump' || n.slot || n.judged || n.beat - B > LOOK || n.beat - B < -1) continue;
-        const s = pool.slice(0, K).find(x => x.active && !x.busy && x.state === 'ride');
-        if (!s) continue;
+        // pick the free rider who will already be nearest the crossing point on that beat, crossing at a
+        // decent angle, and nudge their whole loop by the smallest rotation so they arrive there: a gentle
+        // drift over a few beats, never a U-turn
+        posAt(n.beat, _c);
+        tanAt(n.beat, _b);
+        let best = null;
+        for (const s of pool.slice(0, K)) {
+          if (!s.active || s.busy || s.state !== 'ride') continue;
+          const at = riderPos(s, n.beat, new V3()),
+            q = new THREE.Quaternion().setFromUnitVectors(at, _c),
+            dir = new V3().crossVectors(s.path.A, at).applyQuaternion(q),
+            score = at.angleTo(_c) + 0.8 * (1 - Math.abs(Math.sin(dir.angleTo(_b))));
+          if (!best || score < best.score) best = { s, q, score };
+        }
+        if (!best) continue;
+        const s = best.s,
+          P0 = s.path;
         s.busy = true;
         s.note = n;
         n.slot = s;
-        s.from = s.path;
+        s.from = P0;
         s.bl0 = B;
-        s.bl1 = Math.max(B + 0.3, Math.min(B + 1.6, n.beat - 0.8));
-        s.path = { M: n.M, A: n.A, w: n.w, b0: n.beat };
+        s.bl1 = Math.max(B + 0.5, n.beat - 0.6);
+        s.path = { M: P0.M.clone().applyQuaternion(best.q), A: P0.A.clone().applyQuaternion(best.q), w: P0.w, b0: P0.b0 };
+        // the crossing marker / ahead line follow the rider's real path
+        n.M = _c.clone();
+        n.A = s.path.A.clone();
+        n.w = s.path.w;
+        n.c = new V3().crossVectors(n.A, n.M).normalize();
       }
       for (const s of pool) {
         if (!s.active) continue;
@@ -275,10 +308,10 @@ function frame(nowMs) {
           riderPos(s, B + 0.02, _b).sub(_a).normalize();
           orientOnWall(s.bike.g, _a, _b, 0);
           // dodging you: a quick hop off the wall
-          const dx = s.dodgeB != null ? (B - s.dodgeB) / 0.8 : 9;
+          const dx = s.dodgeB != null ? (B - s.dodgeB) / 0.6 : 9;
           if (dx >= 0 && dx < 1) {
-            s.bike.g.position.multiplyScalar((R - 1.1 * Math.sin(Math.PI * dx)) / R);
-            s.bike.g.rotateX(-0.3 * Math.sin(Math.PI * dx));
+            s.bike.g.position.multiplyScalar((R - 0.7 * Math.sin(Math.PI * dx)) / R);
+            s.bike.g.rotateX(-0.2 * Math.sin(Math.PI * dx));
           }
           arcTrail(s.trail, (i, o) => riderPos(s, B - (i * TRAIL_STEP) / s.path.w, o));
           s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
@@ -391,9 +424,10 @@ function frame(nowMs) {
       );
     {
       if (!nosFlame) nosFlame = makeNosFlame();
-      if (nosFlame.parent !== P.bike.g) P.bike.g.add(nosFlame);
+      if (nosFlame.parent !== P.bike.g) P.bike.g.add(nosFlame, nosFlame.userData.light);
       const on = boostActive();
       nosFlame.visible = on;
+      nosFlame.userData.light.intensity = 0;
       if (on) {
         const k = 0.85 + Math.random() * 0.4;
         nosFlame.scale.set(0.9 + Math.random() * 0.2, 0.9 + Math.random() * 0.2, k);

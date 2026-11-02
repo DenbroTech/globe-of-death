@@ -320,6 +320,20 @@ function voice(kind, t, m, v = 0.1, d = 0.3) {
   } else if (kind === 'glass') {
     osc(t, f * 2, 'sine', v * 0.6, d * 2, 0, 0.3);
     osc(t, f * 5.03, 'sine', v * 0.15, d, 0, 0.3);
+  } else if (kind === 'pluck') {
+    // sky crane move sound: punchy filtered electronic pluck that cuts through the synth music
+    synthNote(t, f, ['square', 'sawtooth'], v * 1.1, d * 0.9, 5200, 650, 0.002, 7, 0.004, 0.15);
+    osc(t, f * 2, 'triangle', v * 0.3, d * 0.4, 0, 0.15);
+  } else if (kind === 'drop') {
+    // underwater move sound: bubbly marimba: a round body with a little rising bubble on the attack
+    osc(t, f * 0.97, 'sine', v * 1.2, d * 1.1, f, -0.1);
+    osc(t, f * 3.9, 'sine', v * 0.35, d * 0.25, 0, -0.1);
+    osc(t, f * 1.5, 'sine', v * 0.25, 0.06, f * 2.2, 0.2);
+  } else if (kind === 'blip') {
+    // moon move sound: crisp space blip with a tiny pitch drop (the moon's echo trails it)
+    osc(t, f * 1.06, 'triangle', v * 1.1, d * 0.9, f, 0.1);
+    osc(t, f * 2, 'sine', v * 0.4, d * 0.5, 0, 0.1);
+    osc(t, f * 3, 'square', v * 0.05, 0.05, 0, 0.1);
   } else if (kind === 'uke') {
     synthNote(t, f, ['triangle', 'sawtooth'], v, 0.35, 3200, 500, 0.003, 4, 0, 0.2);
   } else {

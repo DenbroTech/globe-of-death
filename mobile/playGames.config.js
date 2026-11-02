@@ -9,5 +9,6 @@ module.exports = {
     combo: 'CgkItJiezuMLEAIQAQ', // Best combo
     free: 'CgkItJiezuMLEAIQAg', // Free ride time (format: time; the game sends milliseconds)
     perfects: 'CgkItJiezuMLEAIQAw', // Perfects in one show
+    freepts: 'CgkItJiezuMLEAIQBQ', // Free ride points
   },
 };

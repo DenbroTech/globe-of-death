@@ -23,7 +23,7 @@ function recordRun() {
   if (!game.TUT)
     submitScores(
       game.FREE
-        ? { free: frTime * 1000 } // time leaderboard: milliseconds
+        ? { free: frTime * 1000, freepts: game.score } // time leaderboard: milliseconds
         : { show: game.score, combo: game.stats.maxCombo, perfects: game.stats.perfect },
     );
   const free = game.FREE,
