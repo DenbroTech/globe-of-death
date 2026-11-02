@@ -47,6 +47,10 @@ const CURSES = [
   { id: 'coldCrowd', name: 'Cold crowd', desc: 'No combo bonus.', score: 1 },
   { id: 'taxman', name: 'Taxman', desc: 'Lose 20% of your score when the act ends.', score: 1 },
   { id: 'judges', name: 'Tough judges', desc: 'Perfects only count as Good.', score: 1 },
+  // these hit right away when picked
+  { id: 'fine', name: 'Fine', desc: 'Lose 10,000 points now.', score: 1 },
+  { id: 'comboBreak', name: 'Combo breaker', desc: 'Your combo goes back to 0.', score: 1 },
+  { id: 'halfPerfect', name: 'Half marks', desc: 'Your perfect count is cut in half.', score: 1 },
 ];
 const curseOf = id => CURSES.find(x => x.id === id);
 const pk = id => game.perks[id] || 0,
@@ -118,7 +122,12 @@ function offerCurse(a) {
   ov.querySelectorAll('.perk').forEach(
     b =>
       (b.onclick = () => {
-        if (!game.TUT) game.curse = b.dataset.id;
+        if (!game.TUT) {
+          const id = (game.curse = b.dataset.id);
+          if (id === 'fine') game.score = Math.max(0, game.score - 10000);
+          if (id === 'comboBreak') game.combo = 0;
+          if (id === 'halfPerfect') game.stats.perfect = Math.floor(game.stats.perfect / 2);
+        }
         startAct(a);
       }),
   );
