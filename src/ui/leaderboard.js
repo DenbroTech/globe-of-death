@@ -144,8 +144,9 @@ function showNewLevel(id) {
   setArena(id);
   ov.hidden = false;
   ov.classList.add('newlv');
-  ov.innerHTML = `<div class="card nlcard"><div class="nltag">New level</div><h1>${ARENAS[id].name}</h1>
-    <div class="nlbtns"><button class="go" id="nlRide">Ride here</button><button class="go ghost" id="nlLater">Later</button></div></div>`;
+  ov.innerHTML = `<div class="nlwin"><div class="nltag">New level unlocked</div>
+    <div class="nlfoot"><h1>${ARENAS[id].name}</h1>
+    <div class="nlbtns"><button class="go" id="nlRide">Ride here</button><button class="go ghost" id="nlLater">Later</button></div></div></div>`;
   $('#nlRide').onclick = () => {
     ov.classList.remove('newlv');
     start();
