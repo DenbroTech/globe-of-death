@@ -100,8 +100,23 @@ function sfx(fn) {
   }
 }
 /* music volume: full in a ride, half in the menus */
+let musLvl = 0.33;
 function setMusicLevel(v, tc = 0.4) {
-  if (musicBus) musicBus.gain.setTargetAtTime(v, ac.currentTime, tc);
+  // each arena can sit its music lower (kit().mus) so move sounds stay clear
+  const L = v * (kit().mus ?? 1);
+  if (L === musLvl) return;
+  musLvl = L;
+  if (musicBus) musicBus.gain.setTargetAtTime(L, ac.currentTime, tc);
+}
+/* every move sound briefly dips the music (sidechain-style) so the hit pops out of the mix */
+function duckMusic() {
+  if (!musicBus) return;
+  const t = ac.currentTime,
+    g = musicBus.gain;
+  g.cancelScheduledValues(t);
+  g.setValueAtTime(g.value, t);
+  g.linearRampToValueAtTime(musLvl * 0.55, t + 0.015);
+  g.setTargetAtTime(musLvl, t + 0.08, 0.12);
 }
 function out(node, pan) {
   if (pan && ac.createStereoPanner) {
@@ -381,6 +396,7 @@ function applyArenaAudio(id) {
   echoFb.gain.setTargetAtTime(e ? e.fb : 0, t, 0.1);
   if (e) echoDelay.delayTime.setTargetAtTime(Math.min(1.9, (e.beats * 60) / bpmOfAct(Math.max(1, game.act || 1))), t, 0.1);
   startAmbience(K.amb);
+  if (sfxBus) sfxBus.gain.setTargetAtTime(K.sfx ?? 1, t, 0.1);
 }
 /* ---- ambience beds: a looping filtered-noise layer plus occasional themed events ---- */
 let amb = null;
@@ -545,6 +561,7 @@ export {
   osc,
   rim,
   setMusicLevel,
+  duckMusic,
   sfx,
   sfxBus,
   sfxNoise,

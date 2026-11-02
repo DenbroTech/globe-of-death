@@ -14,6 +14,7 @@ import {
   osc,
   rim,
   setMusicLevel,
+  duckMusic,
   sfx,
   shaker,
   snare,
@@ -228,6 +229,7 @@ function songRoot() {
 }
 function hitSound(type, step, g) {
   if (!ac) return;
+  duckMusic();
   sfx(() => hitSound_(type, step, g));
 }
 function hitSound_(type, step, g) {

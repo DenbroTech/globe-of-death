@@ -17,9 +17,12 @@ const THEMES = {
     amb: 'tent',
   },
   beach: {
+    // the music is all steel pan, so it sits lower and the move sounds are a brighter bell (glass) on top
+    mus: 0.62,
+    sfx: 1.35,
     lead: 'pan',
     stab: 'pan',
-    hit: 'pan',
+    hit: 'glass',
     jump: 'pan',
     bass: 'pluck',
     kick: 'soft',
