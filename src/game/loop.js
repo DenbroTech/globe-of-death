@@ -9,7 +9,7 @@ import { reachAct } from './unlocks.js';
 import { arenaId, arenaTick } from '../arenas/current.js';
 import { TRAIL_STEP, _a, _b, _c, arcTrail, fillTrail, pushRibbon, resetRibbon } from '../render/trails.js';
 import { PN, burst, flash, pGeo, pMat, pPos, pVel } from '../render/particles.js';
-import { ac, ambienceTick } from '../audio/synth.js';
+import { ac, ambienceTick, rebuildAudio } from '../audio/synth.js';
 import { ACT_START, FINAL, INTRO, LOOK, actOfBar, beatAt, bpmOfAct, lat, now, timeAt } from '../audio/clock.js';
 import { orientOnWall, posAt, tanAt } from './path.js';
 import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy, setGhost } from './freeride.js';
@@ -31,7 +31,9 @@ import { hitSound, menuMusic, scheduleStep } from '../audio/songs.js';
 let barsEl, hitEl, trackEl, el;
 
 const barLines = [];
-let audioStuck = 0;
+let audioStuck = 0,
+  acFrozen = 0,
+  lastAcT = -1;
 let clock = 0,
   hudT = 0,
   lastBeatInt = -1;
@@ -110,6 +112,18 @@ function frame(nowMs) {
       setPause(true);
     }
   } else audioStuck = 0;
+  // ...or it says "running" but its clock has stopped moving while we keep drawing frames: rebuild it
+  if (game.running && !game.over && !game.paused && ac && ac.state === 'running') {
+    if (ac.currentTime === lastAcT) {
+      acFrozen += dt;
+      if (acFrozen > 0.6) {
+        acFrozen = 0;
+        rebuildAudio();
+        if (ac && ac.state !== 'running') ac.resume().catch(() => {});
+      }
+    } else acFrozen = 0;
+    lastAcT = ac ? ac.currentTime : -1;
+  } else acFrozen = 0;
   clock += dt;
   let ts = 1;
   if (game.slow > 0) {
@@ -121,12 +135,14 @@ function frame(nowMs) {
   if (game.running && !game.over && !game.paused) {
     const T = now();
     let B = beatAt(T - lat());
-    // the show clock may never run backwards or leap ahead mid-ride. If the phone's clock or audio
+    // the show clock may never jump backwards (>2 beats) or leap ahead (>16) mid-ride. If the phone's clock or audio
     // delay jumps (app switch, Bluetooth, audio restart), re-anchor the tempo map so the ride carries
     // on from where it was, instead of dropping back to the warm-up circle with no moves
-    if (game.lastB != null && (B < game.lastB - 0.25 || B > game.lastB + 16)) {
+    if (game.lastB != null && (B < game.lastB - 2 || B > game.lastB + 16)) {
       const d = T - lat() - timeAt(game.lastB);
       game.tempos.forEach(x => (x.time += d));
+      game.boostEnd += d; // NOS and jump timers live on the same clock
+      P.hopT0 += d;
       B = beatAt(T - lat());
     }
     game.lastB = B;

@@ -5,7 +5,7 @@ import { app } from '../render/renderer.js';
 import { crowd } from '../arenas/crowd.js';
 import { _c, fillTrail, resetRibbon } from '../render/trails.js';
 import { ac, initAudio, master, sfxBus } from '../audio/synth.js';
-import { bpmOfAct, now } from '../audio/clock.js';
+import { bpmOfAct, now, fixLatency } from '../audio/clock.js';
 import { orientOnWall, posAt, tanAt } from './path.js';
 import { fStick, freeReset } from './freeride.js';
 import { myRing, player, pool } from './objects.js';
@@ -84,6 +84,7 @@ function start() {
   // next perk/resume shove the music clock minutes back, leaving the rider circling the bottom with no moves
   game.heldAt = null;
   game.lastB = null;
+  fixLatency();
   game.score = 0;
   game.combo = 0;
   game.balance = 100;

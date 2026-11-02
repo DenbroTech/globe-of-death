@@ -13,7 +13,7 @@ import { ARENAS } from '../arenas/arenas.js';
 import { arenaId, setArena } from '../arenas/current.js';
 import { isNew, markSeen } from '../game/unlocks.js';
 
-let board = { show: [], combo: [], free: [] },
+let board = { show: [], combo: [], free: [], freepts: [] },
   riderName = 'Rider';
 const saveBoard = () => {
   try {
@@ -54,27 +54,31 @@ function recordRun() {
   if (!free) {
     ce = { n: riderName, v: game.stats.maxCombo, act: game.act, win: e.win, encore: game.encore, score: e.v, d: e.d };
     crank = put(board.combo, ce);
+  } else {
+    // free ride also has a points board
+    ce = { n: riderName, v: e.score, time: e.v, near: e.near, riders: e.riders, d: e.d };
+    crank = put(board.freepts, ce);
   }
   saveBoard();
   game.lastEntry =
     rank >= 0
       ? { mode: free ? 'free' : 'show', e, rank: rank + 1, ce: crank >= 0 ? ce : null }
       : crank >= 0
-        ? { mode: 'combo', e: ce, rank: crank + 1 }
+        ? { mode: free ? 'freepts' : 'combo', e: ce, rank: crank + 1 }
         : null;
 }
 function boardRows(mode, hi) {
   const L = board[mode];
   if (!L.length)
-    return `<p class="lbempty">No runs yet. ${mode === 'free' ? 'Go for a free ride' : 'Ride the show'} and your best ${mode === 'combo' ? 'combo' : 'run'} will land here.</p>`;
+    return `<p class="lbempty">No runs yet. ${mode === 'free' || mode === 'freepts' ? 'Go for a free ride' : 'Ride the show'} and your best ${mode === 'combo' ? 'combo' : 'run'} will land here.</p>`;
   // scores live on this phone, so rows show the run itself rather than a name
   const what = e =>
-    mode === 'free' ? `${e.near} near misses` : e.win ? 'Full show' : e.encore ? 'Encore' : 'Act ' + e.act + ' of ' + FINAL;
+    mode === 'free' ? `${e.near} near misses` : mode === 'freepts' ? `${fmtT(e.time)} ride` : e.win ? 'Full show' : e.encore ? 'Encore' : 'Act ' + e.act + ' of ' + FINAL;
   const day = e => new Date(e.d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return `<ol class="lb">${L.map(
     (e, i) =>
       `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${what(e)}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
-    <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : e.riders + ' riders · '}${day(e)}</span></li>`,
+    <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : mode === 'freepts' ? e.near + ' near misses · ' : e.riders + ' riders · '}${day(e)}</span></li>`,
   ).join('')}</ol>`;
 }
 function nameBox() {
@@ -86,8 +90,8 @@ function showBoard(back) {
   app.classList.add('menu');
   ov.hidden = false;
   ov.innerHTML = `<div class="card"><h1><small>On this phone</small>Leaderboard</h1>
-  <div class="arenas"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride</button></div>
-  ${boardRows(game.lbTab, game.lastEntry ? (game.lastEntry.mode === game.lbTab ? game.lastEntry.e : game.lbTab === 'combo' ? game.lastEntry.ce : null) : null)}
+  <div class="arenas"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride time</button><button class="chip" data-lb="freepts" aria-pressed="${game.lbTab === 'freepts'}">Free ride points</button></div>
+  ${boardRows(game.lbTab, game.lastEntry ? (game.lastEntry.mode === game.lbTab ? game.lastEntry.e : game.lbTab === 'combo' || game.lbTab === 'freepts' ? game.lastEntry.ce : null) : null)}
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${playGamesOn() ? '<button class="go ghost" id="lbplay">Google Play</button>' : ''}${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
   ov.querySelectorAll('[data-lb]').forEach(
     b =>
@@ -202,6 +206,13 @@ export function initLeaderboard() {
     if (b && b.show && b.free) {
       board = b;
       board.combo = b.combo || [];
+      // older saves: build the free ride points board from the free rides already on the phone
+      board.freepts =
+        b.freepts ||
+        b.free
+          .map(x => ({ n: x.n, v: x.score || 0, time: x.v, near: x.near || 0, riders: x.riders || 0, d: x.d }))
+          .sort((a, c) => c.v - a.v)
+          .slice(0, 10);
     }
   } catch (e) {}
   try {

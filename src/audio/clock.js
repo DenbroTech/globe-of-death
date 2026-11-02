@@ -11,7 +11,12 @@ const wakeAudio = () => {
 };
 const now = () => (ac ? ac.currentTime : performance.now() / 1000 - pauseAcc);
 // audio output delay, capped: phones (especially with Bluetooth reconnecting) can report silly values
-const lat = () => Math.min(0.3, Math.max(0, ac ? ac.outputLatency || ac.baseLatency || 0 : 0));
+// It's read ONCE when a ride starts (`fixLatency`) and held for the whole ride: the live value wobbles on
+// some phones (Bluetooth), and every wobble moved the show clock (free ride time stalled, rides stuck).
+const liveLat = () => Math.min(0.3, Math.max(0, ac ? ac.outputLatency || ac.baseLatency || 0 : 0));
+let latFixed = null;
+const lat = () => latFixed ?? liveLat();
+const fixLatency = () => (latFixed = liveLat());
 function beatAt(t) {
   let k = game.tempos[0];
   for (const x of game.tempos) if (t >= x.time) k = x;
@@ -67,4 +72,4 @@ export function initClock() {
   }
 }
 
-export { wakeAudio, ACT_START, FINAL, GW, INTRO, LOOK, PW, actOfBar, beatAt, bpmOfAct, lat, now, timeAt };
+export { fixLatency, wakeAudio, ACT_START, FINAL, GW, INTRO, LOOK, PW, actOfBar, beatAt, bpmOfAct, lat, now, timeAt };

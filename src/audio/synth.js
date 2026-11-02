@@ -23,6 +23,17 @@ let ac = null,
   echoFb = null,
   echoOut = null,
   dest = null;
+/* the phone's audio clock froze (it can report "running" while stuck, e.g. Bluetooth dropping): throw the
+   context away and build a fresh one. The show clock's jump guard in frame() re-anchors the tempo map */
+function rebuildAudio() {
+  const old = ac;
+  ac = null;
+  try {
+    if (old) old.close().catch(() => {});
+  } catch (e) {}
+  for (const k in IRS) delete IRS[k];
+  initAudio();
+}
 function initAudio() {
   if (ac) return;
   try {
@@ -566,6 +577,7 @@ export {
   conga,
   hat,
   initAudio,
+  rebuildAudio,
   kick,
   kit,
   master,
