@@ -85,7 +85,7 @@ function showSettings() {
   ov.hidden = false;
   const row = (id, label, on) =>
     `<button class="srow" id="${id}"><span>${label}</span><i class="swt${on ? ' on' : ''}"></i></button>`;
-  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show touch ring', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}</div><button class="go" id="sBack">Done</button><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
+  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show joystick', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}</div><button class="go" id="sBack">Done</button><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
   $('#sSnd').onclick = () => {
     $('#sndBtn').click();
     showSettings();

@@ -59,8 +59,6 @@ const tEnd = e => {
   gestures.delete(e.pointerId);
   if (e.pointerId === game.stickPtr) {
     game.stickPtr = null;
-    ghost.style.left = '';
-    ghost.style.top = '';
     jk.style.transform = 'translate(0px,0px)';
     ghost.classList.remove('on');
   }
@@ -179,7 +177,7 @@ function stuntTick(dt, B) {
   tNeedle.setAttribute('transform', `rotate(${na.toFixed(1)} 60 64)`);
   grip.style.setProperty('--roll', (clamp(game.FREE ? fy() : game.stuntD, -1, 1) * 24).toFixed(1) + 'px');
   blever.style.setProperty('--pull', (Math.min(0, game.stuntD) * -16).toFixed(1) + 'deg');
-  ghost.classList.toggle('hint', game.showRing && game.running && !game.over && B < 10 && game.stickPtr == null);
+  ghost.classList.toggle('hint', game.showRing && game.running && !game.over && game.stickPtr == null);
   swipeHint.classList.toggle('on', !game.showRing && game.running && !game.over && B < 10 && !game.TUT);
   // handlebars steer: follow the loop actually swinging, plus a kick on every swipe
   const yr = turnRate(B),
@@ -232,10 +230,8 @@ export function initControls() {
       fStick.x = fStick.y = 0;
     }
     if (game.stickPtr == null && game.showRing) {
+      // the joystick stays put (bottom middle, above the handlebars); it just mirrors your thumb
       game.stickPtr = e.pointerId;
-      const r = touch.getBoundingClientRect();
-      ghost.style.left = e.clientX - r.left + 'px';
-      ghost.style.top = e.clientY - r.top + 'px';
       jk.style.transform = 'translate(0px,0px)';
       ghost.classList.add('on');
     }

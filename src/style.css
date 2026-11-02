@@ -304,3 +304,7 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .swb.neon{box-shadow:none}.swb.neon .chip{box-shadow:0 0 10px 1px currentColor,inset 0 0 0 1px rgba(255,255,255,.3)}
 .swb.locked{filter:none}.swb.locked .chip{filter:saturate(.35) brightness(.5)}.swb.locked span{color:var(--mute)}
 .swb.locked::after{top:5px;left:5px;right:5px;bottom:auto;height:46px;margin:0;width:auto;background-size:14px}
+
+/* "Show joystick": fixed at the bottom middle, just above the handlebars; dim until you touch */
+.stick{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 200px);margin:0 0 0 -75px;width:150px;height:150px}
+.stick.hint{opacity:.45}.stick .hintTxt{display:none}
