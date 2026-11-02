@@ -1131,10 +1131,11 @@ function makeBike(o) {
   if (st === 'dirt') {
     sideX(
       [
-        [S.zf + 0.02, S.rf + S.tf + 0.08],
-        [S.zf + 0.25, S.rf + S.tf + 0.14],
-        [S.zf + 0.3, S.rf + S.tf + 0.11],
-        [S.zf - 0.1, S.rf + S.tf + 0.09],
+        // MX front mudguard: sits just above the top of the front tyre (wheel centre is at y = rf)
+        [S.zf + 0.02, 2 * S.rf + S.tf + 0.03],
+        [S.zf + 0.25, 2 * S.rf + S.tf + 0.09],
+        [S.zf + 0.3, 2 * S.rf + S.tf + 0.06],
+        [S.zf - 0.1, 2 * S.rf + S.tf + 0.04],
       ],
       0.12,
       paint,

@@ -17,12 +17,11 @@ const THEMES = {
     amb: 'tent',
   },
   beach: {
-    // the music is all steel pan, so it sits lower and the move sounds are a brighter bell (glass) on top
-    mus: 0.62,
-    sfx: 1.35,
+    // the music is all steel pan, so it sits a bit lower than other arenas
+    mus: 0.75,
     lead: 'pan',
     stab: 'pan',
-    hit: 'glass',
+    hit: 'pan',
     jump: 'pan',
     bass: 'pluck',
     kick: 'soft',
@@ -34,8 +33,9 @@ const THEMES = {
   stadium: {
     lead: 'brass',
     stab: 'brass',
-    hit: 'brass',
-    jump: 'horn',
+    // move sounds use Big Top's calliope (the owner found the brass hits horrible)
+    hit: 'calliope',
+    jump: 'calliope',
     bass: 'brassbass',
     kick: 'boom',
     snare: 'big',

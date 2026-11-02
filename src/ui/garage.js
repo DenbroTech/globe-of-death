@@ -105,7 +105,7 @@ const catOf = id => {
   return (PCATS.find(([, f]) => f(it)) || PCATS[0])[0];
 };
 let gCat = {},
-  gPart = 'suit';
+  gPart = 'helmet';
 function showGarage(msg) {
   if (sanitizeSel(garage.sel)) {
     saveGarage();
@@ -159,7 +159,7 @@ function showGarage(msg) {
         .join('')}</div>
       <div class="glabel">Paint <b>${findItem('paint', sel.paint).name}</b></div>${palette('paint')}`
         : `<div class="glabel">Outfit <b>${findItem('costume', sel.costume).name}</b></div>${cards('costume')}
-      <div class="seg"><button data-part="suit" aria-pressed="${gPart === 'suit'}">Suit</button><button data-part="helmet" aria-pressed="${gPart === 'helmet'}">Helmet</button><button data-part="trim" aria-pressed="${gPart === 'trim'}">Trim</button></div><div class="glabel">${{ suit: 'Suit', helmet: 'Helmet', trim: 'Trim' }[gPart]} colour <b>${pname(gPart)}</b></div>${palette(gPart, 1)}`
+      <div class="seg"><button data-part="helmet" aria-pressed="${gPart === 'helmet'}">Helmet</button><button data-part="suit" aria-pressed="${gPart === 'suit'}">Suit</button><button data-part="trim" aria-pressed="${gPart === 'trim'}">Trim</button></div><div class="glabel">${{ suit: 'Suit', helmet: 'Helmet', trim: 'Trim' }[gPart]} colour <b>${pname(gPart)}</b></div>${palette(gPart, 1)}`
     }
     ${msg ? `<p class="gmsg">${msg}</p>` : ''}
     <button class="go wide" id="back">Back to menu</button></div>`;

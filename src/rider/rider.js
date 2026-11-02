@@ -3,7 +3,8 @@ import { mergeGroup } from '../bikes/bike.js';
 import { neonify } from '../render/neon.js';
 import { RIDER_GLTF, figureFromModel } from './riderModel.js';
 import { V3, YAX } from '../core/constants.js';
-import { applyFinish, deep } from '../bikes/finishes.js';
+import { applyFinish, deep, finishTex } from '../bikes/finishes.js';
+import { NEON_T } from '../render/neon.js';
 import { findItem } from '../bikes/catalog.js';
 import { envify } from '../render/envmap.js';
 import { ik2 } from './ik.js';
@@ -744,16 +745,59 @@ function sharpChevron(mat, pal) {
       .replace(
         '#include <color_fragment>',
         `#include <color_fragment>
+        #define HAS_CHEV
+        float chevM = 0.0;
         if (vChev.w > 0.5) {
           float t = vChev.y, fr = vChev.z, al = abs(vChev.x), d = 1e3;
           if (fr > 0.45 && t > 0.5 && t < 0.8 && al < 0.62) d = abs(al - (t - 0.52) * 1.7) - 0.075;
           if (fr < -0.45 && t > 0.42 && t < 0.74 && al < 0.62) d = abs(al - (0.74 - t) * 1.5) - 0.08;
           float aa = max(fwidth(d), 1e-4);
-          diffuseColor.rgb = mix(diffuseColor.rgb, uSec, 1.0 - smoothstep(-aa, aa, d));
+          chevM = 1.0 - smoothstep(-aa, aa, d);
+          diffuseColor.rgb = mix(diffuseColor.rgb, uSec, chevM);
         }`,
       );
   };
   mat.customProgramCacheKey = () => prevKey + '|chev';
+}
+/* trim in a neon or a pattern: the trim panels (vertex colour = the trim colour, plus the shader-drawn
+   chevron) glow like neon tubes, or show the real pattern texture instead of its flat base colour */
+function trimFx(mat, pal, it) {
+  if (!it || !(it.neon || it.tex)) return;
+  const T = it.tex ? finishTex(it.tex) : null,
+    sc = T ? T.scale.toFixed(3) : '1.',
+    prev = mat.onBeforeCompile,
+    prevKey = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+  mat.onBeforeCompile = (sh, r) => {
+    if (prev) prev(sh, r);
+    sh.uniforms.uTrimC = { value: pal.sec };
+    sh.uniforms.uTrimT = NEON_T;
+    if (T) sh.uniforms.uTrimMap = { value: T.map };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vTrP;\nvarying vec3 vTrN;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvTrP = position;\nvTrN = normal;');
+    let code = `{
+        float tm = 1.0 - smoothstep(0.02, 0.06, distance(vColor.rgb, uTrimC));
+        #ifdef HAS_CHEV
+        tm = max(tm, chevM);
+        #endif
+        `;
+    if (T) {
+      code += `vec3 tw = pow(abs(normalize(vTrN)), vec3(4.0)); tw /= (tw.x + tw.y + tw.z);
+        vec3 tc = texture2D(uTrimMap, vTrP.zy * ${sc}).rgb * tw.x + texture2D(uTrimMap, vTrP.zx * ${sc}).rgb * tw.y + texture2D(uTrimMap, vTrP.xy * ${sc}).rgb * tw.z;
+        tc = pow(tc, vec3(2.2));
+        diffuseColor.rgb = mix(diffuseColor.rgb, tc, tm);`;
+      if (T.glow) code += `totalEmissiveRadiance += tc * tm * ${T.glow.toFixed(2)};`;
+    }
+    if (it.neon)
+      code += `float bz = 0.86 + 0.14 * sin(uTrimT * 31.0) * sin(uTrimT * 17.0);
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(1.0), tm * 0.3);
+        totalEmissiveRadiance += uTrimC * tm * 2.4 * bz;`;
+    code += '}';
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', `#include <common>\nuniform vec3 uTrimC;\nuniform float uTrimT;\n${T ? 'uniform sampler2D uTrimMap;\n' : ''}varying vec3 vTrP;\nvarying vec3 vTrN;`)
+      .replace('#include <color_fragment>', '#include <color_fragment>\n' + code);
+  };
+  mat.customProgramCacheKey = () => prevKey + '|trim' + it.id;
 }
 function riderMats(o, C, P) {
   const SM = (c, r, mt, x = {}) =>
@@ -800,7 +844,13 @@ function riderMats(o, C, P) {
     if (D.pal.blk != null) pal.blk = new THREE.Color(D.pal.blk).convertSRGBToLinear();
   }
   // trim colour picked in the garage replaces the white/grey stripes
-  if (o.trim && suit.userData.neon == null) pal.sec = deep(findItem('paint', o.trim).c);
+  if (o.trim && suit.userData.neon == null) {
+    pal.sec = deep(findItem('paint', o.trim).c);
+    // trim panels are found by their colour, so keep it apart from the suit colour if they're near-identical
+    const dc = Math.abs(pal.sec.r - pal.main.r) + Math.abs(pal.sec.g - pal.main.g) + Math.abs(pal.sec.b - pal.main.b);
+    if (dc < 0.15) pal.sec.offsetHSL(0, 0, pal.sec.getHSL({}).l > 0.5 ? -0.12 : 0.12);
+    trimFx(suit, pal, findItem('paint', o.trim)); // before the chevron so its code runs after it
+  }
   // chest/back chevron drawn per pixel (sharp edge) on plain leathers; see riderKit torso
   if (!(D && D.design) && !C.ghost) sharpChevron(suit, pal);
   const CODE = { MAIN, SEC, BLK, DIM };

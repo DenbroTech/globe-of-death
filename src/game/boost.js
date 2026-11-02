@@ -8,7 +8,7 @@ import { addScore, pk } from './perks.js';
 import { tutEv } from '../ui/tutorial.js';
 import { $ } from '../core/constants.js';
 import { statMul } from '../bikes/stats.js';
-import { hitSound } from '../audio/songs.js';
+import { hitSound, nosSound } from '../audio/songs.js';
 
 let boostBtn;
 
@@ -53,10 +53,7 @@ function useBoost() {
   crowd.wave();
   if (ac) {
     const t = ac.currentTime;
-    sfx(() => {
-      tone(t, 220, 'sawtooth', 0.2, 0.5, 2400);
-      tone(t + 0.05, 440, 'sawtooth', 0.12, 0.45, 3000);
-    });
+    nosSound();
   }
 }
 function autoHit(n) {

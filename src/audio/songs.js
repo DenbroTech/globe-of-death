@@ -191,14 +191,12 @@ const songFor = a => {
   const L = ARENAS[arenaId].songs;
   return L[(a - 1 + L.length * 99) % L.length];
 };
-/* move sounds: every move has its OWN fixed note, the same every time you press it, picked from the
-   song's pentatonic scale in its key (so any order of moves sounds like a tune and never clashes).
-   Pentatonic steps above the key root (major: 0 2 4 7 9, minor: 0 3 5 7 10, next octave 12…):
-   down-left 0 · wheelie 1 · left 2 · up-left 3 · up-right 4 · right 5 · down-right 7 · jump 8 ·
-   stoppie -2 · seat stand left = chord on 0+2 · seat stand right = chord on 3+5.
-   The same note twice in a row goes up an octave each time (normal, +1 octave, +2 octaves, then round
-   again), so it's never the same note back to back; another move resets it. Held moves' beat ticks too. */
-const NOTE = { dl: 0, wheelie: 1, left: 2, ul: 3, ur: 4, right: 5, dr: 7, jump: 8, nose: -2, up: 5, down: 2 };
+/* move sounds (the original style the owner liked): ONE note per press, in the arena's instrument,
+   built on the chord that's playing, so moves form a tune with the music. Every move has its own
+   step of the song's pentatonic scale above the chord root, so no two moves sound the same:
+   down-left 0 · left 1 · up-left 2 · right 3 · up-right 4 · down-right 5 (octave).
+   The same move twice in a row jumps up an octave (then back), so it never repeats the same note. */
+const NOTE = { dl: 0, left: 1, ul: 2, right: 3, ur: 4, dr: 5, up: 3, down: 1 };
 const PENT = { maj: [0, 2, 4, 7, 9], min: [0, 3, 5, 7, 10] };
 const pent = (i, maj) => {
   const P = maj ? PENT.maj : PENT.min,
@@ -206,7 +204,6 @@ const pent = (i, maj) => {
   return P[((i % 5) + 5) % 5] + 12 * o;
 };
 const mel = { last: null, rep: 0 };
-const OCT = k => 12 * (k % 3);
 function resetMelody() {
   mel.last = null;
   mel.rep = 0;
@@ -229,42 +226,54 @@ function songRoot() {
 }
 function hitSound(type, step, g) {
   if (!ac) return;
-  duckMusic();
   sfx(() => hitSound_(type, step, g));
 }
 function hitSound_(type, step, g) {
   const t = ac.currentTime,
     S = songNow(),
-    key = S.prog[0] + 24,
+    maj = !!S.maj,
+    r = songRoot() + 24,
     K = kit(),
-    V = K.hit || 'tri',
-    maj = !!S.maj;
-  if (type === 'wheelie' || type === 'nose') {
+    V = K.hit || 'tri';
+  if (type === 'jump') {
     mel.last = null;
-    voice(V, t, key + pent(NOTE[type], maj) + OCT(step || 0), step ? 0.07 : 0.09, 0.38);
+    // a quick rising chord flourish on the arena's instrument (no pitch-sweep "boing")
+    const J = K.jump;
+    if (J === 'horn') return [0, 4, 7].forEach(i => voice('brass', t, r + i - 12, 0.06, 0.55));
+    if (J === 'swoop') return [0, 7, 12].forEach((iv, i) => voice('theremin', t + i * 0.07, r + iv + 12, 0.07, 0.3));
+    if (J === 'bubbles') return [0, 3, 7, 10, 12, 15].forEach((iv, i) => voice('bubble', t + i * 0.04, r + 12 + iv, 0.07, 0.18));
+    [0, 2, 4, 5].forEach((d, i) => voice(V, t + i * 0.045, r + pent(d, maj), 0.08 - i * 0.012, 0.4 - i * 0.05));
     return;
   }
-  if (type.startsWith('stand')) {
+  if (type === 'wheelie' || type === 'nose' || type === 'standl' || type === 'standr' || type === 'stand') {
     mel.last = null;
-    const [a, b] = type === 'standr' ? [3, 5] : [0, 2];
-    voice(V, t, key + pent(a, maj) + OCT(step || 0), 0.07, 0.42);
-    voice(V, t, key + pent(b, maj) + OCT(step || 0), 0.07, 0.42);
+    // held moves: a note per beat walking up the scale (wheelie) / down it (stoppie); seat stand plays two notes
+    const k = Math.min(step || 0, 7),
+      d = type === 'nose' ? 5 - k : type === 'standl' ? 4 - k : k;
+    voice(V, t, r + pent(d, maj), 0.085, 0.38);
+    if (type.startsWith('stand')) voice(V, t, r + pent(d + 2, maj), 0.06, 0.38);
     return;
   }
   if (type === mel.last) mel.rep++;
   else mel.rep = 0;
   mel.last = type;
-  const m = key + pent(NOTE[type] ?? 5, maj) + OCT(mel.rep),
-    v = g === 'p' ? 0.14 : 0.1,
-    soft = type === 'ul' || type === 'ur',
-    hard = type === 'dl' || type === 'dr';
-  if (type === 'jump') {
-    voice(V, t, m, v * 1.1, 0.5);
-    voice(K.jump && !['slide', 'horn', 'swoop', 'bubbles'].includes(K.jump) ? K.jump : V, t, m + 12, v * 0.35, 0.35);
-    return;
-  }
-  voice(V, t, m, v * (soft ? 0.75 : hard ? 1.2 : 1), soft ? 0.22 : 0.28);
-  if (hard) voice(V, t, m - 12, v * 0.5, 0.3);
+  const m = r + pent(NOTE[type] ?? 1, maj) + (mel.rep % 2) * 12;
+  voice(V, t, m, g === 'p' ? 0.15 : 0.1, 0.28);
+}
+/* NOS: a bright rising power-up in the song's key (arena instrument + a sparkly octave on top) */
+function nosSound() {
+  if (!ac) return;
+  sfx(() => {
+    const t = ac.currentTime,
+      maj = !!songNow().maj,
+      r = songRoot() + 24,
+      V = kit().hit || 'tri';
+    [0, 1, 2, 3, 5, 7].forEach((d, i) => {
+      voice(V, t + i * 0.055, r + pent(d, maj), 0.09, 0.32);
+      voice('glass', t + i * 0.055, r + 12 + pent(d, maj), 0.035, 0.25);
+    });
+    voice(V, t + 0.36, r + 12 + pent(5, maj), 0.11, 0.9);
+  });
 }
 function clap(t) {
   nz(t, 'bandpass', 1300, 0.35, 0.06);
@@ -346,7 +355,7 @@ const menu = { t: 0, step: 0, on: false };
 function menuMusic() {
   if (!ac || ac.state !== 'running') return;
   const inRide = game.running && !game.over;
-  setMusicLevel(inRide ? 1 : 0.33); // menus: a third of the ride volume
+  setMusicLevel(inRide ? 0.85 : 0.3); // a touch under the move sounds in a ride; menus about a third
   if (inRide || game.paused) {
     menu.on = false;
     return;
@@ -366,4 +375,4 @@ function menuMusic() {
   }
 }
 
-export { SONGS, clap, hitSound, resetMelody, menuMusic, scheduleStep, songFor };
+export { SONGS, clap, hitSound, nosSound, resetMelody, menuMusic, scheduleStep, songFor };
