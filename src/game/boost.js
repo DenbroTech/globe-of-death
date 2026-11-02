@@ -4,7 +4,7 @@ import { ac, initAudio, sfx, tone } from '../audio/synth.js';
 import { beatAt, lat, now, timeAt } from '../audio/clock.js';
 import { player } from './objects.js';
 import { addBal, toast } from '../ui/hud.js';
-import { addScore, pk } from './perks.js';
+import { addScore, cursed, pk } from './perks.js';
 import { tutEv } from '../ui/tutorial.js';
 import { $ } from '../core/constants.js';
 import { statMul } from '../bikes/stats.js';
@@ -14,10 +14,10 @@ let boostBtn;
 
 let boostB0 = 0;
 function chargeBoost(v) {
-  if ((game.balance < 100 && !pk('hot')) || boostActive()) return;
+  if ((game.balance < 100 && !pk('hot')) || boostActive() || cursed('noNos')) return;
   game.boostCharge = Math.min(
     100,
-    game.boostCharge + 0.4 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2) * (game.balance < 100 ? 0.5 : 1),
+    game.boostCharge + 0.4 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2),
   );
 }
 const boostActive = () => now() < game.boostEnd;
@@ -42,8 +42,14 @@ function nosEnd(b1) {
 function useBoost() {
   initAudio();
   if (!game.running || game.paused || game.over || game.boostCharge < 100 || boostActive()) return;
+  if (cursed('noNos')) return toast('NOS JAMMED', 900);
   tutEv('nos');
-  game.boostEnd = now() + 3 + 1.5 * pk('longBoost');
+  let len = 3;
+  if (pk('doubleNos') > 0) {
+    game.perks.doubleNos--;
+    len *= 2;
+  }
+  game.boostEnd = now() + len;
   game.boostCharge = 0;
   boostB0 = beatAt(now() - lat());
   game.boostB1 = nosEnd(beatAt(game.boostEnd - lat()));

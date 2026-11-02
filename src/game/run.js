@@ -19,6 +19,7 @@ import { leaveGarage, rebuildPlayerBike } from '../ui/garage.js';
 import { tutDraw, tutEl } from '../ui/tutorial.js';
 import { $, R } from '../core/constants.js';
 import { showStart } from '../ui/menus.js';
+import { endActFx } from './perks.js';
 
 function start() {
   resetMelody();
@@ -64,7 +65,8 @@ function start() {
   game.boostCharge = 0;
   game.boostEnd = 0;
   game.perks = {};
-  game.netLeft = 0;
+  game.shield = 0;
+  endActFx();
   game.boostWasReady = false;
   leaveGarage();
   rebuildPlayerBike();
@@ -134,6 +136,7 @@ function quitToMenu() {
     awardFans(false);
   }
   resetInput();
+  endActFx();
   game.TUT = false;
   tutEl.hidden = true;
   game.running = false;

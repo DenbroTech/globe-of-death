@@ -21,7 +21,7 @@ import { autoHit, nosEnd, boostActive, boostB0, boostBtn, chargeBoost } from './
 import { finale, finishHold, miss, ridersFor, tumble } from './judging.js';
 import { stuntTick } from '../input/controls.js';
 import { updateCamera } from '../render/camera.js';
-import { addScore, gw, offerPerks, pk } from './perks.js';
+import { addScore, cursed, endActFx, gw, offerPerks, pk } from './perks.js';
 import { gBike, gFig, showroom } from '../ui/garage.js';
 import { showOver } from '../ui/leaderboard.js';
 import { tutGen, tutTick } from '../ui/tutorial.js';
@@ -39,6 +39,9 @@ let clock = 0,
   lastBeatInt = -1;
 /* NOS afterburner: two additive cones (orange outer, white-hot core) out of the back of your bike + a warm light */
 let nosFlame = null;
+let wasBlind = false,
+  wasDark = false,
+  dizzy = 0;
 function makeNosFlame() {
   const g = new THREE.Group();
   const cone = (r, len, hex) => {
@@ -153,11 +156,16 @@ function frame(nowMs) {
         tutTick(B);
         if (game.paused) return;
       }
-      else while (game.genBar <= Math.floor(B / 4) + 3) genBarNotes(game.genBar++);
+      // the next act's moves wait until its perk / curse is picked (they can change its tempo and moves)
+      else
+        while (game.genBar <= Math.floor(B / 4) + 3 && (game.encore || actOfBar(game.genBar) <= game.act))
+          genBarNotes(game.genBar++);
     }
     while (timeAt(game.schedStep / 2) < T + 0.15) scheduleStep(game.schedStep++);
     if (!game.FREE) {
-      if (boostActive()) for (const n of game.notes) if (!n.judged && timeAt(n.beat) <= T - lat()) autoHit(n);
+      for (const n of game.notes) if (n.decoy && !n.judged && timeAt(n.beat) + gw(n.type) < T - lat()) n.judged = 'd';
+      if (boostActive())
+        for (const n of game.notes) if (!n.judged && !n.decoy && timeAt(n.beat) <= T - lat()) autoHit(n);
       for (const n of game.notes)
         if (
           !n.judged &&
@@ -195,7 +203,7 @@ function frame(nowMs) {
           const got = reachAct(a, id => ARENAS[id].name);
           if (got.length) setTimeout(() => toast('Unlocked: ' + got.slice(0, 3).join(' · '), 2400), 900);
         }
-        game.netLeft = pk('net');
+        endActFx();
         if (a === FINAL + 1 && !game.encore) {
           finale();
           return;
@@ -385,10 +393,17 @@ function frame(nowMs) {
       const w = trackEl.clientWidth,
         hx = 24,
         ppb = (w - hx - 24) / LOOK;
+      const blind = cursed('blind');
+      if (blind !== wasBlind) {
+        wasBlind = blind;
+        if (!blind) for (const n of game.notes) n.el.style.opacity = '';
+      }
       for (const n of game.notes) {
         const x = hx + (n.beat - B) * ppb;
         n.el.style.transform = `translateX(${x}px)`;
         n.el.hidden = x > w + 30;
+        // Blind spot curse: moves fade out in the last beat and a bit before the circle
+        if (blind && !n.len) n.el.style.opacity = n.judged ? 1 : clamp(n.beat - B - 0.8, 0, 1);
         if (n.len && n.el.dataset.w != String(ppb | 0)) {
           n.el.dataset.w = ppb | 0;
           n.el.style.width = n.len * ppb + 40 + 'px';
@@ -518,6 +533,15 @@ function frame(nowMs) {
   }
   if (P.h === undefined) P.h = 0;
   updateCamera(dt);
+  // curses that change the view: Dizzy rolls the camera, Lights out darkens everything but the middle
+  const live = game.running && !game.over;
+  dizzy += ((live && cursed('dizzy') ? 1 : 0) - dizzy) * Math.min(1, dt * 1.5);
+  if (dizzy > 0.001) camera.rotateZ(Math.sin(clock * 0.55) * 0.6 * dizzy);
+  const dark = live && cursed('dark');
+  if (dark !== wasDark) {
+    wasDark = dark;
+    document.body.classList.toggle('lightsout', dark);
+  }
   renderer.render(scene, camera);
   hudT -= dt;
   if (hudT <= 0) {
@@ -534,7 +558,7 @@ function frame(nowMs) {
       ? 'GO!'
       : game.boostCharge >= 100
         ? 'TAP'
-        : game.balance < 100 && !pk('hot')
+        : cursed('noNos') || (game.balance < 100 && !pk('hot'))
           ? '—'
           : Math.round(game.boostCharge) + '%';
     if (game.boostCharge >= 100 && !game.boostWasReady) toast('NOS READY · TAP IT', 1300);

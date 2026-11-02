@@ -316,7 +316,7 @@ function scheduleStep(s) {
     if (k % 4 === 0) kick(t);
     hat(t, false);
   } else {
-    playStep(S, k, bar, a, t, 30 / bpmOfAct(a));
+    playStep(S, k, bar, a, t, timeAt(B + 0.5) - t);
   }
   if (bar === 1 && k >= 6) snare(t);
   if (bar === 1 && k % 2 === 0) tone(t, k === 6 ? 1320 : 660, 'square', 0.12, 0.12);

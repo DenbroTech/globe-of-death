@@ -10,9 +10,9 @@ import { frNear, frTime, freeSteer } from './freeride.js';
 import { ARENAS } from '../arenas/arenas.js';
 import { player, pool } from './objects.js';
 import { DIRS } from './chart.js';
-import { addBal, ov, showJudge } from '../ui/hud.js';
+import { addBal, ov, showJudge, toast } from '../ui/hud.js';
 import { chargeBoost, useBoost } from './boost.js';
-import { addScore, gw, pk, pw } from './perks.js';
+import { addScore, cursed, drawCurse, gw, pk, pw } from './perks.js';
 import { countPlay, recordRun, showOver } from '../ui/leaderboard.js';
 import { tutEv } from '../ui/tutorial.js';
 import { resetInput } from './run.js';
@@ -21,7 +21,9 @@ import { bst } from '../bikes/stats.js';
 import { recordCareer } from './unlocks.js';
 import { hitSound } from '../audio/songs.js';
 
+const MIR = { left: 'right', right: 'left', ul: 'ur', ur: 'ul', dl: 'dr', dr: 'dl' };
 function release(type) {
+  if (cursed('mirror') && MIR[type]) type = MIR[type];
   if (type === 'left' || type === 'ul' || type === 'dl') type = 'standl';
   else if (type === 'right' || type === 'ur' || type === 'dr') type = 'standr';
   if (type !== 'wheelie' && type !== 'nose' && type !== 'standl' && type !== 'standr') return;
@@ -42,6 +44,7 @@ function release(type) {
 }
 const ridersFor = a => Math.max(0, Math.min(a - 1, pool.length)),
   missCost = () =>
+    (cursed('glass') ? 2 : 1) *
     Math.min(55, 18 + 4 * game.act) *
     Math.max(0.35, 1 - 0.25 * pk('armor')) *
     Math.max(0.5, 1 - (bst('grip') - 3) * 0.13);
@@ -60,7 +63,7 @@ function finishHold(n) {
   showJudge('p', n.type === 'nose' ? 'STOPPIE!' : n.type.startsWith('stand') ? 'SEAT STAND!' : 'WHEELIE!');
   game.cheer = 1;
   crowd.wave();
-  addBal(10 + 5 * pk('pleaser'));
+  addBal(10);
   sfxNoise(1.2, 1300, 0.22, 'cheer');
 }
 function press(type, tAt, soft) {
@@ -68,6 +71,7 @@ function press(type, tAt, soft) {
   initAudio();
   if (!game.running || game.paused || game.over) return;
   const t = tAt ?? now() - lat();
+  if (cursed('mirror') && MIR[type]) type = MIR[type];
   if (type === 'jump') player.hopT0 = t;
   if (type === 'wheelie') game.wheelieDown = true;
   if (type === 'nose') game.noseDown = true;
@@ -98,6 +102,16 @@ function press(type, tAt, soft) {
           ((isL && ['left', 'ul', 'dl'].includes(n.type)) || (isR && ['right', 'ur', 'dr'].includes(n.type)))));
   const W = soft ? 2 : game.holdNote ? 1.5 : 1;
   if (soft && !(best && bd <= gw(best.type) * W && okT(best))) return;
+  if (best && best.decoy && bd <= gw(best.type) * W && okT(best)) {
+    // Decoys curse: hitting a crossed-out move is a mistake
+    best.judged = 'm';
+    best.el.classList.add('miss');
+    loseCombo();
+    showJudge('m', 'DECOY!');
+    if (!game.TUT && !pk('lockNos')) game.boostCharge = 0;
+    addBal(-missCost() * 0.6);
+    return;
+  }
   if (best && bd <= gw(best.type) * W && okT(best)) {
     const g = bd <= pw(best.type) * W ? 'p' : 'g';
     best.judged = g;
@@ -108,12 +122,11 @@ function press(type, tAt, soft) {
       both = game.holdNote && !best.len;
     addScore((g === 'p' ? 300 : 120) * mult * (both ? 2 : 1));
     game.stats[g === 'p' ? 'perfect' : 'good']++;
-    addBal(g === 'p' ? 7 : 3);
+    addBal(g === 'p' ? 7 * (1 + pk('perfHeal')) : 3);
     chargeBoost(g === 'p' ? 14 : 7);
     if (best.type === 'jump') {
       game.cheer = 1;
       crowd.wave();
-      addBal(5 * pk('pleaser'));
       sfxNoise(1.1, 1500, 0.2, 'cheer');
     }
     showJudge(g, both ? 'DOUBLE!' : g === 'p' ? 'PERFECT!' : 'GOOD');
@@ -135,9 +148,9 @@ function press(type, tAt, soft) {
       sfxNoise(1.1, 1400, 0.18, 'cheer');
     }
   } else if (best && bd <= gw(best.type)) {
-    game.combo = 0;
+    loseCombo();
     showJudge('m', 'WRONG BUTTON');
-    if (!game.TUT) game.boostCharge = 0;
+    if (!game.TUT && !pk('lockNos')) game.boostCharge = 0;
     addBal(-(6 + game.act));
     if (DIRS.includes(type)) freeSteer(type, t);
   } else if (DIRS.includes(type)) {
@@ -156,8 +169,8 @@ function miss(n) {
   tutEv('miss', n.type);
   n.judged = 'm';
   n.el.classList.add('miss');
-  game.combo = 0;
-  if (!game.TUT) game.boostCharge = 0; // a miss empties the NOS
+  loseCombo();
+  if (!game.TUT && !pk('lockNos')) game.boostCharge = 0; // a miss empties the NOS (unless Locked NOS)
   if (n.len) {
     showJudge(
       'm',
@@ -165,9 +178,10 @@ function miss(n) {
     );
     return;
   }
-  if (game.netLeft > 0) {
-    game.netLeft--;
-    showJudge('g', 'SAFETY NET');
+  if (game.shield > 0 && !game.TUT) {
+    game.shield--;
+    drawCurse();
+    showJudge('g', 'SHIELD');
     if (n.slot && n.type === 'jump') player.hopT0 = now() - lat() - 0.2;
     return;
   }
@@ -181,6 +195,15 @@ function miss(n) {
     n.slot.dodgeB = beatAt(now() - lat());
   } else sfxNoise(0.4, 300, 0.4, 'crash');
   addBal(-missCost());
+}
+/* a mistake breaks the combo, unless Combo saver has one left this act */
+function loseCombo() {
+  if (game.combo > 0 && game.comboSaves > 0 && !game.TUT) {
+    game.comboSaves--;
+    setTimeout(() => toast('COMBO SAVED', 900), 350);
+    return;
+  }
+  game.combo = 0;
 }
 function holdClock() {
   if (game.heldAt == null) game.heldAt = now();

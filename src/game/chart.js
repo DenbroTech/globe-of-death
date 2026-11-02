@@ -1,5 +1,6 @@
 import { game } from '../core/state.js';
-import { ACT_START, actOfBar, bpmOfAct, timeAt } from '../audio/clock.js';
+import { ACT_START, actOfBar, timeAt } from '../audio/clock.js';
+import { actBpm, cursed } from './perks.js';
 import { addTurn } from './path.js';
 import { setCross } from './freeride.js';
 import { $ } from '../core/constants.js';
@@ -24,9 +25,10 @@ const ICON = {
 };
 const DIRS = ['up', 'down', 'left', 'right', 'ul', 'ur', 'dl', 'dr'],
   ROT = { up: 0, ur: 45, right: 90, dr: 135, down: 180, dl: 225, left: 270, ul: 315 };
-function addNote(beat, type, len) {
-  const n = { beat, type, judged: null, len: len || 0 };
-  if (DIRS.includes(type)) {
+function addNote(beat, type, len, decoy) {
+  const n = { beat, type, judged: null, len: len || 0, decoy: !!decoy };
+  if (decoy) {
+  } else if (DIRS.includes(type)) {
     addTurn(beat, type);
     n.to = true;
     game.lastTiltBeat = beat;
@@ -37,12 +39,13 @@ function addNote(beat, type, len) {
     setCross(n);
   }
   n.el = document.createElement('div');
-  n.el.className = 'note ' + type + (DIRS.includes(type) ? ' dir' : '');
+  n.el.className = 'note ' + type + (DIRS.includes(type) ? ' dir' : '') + (decoy ? ' decoy' : '');
   n.el.innerHTML = ICON[type];
   if (DIRS.includes(type)) n.el.style.setProperty('--r', ROT[type] + 'deg');
   if (type === 'standl' || type === 'standr') n.el.style.setProperty('--r', (type === 'standl' ? 270 : 90) + 'deg');
   notesEl.appendChild(n.el);
   game.notes.push(n);
+  if (decoy) return;
   game.lastNoteBeat = beat + (n.len ? 0.5 : 0);
   if (n.len) {
     game.holdEnd = beat + n.len;
@@ -54,7 +57,7 @@ let ppbNow = 50;
 function genBarNotes(b) {
   const a = actOfBar(b);
   if ((b >= 3 && actOfBar(b - 1) !== a) || b === 3) {
-    const bpm = bpmOfAct(a);
+    const bpm = actBpm(a);
     if (game.tempos[game.tempos.length - 1].bpm !== bpm) game.tempos.push({ beat: b * 4, time: timeAt(b * 4), bpm });
   }
   if (b < 3 || (b > 3 && ACT_START.includes(b))) return; // first bar of every act is a breather
@@ -121,7 +124,7 @@ function genBarNotes(b) {
       [P4, 0.5],
       [P5, 0.5],
     ],
-  ][Math.min(a, 10)];
+  ][Math.min(a + (cursed('double') ? 3 : 0), 10)];
   {
     let q = r,
       pick = mix[mix.length - 1][0];
@@ -135,9 +138,19 @@ function genBarNotes(b) {
     slots = pick === P1 ? [b % 2 ? 2 : 0] : pick[Math.floor(Math.random() * pick.length)];
   }
   const actEnd = (ACT_START.find(x => x > b) || 9999) * 4;
-  if (b >= 5 && b - game.lastWheelieBar >= 3 && Math.random() < 0.4 && actEnd - 1 - b * 4 >= 2) {
+  const mania = cursed('wheelies');
+  if (
+    b >= 5 &&
+    b - game.lastWheelieBar >= (mania ? 1 : 3) &&
+    b * 4 >= game.holdEnd + 1 &&
+    Math.random() < (mania ? 1 : 0.4) &&
+    actEnd - 1 - b * 4 >= 2
+  ) {
     game.lastWheelieBar = b;
-    const len = Math.min([2, 2, 3, 3, 4, 5, 6][Math.floor(Math.random() * 7)], actEnd - 1 - b * 4),
+    const len = Math.min(
+        mania ? 2 + Math.floor(Math.random() * 2) : [2, 2, 3, 3, 4, 5, 6][Math.floor(Math.random() * 7)],
+        actEnd - 1 - b * 4,
+      ),
       hr = Math.random(),
       ht = a < 2 ? 'wheelie' : hr < 0.4 ? 'wheelie' : hr < 0.7 ? 'nose' : Math.random() < 0.5 ? 'standl' : 'standr';
     addNote(b * 4, ht, len);
@@ -168,6 +181,12 @@ function genBarNotes(b) {
     } else continue;
     addNote(B, type);
     if (inHold) game.holdSingles++;
+  }
+  // Decoys curse: a crossed-out move in a gap, at least a beat clear of anything real
+  if (cursed('decoys') && Math.random() < 0.7) {
+    const B = b * 4 + [1, 2, 3][Math.floor(Math.random() * 3)];
+    const clear = !game.notes.some(n => Math.abs(n.beat - B) < 1 || (n.len && B > n.beat - 1 && B < n.beat + n.len + 1));
+    if (clear && B <= actEnd - 1) addNote(B, ['left', 'right', 'ul', 'ur', 'dl', 'dr'][Math.floor(Math.random() * 6)], 0, true);
   }
 }
 
