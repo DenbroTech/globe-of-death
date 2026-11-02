@@ -41,6 +41,7 @@ const CURSES = [
   { id: 'dark', name: 'Lights out', desc: 'The arena goes dark.' },
   { id: 'dizzy', name: 'Dizzy', desc: 'The world rolls round.' },
   { id: 'double', name: 'Double time', desc: 'Much busier moves.' },
+  { id: 'mystery', name: 'Mystery moves', desc: 'Moves stay blank until 1 second before you press.' },
   // score curses: ride as normal, but your points suffer (no ×2 on these)
   { id: 'pickpocket', name: 'Pickpocket', desc: 'Points are worth 10%.', score: 1 },
   { id: 'coldCrowd', name: 'Cold crowd', desc: 'No combo bonus.', score: 1 },

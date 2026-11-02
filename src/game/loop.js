@@ -426,7 +426,9 @@ function frame(nowMs) {
       const w = trackEl.clientWidth,
         hx = 24,
         ppb = (w - hx - 24) / LOOK;
-      const blind = cursed('blind');
+      const blind = cursed('blind'),
+        mystery = cursed('mystery'),
+        bpmNow = game.tempos[game.tempos.length - 1].bpm;
       if (blind !== wasBlind) {
         wasBlind = blind;
         if (!blind) for (const n of game.notes) n.el.style.opacity = '';
@@ -437,6 +439,12 @@ function frame(nowMs) {
         n.el.hidden = x > w + 30;
         // Blind spot curse: moves fade out in the last beat and a bit before the circle
         if (blind && !n.len) n.el.style.opacity = n.judged ? 1 : clamp(n.beat - B - 0.8, 0, 1);
+        // Mystery moves curse: every move is a blank circle until 1 second before you press it
+        const hide = mystery && !n.judged && !n.decoy && ((n.beat - B) * 60) / bpmNow > 1;
+        if (hide !== !!n.blank) {
+          n.blank = hide;
+          n.el.classList.toggle('blank', hide);
+        }
         if (n.len && n.el.dataset.w != String(ppb | 0)) {
           n.el.dataset.w = ppb | 0;
           n.el.style.width = n.len * ppb + 40 + 'px';
