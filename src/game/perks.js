@@ -16,7 +16,7 @@ import { $ } from '../core/constants.js';
 const PERKS = [
   { id: 'lockNos', name: 'Locked NOS', desc: "A charged NOS isn't lost when you miss.", once: 1 },
   { id: 'doubleNos', name: 'Double NOS', desc: 'Your next NOS lasts twice as long.' },
-  { id: 'hot', name: 'Hot NOS', desc: "NOS charges even when your balance isn't full.", once: 1 },
+  { id: 'hot', name: 'Hot NOS', desc: 'NOS keeps charging even after a miss.', once: 1 },
   { id: 'shield', name: 'Shield', desc: 'Your next 3 misses cost nothing.' },
   { id: 'comboSave', name: 'Combo saver', desc: 'Your combo survives one miss every act.' },
   { id: 'slowmo', name: 'Slow-mo', desc: 'Next act plays 10 BPM slower.', act: 1 },
