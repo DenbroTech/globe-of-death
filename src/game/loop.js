@@ -119,8 +119,17 @@ function frame(nowMs) {
   }
   const P = player;
   if (game.running && !game.over && !game.paused) {
-    const T = now(),
+    const T = now();
+    let B = beatAt(T - lat());
+    // the show clock may never run backwards or leap ahead mid-ride. If the phone's clock or audio
+    // delay jumps (app switch, Bluetooth, audio restart), re-anchor the tempo map so the ride carries
+    // on from where it was, instead of dropping back to the warm-up circle with no moves
+    if (game.lastB != null && (B < game.lastB - 0.25 || B > game.lastB + 16)) {
+      const d = T - lat() - timeAt(game.lastB);
+      game.tempos.forEach(x => (x.time += d));
       B = beatAt(T - lat());
+    }
+    game.lastB = B;
     // keep the chart 3 bars ahead and the music scheduled
     if (!game.FREE) {
       if (game.TUT) {
