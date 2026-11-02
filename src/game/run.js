@@ -22,6 +22,11 @@ import { showStart } from '../ui/menus.js';
 
 function start() {
   resetMelody();
+  // other riders turn up in a different order every run
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
   if (sanitizeSel(garage.sel)) rebuildPlayerBike();
   crowd.sync();
   game.TUT = game.tutPending;
@@ -64,9 +69,10 @@ function start() {
   leaveGarage();
   rebuildPlayerBike();
   pool.forEach(s => {
+    s.active = false;
     s.busy = false;
     s.bike.g.visible = false;
-    s.dots.forEach(d => (d.visible = false));
+    s.ahead.visible = false;
     s.mark.visible = false;
     s.trail.visible = false;
     s.state = null;
@@ -143,11 +149,12 @@ function quitToMenu() {
   game.notes = [];
   freeReset();
   pool.forEach(s => {
+    s.active = false;
     s.busy = false;
     s.state = null;
     s.bike.g.visible = false;
     s.trail.visible = false;
-    s.dots.forEach(d => (d.visible = false));
+    s.ahead.visible = false;
     s.mark.visible = false;
   });
   player.trail.visible = false;

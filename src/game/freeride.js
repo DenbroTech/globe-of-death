@@ -22,6 +22,8 @@ let fr = [],
 const GHOST = 5; // seconds a new rider rides as a see-through ghost before they can hit you
 /* see-through look for a newly arrived rider: swap in half-opacity copies of its materials */
 function setGhost(s, f) {
+  if (f >= 1 && !s.ghostOn) return;
+  s.ghostOn = f < 1;
   if (!s.ghost) {
     s.ghost = new Map();
     s.bike.g.traverse(o => {
@@ -58,7 +60,7 @@ function freeReset() {
     s.state = null;
     s.bike.g.visible = false;
     s.trail.visible = false;
-    s.dots.forEach(d => (d.visible = false));
+    s.ahead.visible = false;
     s.mark.visible = false;
   });
   fr = [];
@@ -169,12 +171,8 @@ function freeTick(dt, T, B) {
     orientOnWall(s.bike.g, _a, _b, 0);
     arcTrail(s.trail, (i, o) => frPos(r, r.th - Math.sign(r.om) * i * TRAIL_STEP, o));
     s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
-    for (let i = 0; i < s.dots.length; i++) {
-      const d = s.dots[i];
-      d.visible = true;
-      frPos(r, r.th + r.om * (i + 1) * 0.16, d.position).multiplyScalar(R - 0.06);
-      d.material.opacity = 0.7 - 0.045 * i;
-    }
+    s.ahead.visible = true;
+    arcTrail(s.ahead, (i, o) => frPos(r, r.th + Math.sign(r.om) * i * 0.085, o));
     if (r.ghost > 0) {
       // ghost: no collisions or near misses yet, fades in over the last half second
       r.ghost -= dt;
@@ -243,7 +241,7 @@ function freeCrash(r) {
   s.cv = new V3(Math.random() - 0.5, 2, Math.random() - 0.5).multiplyScalar(3);
   s.sa = new V3(1, 0.3, 0.2).normalize();
   s.sw = 10;
-  s.dots.forEach(d => (d.visible = false));
+  s.ahead.visible = false;
   s.trail.visible = false;
   frDanger = null;
   $('#vig').style.opacity = 0;
@@ -350,6 +348,7 @@ export {
   freeBest,
   freeFall,
   freeReset,
+  setGhost,
   freeSteer,
   freeStep,
   freeTick,

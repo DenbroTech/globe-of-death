@@ -41,21 +41,13 @@ export function initObjects() {
     const bike = makeBike({ paintHex: hex, style: RSTY[i % 5], costume, suitHex: costume === 'leathers' ? hex : undefined });
     bike.g.visible = false;
     globe.add(bike.g);
-    const beacon = glowSprite(hex, 0.8);
-    beacon.position.set(0, 1.55, 0);
-    bike.m.add(beacon);
-    const dots = [];
-    for (let i = 0; i < 12; i++) {
-      const d = glowSprite(hex, 0.32);
-      d.visible = false;
-      globe.add(d);
-      dots.push(d);
-    }
+    // where they're heading: a line ahead of them in their colour (like your trail, but forwards)
+    const ahead = makeTrail(hex);
     const mark = glowSprite(0xff2a40, 1.5);
     mark.visible = false;
     globe.add(mark);
     const trail = makeTrail(hex);
-    return { name, hex, bike, dots, mark, trail, busy: false };
+    return { name, hex, bike, ahead, mark, trail, busy: false };
   });
 }
 

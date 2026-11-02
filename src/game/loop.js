@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { game } from '../core/state.js';
 import { camera, renderer, scene } from '../render/renderer.js';
 import { inner } from '../render/lights.js';
@@ -11,7 +12,7 @@ import { PN, burst, flash, pGeo, pMat, pPos, pVel } from '../render/particles.js
 import { ac, ambienceTick } from '../audio/synth.js';
 import { ACT_START, FINAL, INTRO, LOOK, actOfBar, beatAt, bpmOfAct, lat, now, timeAt } from '../audio/clock.js';
 import { orientOnWall, posAt, tanAt } from './path.js';
-import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy } from './freeride.js';
+import { FR_CRUISE, FR_MIN, fmtT, frNear, frTime, freeFall, freeStep, freeTick, fx, fy, setGhost } from './freeride.js';
 import { myRing, player, pool } from './objects.js';
 import { genBarNotes } from './chart.js';
 import { addBal, ov, showJudge, toast } from '../ui/hud.js';
@@ -33,6 +34,59 @@ const barLines = [];
 let clock = 0,
   hudT = 0,
   lastBeatInt = -1;
+/* NOS afterburner: two additive cones (orange outer, white-hot core) out of the back of your bike + a warm light */
+let nosFlame = null;
+function makeNosFlame() {
+  const g = new THREE.Group();
+  const cone = (r, len, hex) => {
+    const geo = new THREE.ConeGeometry(r, len, 18, 6, true);
+    geo.translate(0, len / 2, 0);
+    geo.rotateX(-Math.PI / 2); // tip points backwards (-z)
+    const P = geo.attributes.position,
+      C = new Float32Array(P.count * 3),
+      c = new THREE.Color(hex);
+    for (let i = 0; i < P.count; i++) {
+      const f = Math.pow(1 - Math.min(1, -P.getZ(i) / len), 1.4);
+      C[i * 3] = c.r * f;
+      C[i * 3 + 1] = c.g * f;
+      C[i * 3 + 2] = c.b * f;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(C, 3));
+    return new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+    );
+  };
+  g.add(cone(0.2, 1.5, 0xff5a10), cone(0.1, 0.95, 0xfff0b0));
+  const L = new THREE.PointLight(0xff7a20, 0, 6, 2);
+  L.position.z = -0.5;
+  g.add(L);
+  g.userData.light = L;
+  g.position.set(0, 0.42, -0.95);
+  g.visible = false;
+  return g;
+}
+/* other riders' loops: a path is a great circle (point M at beat b0, axis A, w radians per beat) */
+const _rp = new V3();
+function idlePath(B) {
+  const M = new V3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+  if (M.dot(player.p) > 0.2) M.negate(); // start away from you
+  const A = new V3().crossVectors(M, new V3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5)).normalize();
+  return { M, A, w: (Math.PI / 2) * (0.9 + Math.random() * 0.3), b0: B };
+}
+function riderPos(s, B, out) {
+  const P = s.path;
+  out.copy(P.M).applyAxisAngle(P.A, P.w * (B - P.b0));
+  if (s.from && B < s.bl1) {
+    const F = s.from,
+      x = clamp((B - s.bl0) / (s.bl1 - s.bl0), 0, 1),
+      k = x * x * (3 - 2 * x);
+    _rp.copy(F.M).applyAxisAngle(F.A, F.w * (B - F.b0));
+    _rp.lerp(out, k);
+    if (_rp.lengthSq() > 1e-4) out.copy(_rp);
+  }
+  return out.normalize();
+}
 function frame(nowMs) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.05, (nowMs - game.lastT) / 1000);
@@ -171,7 +225,7 @@ function frame(nowMs) {
     P.bike.m.rotation.x = -0.55 * P.wh + 0.42 * P.nw;
     P.bike.m.position.y = 0.18 * P.wh + 0.2 * P.nw;
     P.bike.m.position.z = -0.1 * P.wh + 0.16 * P.nw;
-    P.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
+    P.bike.wheels.forEach(w => (w.rotation.x += dt * (boostActive() ? 55 : 25)));
     // ribbon of where you've been (starts once you're up on the wall)
     if (B >= INTRO) {
       if (!myRing.visible) resetRibbon(myRing, P.p);
@@ -184,77 +238,83 @@ function frame(nowMs) {
     } else arcTrail(P.trail, (i, o) => posAt(B - (i * TRAIL_STEP) / (Math.PI / 2), o));
     if (game.FREE) freeTick(dt, T, B);
     else {
-      // riders cutting across
-      for (const n of game.notes) {
-        if (n.type !== 'jump') continue;
-        if (!n.slot && n.beat - B < LOOK && n.beat - B > -1) {
-          const s = pool.slice(0, ridersFor(game.act)).find(x => !x.busy);
-          if (s) {
-            s.busy = true;
-            s.state = 'ride';
-            n.slot = s;
-            s.note = n;
-            s.bike.g.visible = true;
-            s.trail.visible = true;
-            _c.copy(n.M).applyAxisAngle(n.A, n.w * (B - n.beat));
-            fillTrail(s.trail, _c.multiplyScalar(R - 0.04));
-          }
+      // other riders: always on the wall riding their own loops. When a jump is due, one of them swings
+      // onto a path that crosses yours on that beat, then just carries on round (they never vanish)
+      const K = game.TUT ? 0 : ridersFor(game.act);
+      pool.forEach((s, i) => {
+        if (i < K && !s.active) {
+          s.active = true;
+          s.state = 'ride';
+          s.busy = false;
+          s.from = null;
+          s.path = idlePath(B);
+          s.fadeB = B;
+          s.bike.g.visible = s.trail.visible = true;
+          riderPos(s, B, _c);
+          fillTrail(s.trail, _c.multiplyScalar(R - 0.04));
         }
+      });
+      for (const n of game.notes) {
+        if (n.type !== 'jump' || n.slot || n.judged || n.beat - B > LOOK || n.beat - B < -1) continue;
+        const s = pool.slice(0, K).find(x => x.active && !x.busy && x.state === 'ride');
+        if (!s) continue;
+        s.busy = true;
+        s.note = n;
+        n.slot = s;
+        s.from = s.path;
+        s.bl0 = B;
+        s.bl1 = Math.max(B + 0.3, Math.min(B + 1.6, n.beat - 0.8));
+        s.path = { M: n.M, A: n.A, w: n.w, b0: n.beat };
       }
       for (const s of pool) {
-        if (!s.busy) continue;
-        const n = s.note,
-          dB = B - n.beat;
+        if (!s.active) continue;
+        const n = s.busy ? s.note : null,
+          dB = n ? B - n.beat : 99;
         if (s.state === 'ride') {
-          const ang = n.w * dB;
-          _a.copy(n.M).applyAxisAngle(n.A, ang);
-          _b.copy(n.c).applyAxisAngle(n.A, ang);
+          riderPos(s, B, _a);
+          riderPos(s, B + 0.02, _b).sub(_a).normalize();
           orientOnWall(s.bike.g, _a, _b, 0);
-          arcTrail(s.trail, (i, o) => o.copy(n.M).applyAxisAngle(n.A, ang - Math.sign(n.w) * i * TRAIL_STEP));
+          arcTrail(s.trail, (i, o) => riderPos(s, B - (i * TRAIL_STEP) / s.path.w, o));
           s.bike.wheels.forEach(w => (w.rotation.x += dt * 25));
-          for (let i = 0; i < s.dots.length; i++) {
-            const d = s.dots[i];
-            d.visible = dB < 0;
-            if (d.visible) {
-              const f = (i + 1) / (s.dots.length + 1);
-              d.position
-                .copy(n.M)
-                .applyAxisAngle(n.A, ang * (1 - f))
-                .multiplyScalar(R - 0.06);
-              d.material.opacity = 0.35 + 0.5 * f;
-            }
+          setGhost(s, clamp((B - s.fadeB) / 0.8, 0, 1));
+          s.ahead.visible = !!n && dB < 0;
+          if (s.ahead.visible) {
+            const len = n.w * -dB + 0.35;
+            arcTrail(s.ahead, (i, o) => o.copy(n.M).applyAxisAngle(n.A, n.w * dB + (i / 21) * len));
           }
-          s.mark.visible = dB < 0.3;
+          s.mark.visible = !!n && dB < 0.3;
           if (s.mark.visible) {
             s.mark.position.copy(n.M).multiplyScalar(R - 0.12);
             const u = clamp(1 + dB / LOOK, 0, 1);
             s.mark.scale.setScalar(0.7 + 1.1 * u + 0.25 * Math.sin(clock * 16));
             s.mark.material.opacity = 0.4 + 0.6 * u;
           }
+          if (n && dB > 2) {
+            s.busy = false;
+            s.from = null;
+            n.slot = null;
+            n.done = true;
+          }
         } else if (s.state === 'tumble') {
           tumble(s, dt);
           s.bike.g.position.copy(s.cp);
           s.bike.g.rotateOnAxis(s.sa, s.sw * dt);
-          s.mark.visible = false;
-          s.trail.visible = false;
-          s.dots.forEach(d => (d.visible = false));
-        }
-        if (dB > 2 && dB <= 4 && s.state === 'ride') {
-          const f = 1 - (dB - 2) / 2;
-          s.bike.g.scale.setScalar(Math.max(0.01, f));
-          s.trail.material.opacity = f;
-        }
-        if (dB > 4 || (dB > 2 && s.state !== 'ride')) {
-          s.bike.g.scale.setScalar(1);
-          s.trail.material.opacity = 1;
-          s.busy = false;
-          s.bike.g.visible = false;
-          s.dots.forEach(d => (d.visible = false));
-          s.mark.visible = false;
-          s.trail.visible = false;
-          s.state = null;
-          n.slot = null;
-          n.done = true;
+          s.mark.visible = s.trail.visible = s.ahead.visible = false;
+          if (dB > 2) {
+            // knocked off: back on the bike somewhere else in the globe, fading in
+            if (n) {
+              n.slot = null;
+              n.done = true;
+            }
+            s.busy = false;
+            s.state = 'ride';
+            s.from = null;
+            s.path = idlePath(B);
+            s.fadeB = B;
+            s.trail.visible = true;
+            riderPos(s, B, _c);
+            fillTrail(s.trail, _c.multiplyScalar(R - 0.04));
+          }
         }
       }
       // the track
@@ -323,6 +383,17 @@ function frame(nowMs) {
         ac.currentTime,
         0.05,
       );
+    {
+      if (!nosFlame) nosFlame = makeNosFlame();
+      if (nosFlame.parent !== P.bike.g) P.bike.g.add(nosFlame);
+      const on = boostActive();
+      nosFlame.visible = on;
+      if (on) {
+        const k = 0.85 + Math.random() * 0.4;
+        nosFlame.scale.set(0.9 + Math.random() * 0.2, 0.9 + Math.random() * 0.2, k);
+        nosFlame.userData.light.intensity = 2.2 * k;
+      }
+    }
     if (boostActive() && Math.random() < 0.5) {
       burst(
         _c
@@ -343,7 +414,7 @@ function frame(nowMs) {
     gBike.wheels.forEach(w => (w.rotation.x = 0));
   }
   if (P.bike.flutter) P.bike.flutter(clock, 1);
-  for (const s of pool) if (s.busy && s.bike.flutter) s.bike.flutter(clock, 1);
+  for (const s of pool) if ((s.busy || s.active) && s.bike.flutter) s.bike.flutter(clock, 1);
   if (game.over && !game.over.win) {
     tumble(player, dt * ts);
     P.bike.g.position.copy(player.cp);

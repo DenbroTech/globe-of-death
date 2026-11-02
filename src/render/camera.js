@@ -131,7 +131,7 @@ function updateCamera(dt) {
   }
   camera.up.copy(cam.up);
   camera.lookAt(cam.look);
-  if (game.running && !game.over && boostActive()) fov += 10;
+  if (game.running && !game.over && boostActive()) fov += 16; // NOS: big speed kick
   if (Math.abs(camera.fov - fov) > 0.1) {
     camera.fov += (fov - camera.fov) * Math.min(1, dt * 5);
     camera.updateProjectionMatrix();
