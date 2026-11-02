@@ -84,8 +84,9 @@ A phone-first 3D rhythm stunt game. You ride a motorbike inside a steel "globe o
 2. Further tidy-ups as we touch code: move more of `S` into owning modules, remove `rider/riderModel.js` if no imported model is planned.
 3. **Rider**: keep improving toward the reference race suits (owner will share images); or import a rigged rider model the owner downloads (`.glb`/`.fbx`) and pose it with the existing IK targets.
 4. **Mobile app**: Expo app in `mobile/` (see README). `npm run mobile:sync` rebuilds `mobile/assets/game.html` after game changes — always run it before the owner builds. Game-side bridge `src/platform/app.js` (back button, pause on background). Fonts are bundled. Still to do: Google AdMob for interstitials (every 3 acts, at natural breaks, frequency-capped) and rewarded ads (unlocks, second chance, double tickets); one-off "Remove ads" in-app purchase.
-5. **Online leaderboards** (later): Google Play Games / Game Center, or a small backend.
-6. Performance pass on mid-range phones (draw calls, shadow map size, crowd counts, particle counts).
+5. **New arenas (agreed, start Wed 4 Nov)**: underground cavern, miniature world in a back garden, solar system (the globe is a planet), pirate ship, medieval court with kings watching, dinosaurs, digital matrix world. Meant for paying customers later (in-app purchase), free for now — add a `premium` flag so they can be locked later.
+6. **Online leaderboards** (later): Google Play Games / Game Center, or a small backend.
+7. Performance pass on mid-range phones (draw calls, shadow map size, crowd counts, particle counts).
 
 ## Known rough edges
 - Rider still reads a bit "mannequin" — the owner wants more realism (in-between stylised and real).
