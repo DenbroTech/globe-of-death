@@ -18,7 +18,7 @@ import { CATALOG, findItem } from '../bikes/catalog.js';
 import { makeFigure } from '../rider/rider.js';
 import { BIKE_STATS, STAT_NAMES } from '../bikes/stats.js';
 import { showStart } from './menus.js';
-import { isUnlocked, reqText, sanitizeSel } from '../game/unlocks.js';
+import { anyNew, isNew, isUnlocked, markSeen, reqText, sanitizeSel } from '../game/unlocks.js';
 
 const LOCK = '<svg class="lk" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
@@ -131,7 +131,7 @@ function showGarage(msg) {
     `<div class="igrid">${CATALOG[k]
       .map(it => {
         const open = isUnlocked(k, it.id);
-        return `<button class="item${sel[k] === it.id ? ' sel' : ''}${open ? '' : ' locked'}" data-k="${k}" data-id="${it.id}"><b>${it.name}</b><span>${!open ? LOCK + reqText(k, it.id) : sel[k] === it.id ? (k === 'style' ? 'Riding' : 'Wearing') : ''}</span></button>`;
+        return `<button class="item${sel[k] === it.id ? ' sel' : ''}${open ? '' : ' locked'}" data-k="${k}" data-id="${it.id}">${isNew(k, it.id) ? '<i class="newdot"></i>' : ''}<b>${it.name}</b><span>${!open ? LOCK + reqText(k, it.id) : sel[k] === it.id ? (k === 'style' ? 'Riding' : 'Wearing') : ''}</span></button>`;
       })
       .join('')}</div>`;
   const palette = (key, def) => {
@@ -139,13 +139,15 @@ function showGarage(msg) {
       cat = gCat[key] || (cur ? catOf(cur) : 'Solid');
     gCat[key] = cat;
     const list = CATALOG.paint.filter(PCATS.find(c => c[0] === cat)[1]);
-    return `<div class="cats">${PCATS.map(([c]) => `<button class="cat" data-cat="${c}" data-key="${key}" aria-pressed="${c === cat}">${c}</button>`).join('')}</div>
-      <div class="hs" data-hs="sw-${key}-${cat}">${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}${isUnlocked('paint', it.id) ? '' : ' locked'}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></button>`).join('')}</div>`;
+    const catNew = c => CATALOG.paint.some(it => PCATS.find(x => x[0] === c)[1](it) && isNew('paint', it.id));
+    // spray-shop paint cards: a square sample of the finish with its name underneath
+    return `<div class="cats">${PCATS.map(([c]) => `<button class="cat" data-cat="${c}" data-key="${key}" aria-pressed="${c === cat}">${c}${catNew(c) ? '<i class="newdot"></i>' : ''}</button>`).join('')}</div>
+      <div class="hs" data-hs="sw-${key}-${cat}">${list.map(it => `<button class="swb${cur === it.id ? ' sel' : ''}${it.neon ? ' neon' : ''}${isUnlocked('paint', it.id) ? '' : ' locked'}" data-sw="${key}" data-id="${it.id}" title="${it.name}" aria-label="${it.name}"><i class="chip" style="background:${hex(it)}${it.neon ? ';color:#' + it.c.toString(16).padStart(6, '0') : ''}"></i><span>${it.name}</span>${isNew('paint', it.id) ? '<i class="newdot"></i>' : ''}</button>`).join('')}</div>`;
   };
   const st = BIKE_STATS[sel.style],
     pname = k => (sel[k] ? findItem('paint', sel[k]).name : 'Outfit colours');
   ov.innerHTML = `<div class="card gcard">
-    <div class="ghead"><h2>Garage</h2><div class="seg gseg"><button class="tab" data-tab="bike" aria-pressed="${tab === 'bike'}">Bike</button><button class="tab" data-tab="rider" aria-pressed="${tab === 'rider'}">Rider</button></div></div>
+    <div class="ghead"><h2>Garage</h2><div class="seg gseg"><button class="tab" data-tab="bike" aria-pressed="${tab === 'bike'}">Bike${anyNew(['style', 'paint']) ? '<i class="newdot"></i>' : ''}</button><button class="tab" data-tab="rider" aria-pressed="${tab === 'rider'}">Rider${anyNew(['costume', 'paint']) ? '<i class="newdot"></i>' : ''}</button></div></div>
     ${
       tab === 'bike'
         ? `<div class="glabel">Model <b>${findItem('style', sel.style).name}</b></div>${cards('style')}
@@ -192,6 +194,7 @@ function showGarage(msg) {
   );
   const pick = (k, id) => {
     const kind = k === 'suit' || k === 'helmet' || k === 'trim' ? 'paint' : k;
+    if (id && isUnlocked(kind, id)) markSeen(kind, id);
     if (id && !isUnlocked(kind, id)) {
       // locked: say how to earn it, don't select
       const it = CATALOG[kind].find(i => i.id === id);

@@ -383,16 +383,17 @@ const FIN_GEN = {
 /* which finishes glow in the dark, and how many repeats per metre of bike */
 const FIN_META = {
   tubes: { scale: 1.3, glow: 1.6 },
-  flames: { scale: 1.5, glow: 0.5 },
-  lightning: { scale: 1.3, glow: 1.1 },
-  lava: { scale: 1.6, glow: 1 },
-  synth: { scale: 2.2, glow: 0.9 },
-  galaxy: { scale: 1.3, glow: 0.35 },
+  // flow: the pattern drifts across the surface (metres per second); flick: the glow flickers like a strike
+  flames: { scale: 1.5, glow: 0.5, flow: [0, 0.16, -0.32] },
+  lightning: { scale: 1.3, glow: 1.1, flow: [0.06, -0.3, 0.22], flick: 1 },
+  lava: { scale: 1.6, glow: 1, flow: [0.03, -0.05, 0.04] },
+  synth: { scale: 2.2, glow: 0.9, flow: [0, 0, -0.35] },
+  galaxy: { scale: 1.3, glow: 0.35, flow: [0.02, 0.01, 0.03] },
+  holo: { scale: 1, flow: [0.08, 0.06, 0] },
   carbon: { scale: 6 },
   camo: { scale: 1.4 },
   tiger: { scale: 1.4 },
   checker: { scale: 2.2 },
-  holo: { scale: 1 },
   leopard: { scale: 1.6 },
   zebra: { scale: 1.4 },
   stripes: { scale: 0.75 },
@@ -407,9 +408,10 @@ function finishTex(id) {
   const t = tex(c, true);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   const M = FIN_META[id] || {};
-  return (FIN_CACHE[id] = { map: t, scale: M.scale || 3, glow: M.glow || 0, url: c.toDataURL('image/png') });
+  return (FIN_CACHE[id] = { map: t, scale: M.scale || 3, glow: M.glow || 0, flow: M.flow, flick: M.flick, url: c.toDataURL('image/png') });
 }
-function triplanar(mat, scale, waves) {
+function triplanar(mat, scale, waves, flow, flick) {
+  const F = flow ? `vec3(${flow.map(v => v.toFixed(3)).join(',')})` : 'vec3(0.)';
   // triOff shifts the pattern (e.g. flames start at the front of the tank)
   mat.userData.triOff = mat.userData.triOff || { value: new THREE.Vector3() };
   mat.onBeforeCompile = sh => {
@@ -425,16 +427,18 @@ function triplanar(mat, scale, waves) {
         tcol.rgb=max(tcol.rgb*wc+cross(wk,tcol.rgb)*sin(wa)+wk*dot(wk,tcol.rgb)*(1.-wc),0.)*(.7+.45*sin(uNT*5.-wp*7.));}`
       : '';
     const tri = s =>
-      `vec3 tw=pow(abs(normalize(vTriN)),vec3(4.0));tw/=(tw.x+tw.y+tw.z);vec3 tp=vTriP+triOff;vec4 tcol=texture2D(${s},tp.zy*triS)*tw.x+texture2D(${s},tp.zx*triS)*tw.y+texture2D(${s},tp.xy*triS)*tw.z;${wave}`;
+      `vec3 tw=pow(abs(normalize(vTriN)),vec3(4.0));tw/=(tw.x+tw.y+tw.z);vec3 tp=vTriP+triOff+${F}*uNT;vec4 tcol=texture2D(${s},tp.zy*triS)*tw.x+texture2D(${s},tp.zx*triS)*tw.y+texture2D(${s},tp.xy*triS)*tw.z;${wave}`;
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <common>', '#include <common>\nuniform float triS;uniform float uNT;uniform vec3 triOff;\nvarying vec3 vTriP;\nvarying vec3 vTriN;')
       .replace('#include <map_fragment>', `#ifdef USE_MAP\n${tri('map')}diffuseColor*=mapTexelToLinear(tcol);\n#endif`)
       .replace(
         '#include <emissivemap_fragment>',
-        `#ifdef USE_EMISSIVEMAP\n{${tri('emissiveMap')}totalEmissiveRadiance*=emissiveMapTexelToLinear(tcol).rgb;}\n#endif`,
+        `#ifdef USE_EMISSIVEMAP\n{${tri('emissiveMap')}totalEmissiveRadiance*=emissiveMapTexelToLinear(tcol).rgb;${
+          flick ? 'float fk=fract(sin(floor(uNT*11.)*12.9898)*43758.5);totalEmissiveRadiance*=fk>.82?1.9:.65+.25*sin(uNT*37.);' : ''
+        }}\n#endif`,
       );
   };
-  mat.customProgramCacheKey = () => 'tri' + scale + (waves ? 'w' : '');
+  mat.customProgramCacheKey = () => 'tri' + scale + (waves ? 'w' : '') + F + (flick ? 'k' : '');
 }
 /* neon tube look for any surface: white-hot where it faces you, saturated colour toward the edges,
    and a live buzz (fast hum + the odd stutter, each material on its own phase) */
@@ -493,7 +497,7 @@ function applyFinish(mat, it) {
       if (!mat.transparent) mat.emissive.set(0);
     }
     mat.userData.triScale = T.scale;
-    triplanar(mat, T.scale, it.tex === 'tubes');
+    triplanar(mat, T.scale, it.tex === 'tubes', T.flow, T.flick);
   } else mat.color.copy(deep(it.c));
   mat.needsUpdate = true;
   return mat;

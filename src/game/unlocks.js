@@ -160,6 +160,37 @@ function reachAct(a, arenaName) {
   save();
   return before.filter(([k, id]) => earned(k, id)).map(([k, id]) => (k === 'arena' ? arenaName(id) : CATALOG[NAMES[k]].find(i => i.id === id).name));
 }
+/* "new" = earned but never tapped in the garage yet (white pulsing dot). The first time this runs,
+   everything already earned counts as seen, so only future unlocks get a dot. */
+let seen = null;
+function loadSeen() {
+  if (seen) return;
+  try {
+    const raw = localStorage.getItem('god-seen');
+    seen = raw ? new Set(JSON.parse(raw)) : null;
+  } catch (e) {}
+  if (!seen) {
+    seen = new Set(allItems().filter(([k, id]) => earned(k, id)).map(([k, id]) => k + ':' + id));
+    saveSeen();
+  }
+}
+function saveSeen() {
+  try {
+    localStorage.setItem('god-seen', JSON.stringify([...seen]));
+  } catch (e) {}
+}
+const isNew = (kind, id) => {
+  loadSeen();
+  return !!reqsOf(kind, id) && earned(kind, id) && !seen.has(kind + ':' + id);
+};
+function markSeen(kind, id) {
+  loadSeen();
+  if (!seen.has(kind + ':' + id)) {
+    seen.add(kind + ':' + id);
+    saveSeen();
+  }
+}
+const anyNew = kinds => allItems().some(([k, id]) => kinds.includes(k) && isNew(k, id));
 /* called from initProgress: loads the career, carrying over older saves (best act, show won, best free ride) */
 function initUnlocks(prog) {
   try {
@@ -171,4 +202,4 @@ function initUnlocks(prog) {
   } catch (e) {}
 }
 
-export { UNLOCKS, career, earned, initUnlocks, isUnlocked, reachAct, reqText, recordCareer, sanitizeSel };
+export { UNLOCKS, anyNew, career, earned, isNew, markSeen, initUnlocks, isUnlocked, reachAct, reqText, recordCareer, sanitizeSel };

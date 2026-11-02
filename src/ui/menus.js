@@ -8,6 +8,7 @@ import { ov, toast } from './hud.js';
 import { parkBike, showGarage } from './garage.js';
 import { showBoard } from './leaderboard.js';
 import { startTutorial, tutDone } from './tutorial.js';
+import { anyNew } from '../game/unlocks.js';
 import { start } from '../game/run.js';
 import { $ } from '../core/constants.js';
 
@@ -29,7 +30,7 @@ function showStart() {
   <h1>Globe Riders</h1>
   <div class="arenas"><button class="chip" data-mode="show" aria-pressed="${game.gameMode === 'show'}">The show</button><button class="chip" data-mode="free" aria-pressed="${game.gameMode === 'free'}">Free ride</button></div>
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="start">Ride</button></div>
-  <div class="hicons five"><button id="lvBtn"><svg viewBox="0 0 24 24" class="hi"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/></svg><span>${ARENAS[arenaId].name}</span></button><button id="gar">${ICO('gar')}<span>Garage</span></button><button id="lbbtn">${ICO('lb')}<span>Scores</span></button><button id="tutBtn" class="${tutDone() ? '' : 'glow'}">${ICO('learn')}<span>Lesson</span></button><button id="setBtn">${ICO('set')}<span>Settings</span></button></div>
+  <div class="hicons five"><button id="lvBtn"><svg viewBox="0 0 24 24" class="hi"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c3 3 3 14 0 17M12 3.5c-3 3-3 14 0 17"/></svg><span>${ARENAS[arenaId].name}</span></button><button id="gar">${ICO('gar')}<span>Garage</span>${anyNew(['style', 'paint', 'costume']) ? '<i class="newdot"></i>' : ''}</button><button id="lbbtn">${ICO('lb')}<span>Scores</span></button><button id="tutBtn" class="${tutDone() ? '' : 'glow'}">${ICO('learn')}<span>Lesson</span></button><button id="setBtn">${ICO('set')}<span>Settings</span></button></div>
   ${game.best ? `<div class="best">Best show ${game.best.toLocaleString()}</div>` : ''}</div>`;
   ov.querySelectorAll('[data-mode]').forEach(
     b =>
