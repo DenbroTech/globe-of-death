@@ -94,7 +94,7 @@ function showSettings() {
   $('#sRing').onclick = () => {
     game.showRing = !game.showRing;
     try {
-      localStorage.setItem('god-ring', game.showRing ? '1' : '0');
+      localStorage.setItem('god-ring2', game.showRing ? '1' : '0');
     } catch (e) {}
     showSettings();
   };

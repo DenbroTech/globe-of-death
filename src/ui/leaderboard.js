@@ -40,6 +40,7 @@ function recordRun() {
           win: !!(game.over && game.over.win),
           encore: game.encore,
           combo: game.stats.maxCombo,
+          curses: game.cursesSurvived || 0,
           d: Date.now(),
         };
   const put = (L, x) => {
@@ -52,7 +53,16 @@ function recordRun() {
   let ce = null,
     crank = -1;
   if (!free) {
-    ce = { n: riderName, v: game.stats.maxCombo, act: game.act, win: e.win, encore: game.encore, score: e.v, d: e.d };
+    ce = {
+      n: riderName,
+      v: game.stats.maxCombo,
+      act: game.act,
+      win: e.win,
+      encore: game.encore,
+      score: e.v,
+      curses: e.curses,
+      d: e.d,
+    };
     crank = put(board.combo, ce);
   } else {
     // free ride also has a points board
@@ -67,17 +77,29 @@ function recordRun() {
         ? { mode: free ? 'freepts' : 'combo', e: ce, rank: crank + 1 }
         : null;
 }
+/* curses survived in a show: a little skull ×N */
+const SKULL =
+  '<svg class="skull" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2C7 2 3.5 5.6 3.5 10.2c0 2.7 1.2 4.6 3 5.8V19a1 1 0 0 0 1 1h1.3v-2h1.4v2h3.6v-2h1.4v2h1.3a1 1 0 0 0 1-1v-3c1.8-1.2 3-3.1 3-5.8C20.5 5.6 17 2 12 2zM8.6 13.6a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zm6.8 0a2.1 2.1 0 1 1 0-4.2 2.1 2.1 0 0 1 0 4.2zM12 14.2l1.1 2h-2.2z"/></svg>';
+const skulls = e => (e.curses ? ` <span class="sk">${SKULL}×${e.curses}</span>` : '');
 function boardRows(mode, hi) {
   const L = board[mode];
   if (!L.length)
     return `<p class="lbempty">No runs yet. ${mode === 'free' || mode === 'freepts' ? 'Go for a free ride' : 'Ride the show'} and your best ${mode === 'combo' ? 'combo' : 'run'} will land here.</p>`;
   // scores live on this phone, so rows show the run itself rather than a name
   const what = e =>
-    mode === 'free' ? `${e.near} near misses` : mode === 'freepts' ? `${fmtT(e.time)} ride` : e.win ? 'Full show' : e.encore ? 'Encore' : 'Act ' + e.act + ' of ' + FINAL;
+    mode === 'free'
+      ? `${e.near} near misses`
+      : mode === 'freepts'
+        ? `${fmtT(e.time)} ride`
+        : e.win
+          ? 'Full show'
+          : e.encore
+            ? 'Encore'
+            : 'Act ' + e.act + ' of ' + FINAL;
   const day = e => new Date(e.d).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return `<ol class="lb">${L.map(
     (e, i) =>
-      `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${what(e)}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
+      `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${what(e)}${mode === 'show' || mode === 'combo' ? skulls(e) : ''}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
     <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : mode === 'freepts' ? e.near + ' near misses · ' : e.riders + ' riders · '}${day(e)}</span></li>`,
   ).join('')}</ol>`;
 }
@@ -183,7 +205,9 @@ function showOver() {
     };
   };
   const got = game.over.unlocked || [],
-    crowdLine = (got.length ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>` : '');
+    crowdLine = got.length
+      ? `<div class="unl"><b>Unlocked</b> ${got.slice(0, 4).join(' · ')}${got.length > 4 ? ' +' + (got.length - 4) : ''}</div>`
+      : '';
   if (game.FREE) {
     ov.innerHTML = `<div class="card home"><h1><small>Free ride</small>${game.over.fell ? 'Fell off!' : 'Crash!'}</h1>
     <div class="res"><div><span>Time</span><b>${fmtT(frTime)}</b></div><div><span>Near misses</span><b>${frNear}</b></div><div><span>Score</span><b>${Math.floor(game.score).toLocaleString()}</b></div></div>

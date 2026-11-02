@@ -39,7 +39,8 @@ let clock = 0,
   lastBeatInt = -1;
 /* NOS afterburner: two additive cones (orange outer, white-hot core) out of the back of your bike + a warm light */
 let nosFlame = null;
-let wasBlind = false,
+let rate0 = null,
+  wasBlind = false,
   wasDark = false,
   dizzy = 0;
 function makeNosFlame() {
@@ -60,7 +61,14 @@ function makeNosFlame() {
     geo.setAttribute('color', new THREE.BufferAttribute(C, 3));
     return new THREE.Mesh(
       geo,
-      new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }),
+      new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        toneMapped: false,
+      }),
     );
   };
   g.add(cone(0.2, 1.5, 0xff5a10), cone(0.1, 0.95, 0xfff0b0));
@@ -135,6 +143,7 @@ function frame(nowMs) {
     if (game.slow <= 0 && game.over) showOver();
   }
   const P = player;
+  if (!(game.running && !game.over && !game.paused)) rate0 = null;
   if (game.running && !game.over && !game.paused) {
     const T = now();
     let B = beatAt(T - lat());
@@ -149,6 +158,23 @@ function frame(nowMs) {
       B = beatAt(T - lat());
     }
     game.lastB = B;
+    // the audio clock may never run faster than real time (some phones race it ahead after resuming,
+    // which made the ride fast-forward): any lead over the wall clock is taken back out of the tempo map
+    {
+      const pn = performance.now() / 1000;
+      if (rate0 == null || pn - rate0.p > 2) rate0 = { p: pn, t: T };
+      else {
+        const lead = T - rate0.t - (pn - rate0.p);
+        if (lead > 0.08) {
+          game.tempos.forEach(x => (x.time += lead));
+          game.boostEnd += lead;
+          P.hopT0 += lead;
+          rate0 = { p: pn, t: T };
+          B = beatAt(T - lat());
+          game.lastB = B;
+        }
+      }
+    }
     // keep the chart 3 bars ahead and the music scheduled
     if (!game.FREE) {
       if (game.TUT) {
@@ -325,7 +351,12 @@ function frame(nowMs) {
         s.from = P0;
         s.bl0 = B;
         s.bl1 = Math.max(B + 0.5, n.beat - 0.6);
-        s.path = { M: P0.M.clone().applyQuaternion(best.q), A: P0.A.clone().applyQuaternion(best.q), w: P0.w, b0: P0.b0 };
+        s.path = {
+          M: P0.M.clone().applyQuaternion(best.q),
+          A: P0.A.clone().applyQuaternion(best.q),
+          w: P0.w,
+          b0: P0.b0,
+        };
         // the crossing marker / ahead line follow the rider's real path
         n.M = _c.clone();
         n.A = s.path.A.clone();
@@ -338,7 +369,9 @@ function frame(nowMs) {
           dB = n ? B - n.beat : 99;
         if (s.state === 'ride') {
           riderPos(s, B, _a);
-          riderPos(s, B + 0.02, _b).sub(_a).normalize();
+          riderPos(s, B + 0.02, _b)
+            .sub(_a)
+            .normalize();
           orientOnWall(s.bike.g, _a, _b, 0);
           // dodging you: a quick hop off the wall
           const dx = s.dodgeB != null ? (B - s.dodgeB) / 0.6 : 9;

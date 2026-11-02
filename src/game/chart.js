@@ -154,8 +154,7 @@ function genBarNotes(b) {
       hr = Math.random(),
       ht = a < 2 ? 'wheelie' : hr < 0.4 ? 'wheelie' : hr < 0.7 ? 'nose' : Math.random() < 0.5 ? 'standl' : 'standr';
     addNote(b * 4, ht, len);
-    slots =
-      a >= 5 ? (r < 0.5 ? [1, 2, len + 1] : [1.5, len + 1]).filter(x => x < 4) : slots.filter(s => s >= len + 1);
+    slots = a >= 5 ? (r < 0.5 ? [1, 2, len + 1] : [1.5, len + 1]).filter(x => x < 4) : slots.filter(s => s >= len + 1);
   }
   for (const s of slots) {
     const B = b * 4 + s;
@@ -185,8 +184,11 @@ function genBarNotes(b) {
   // Decoys curse: a crossed-out move in a gap, at least a beat clear of anything real
   if (cursed('decoys') && Math.random() < 0.7) {
     const B = b * 4 + [1, 2, 3][Math.floor(Math.random() * 3)];
-    const clear = !game.notes.some(n => Math.abs(n.beat - B) < 1 || (n.len && B > n.beat - 1 && B < n.beat + n.len + 1));
-    if (clear && B <= actEnd - 1) addNote(B, ['left', 'right', 'ul', 'ur', 'dl', 'dr'][Math.floor(Math.random() * 6)], 0, true);
+    const clear = !game.notes.some(
+      n => Math.abs(n.beat - B) < 1 || (n.len && B > n.beat - 1 && B < n.beat + n.len + 1),
+    );
+    if (clear && B <= actEnd - 1)
+      addNote(B, ['left', 'right', 'ul', 'ur', 'dl', 'dr'][Math.floor(Math.random() * 6)], 0, true);
   }
 }
 

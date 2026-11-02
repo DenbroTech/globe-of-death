@@ -199,7 +199,7 @@ export function initControls() {
   jk = $('#joyKnob');
   game.showRing = false;
   try {
-    game.showRing = localStorage.getItem('god-ring') === '1';
+    game.showRing = localStorage.getItem('god-ring2') !== '0'; // on unless switched off
   } catch (e) {}
   swipeHint = $('#swipeHint');
   bars = $('#hbars');

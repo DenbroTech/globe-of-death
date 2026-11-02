@@ -15,10 +15,7 @@ let boostBtn;
 let boostB0 = 0;
 function chargeBoost(v) {
   if ((game.balance < 100 && !pk('hot')) || boostActive() || cursed('noNos')) return;
-  game.boostCharge = Math.min(
-    100,
-    game.boostCharge + 0.4 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2),
-  );
+  game.boostCharge = Math.min(100, game.boostCharge + 0.4 * v * (1 + 0.5 * pk('nitro')) * statMul('boost', 0.2));
 }
 const boostActive = () => now() < game.boostEnd;
 /* where the NOS band ends: stretched to the end of any long press it overlaps, and over any single move

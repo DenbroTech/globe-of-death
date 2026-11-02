@@ -4,6 +4,7 @@ import { beatAt, lat, now } from '../audio/clock.js';
 import { addNote } from '../game/chart.js';
 import { ov, showJudge } from './hud.js';
 import { offerPerks } from '../game/perks.js';
+import { resetCam } from '../render/camera.js';
 import { boostActive } from '../game/boost.js';
 import { holdClock } from '../game/judging.js';
 import { quitToMenu, resetInput, start } from '../game/run.js';
@@ -39,7 +40,7 @@ const TUT_STEPS = [
   },
   {
     t: 'Camera',
-    d: 'Tap the camera button at the top to switch view: Centre, Chase, Chest, Outside and Arena. Try a few and keep your favourite.',
+    d: 'Tap the camera button at the top to switch view. Try a few: you\'ll go back to Centre after.',
     need: 3,
     ev: 'cam',
     cam: true,
@@ -115,7 +116,7 @@ const TUT_STEPS = [
   },
   {
     t: 'Perks',
-    d: 'The yellow line marks the end of an act. Ride through it and pick a perk to help you in the next one.',
+    d: 'The yellow line ends an act: pick a perk to help you. Sometimes a curse follows: pick the least bad. It lasts one act.',
     need: 1,
     ev: 'perk',
     gen: b => {
@@ -185,6 +186,7 @@ function tutEv(kind, type) {
   game.tutN++;
   tutDraw();
   if (game.tutN >= S.need) {
+    if (S.cam) setTimeout(resetCam, 400); // back to Centre so nobody gets stuck in an odd view
     game.tutI++;
     game.tutN = 0;
     showJudge('p', 'NICE!');

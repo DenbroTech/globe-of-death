@@ -16,7 +16,7 @@ import { $ } from '../core/constants.js';
 const PERKS = [
   { id: 'lockNos', name: 'Locked NOS', desc: "A charged NOS isn't lost when you miss.", once: 1 },
   { id: 'doubleNos', name: 'Double NOS', desc: 'Your next NOS lasts twice as long.' },
-  { id: 'hot', name: 'Hot NOS', desc: 'NOS charges even when your balance isn\'t full.', once: 1 },
+  { id: 'hot', name: 'Hot NOS', desc: "NOS charges even when your balance isn't full.", once: 1 },
   { id: 'shield', name: 'Shield', desc: 'Your next 3 misses cost nothing.' },
   { id: 'comboSave', name: 'Combo saver', desc: 'Your combo survives one miss every act.' },
   { id: 'slowmo', name: 'Slow-mo', desc: 'Next act plays 10 BPM slower.', act: 1 },
@@ -41,7 +41,13 @@ const CURSES = [
   { id: 'dark', name: 'Lights out', desc: 'The arena goes dark.' },
   { id: 'dizzy', name: 'Dizzy', desc: 'The world rolls round.' },
   { id: 'double', name: 'Double time', desc: 'Much busier moves.' },
+  // score curses: ride as normal, but your points suffer (no ×2 on these)
+  { id: 'pickpocket', name: 'Pickpocket', desc: 'Points are worth 10%.', score: 1 },
+  { id: 'coldCrowd', name: 'Cold crowd', desc: 'No combo bonus.', score: 1 },
+  { id: 'taxman', name: 'Taxman', desc: 'Lose 20% of your score when the act ends.', score: 1 },
+  { id: 'judges', name: 'Tough judges', desc: 'Perfects only count as Good.', score: 1 },
 ];
+const curseOf = id => CURSES.find(x => x.id === id);
 const pk = id => game.perks[id] || 0,
   fx = id => (game.actFx && game.actFx[id]) || 0,
   cursed = id => !game.TUT && game.curse === id;
@@ -49,7 +55,13 @@ const winMul = () => 1 + (fx('wide') ? 0.6 : 0);
 const pw = t => PW * winMul() * statMul(kindOf(t)),
   gw = t => GW * winMul() * statMul(kindOf(t));
 function addScore(v) {
-  game.score += v * (1 + 0.25 * pk('score')) * (fx('showtime') ? 2 : 1) * (game.curse && !game.TUT ? 2 : 1);
+  const c = !game.TUT && game.curse && curseOf(game.curse);
+  game.score +=
+    v *
+    (1 + 0.25 * pk('score')) *
+    (fx('showtime') ? 2 : 1) *
+    (c ? (c.score ? 1 : 2) : 1) *
+    (cursed('pickpocket') ? 0.1 : 1);
 }
 /* BPM of an act including Slow-mo / Fast forward (only known once the act's picks are made) */
 const actBpm = a => bpmOfAct(a) + (fx('slowmo') ? -10 : 0) + (cursed('fast') ? 15 : 0);
@@ -60,39 +72,52 @@ function startAct(a) {
   if (game.TUT) return tutEv('perk');
   drawCurse();
   if (game.curse) {
-    const c = CURSES.find(x => x.id === game.curse);
-    toast(`${c.name.toUpperCase()} · ×2 POINTS`, 2200);
-  } else
-    toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
+    const c = curseOf(game.curse);
+    toast(c.score ? `CURSE · ${c.name.toUpperCase()}` : `${c.name.toUpperCase()} · ×2 POINTS`, 2200);
+  } else toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
 }
 function drawCurse() {
   const el = $('#curse');
   if (!el) return;
-  const c = !game.TUT && game.curse && CURSES.find(x => x.id === game.curse);
+  const c = !game.TUT && game.curse && curseOf(game.curse);
   el.hidden = !c;
-  if (c) el.textContent = c.name + ' ×2';
+  if (c) el.textContent = c.score ? c.name : c.name + ' ×2';
   const pips = $('#shieldPips');
   if (pips) pips.textContent = '◆'.repeat(Math.min(6, game.shield || 0));
   document.body.classList.toggle('lightsout', !!c && c.id === 'dark');
 }
 /* a new act begins: act-only perks and the curse end */
-function endActFx() {
+function endActFx(survived = true) {
+  if (survived && game.curse && game.running && !game.over && !game.TUT) {
+    game.cursesSurvived = (game.cursesSurvived || 0) + 1;
+    if (game.curse === 'taxman') game.score *= 0.8;
+    setTimeout(() => toast('CURSE SURVIVED ☠', 1300), 1700);
+  }
   game.actFx = {};
   game.curse = null;
   game.comboSaves = pk('comboSave');
   drawCurse();
 }
+/* each show gets 0 (25%), 1 (50%) or 2 (25%) curses, on random acts from 3 to 10 */
+function planCurses() {
+  const r = Math.random(),
+    n = r < 0.25 ? 0 : r < 0.75 ? 1 : 2,
+    acts = [3, 4, 5, 6, 7, 8, 9, 10].sort(() => Math.random() - 0.5);
+  game.curseActs = acts.slice(0, n);
+  game.cursesSurvived = 0;
+}
 function offerCurse(a) {
-  const pool3 = CURSES.slice()
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 3);
-  ov.innerHTML = `<div class="card cursed"><h1><small>Act ${a} · cursed!</small>Pick your curse</h1>
-    <div class="nextup"><span>Lasts 1 act</span><span>×2 points</span></div>
+  // always one ride-as-normal score curse in the three
+  const play = CURSES.filter(c => !c.score).sort(() => Math.random() - 0.5),
+    sc = CURSES.filter(c => c.score).sort(() => Math.random() - 0.5);
+  const pool3 = [play[0], play[1], sc[0]].sort(() => Math.random() - 0.5);
+  ov.innerHTML = `<div class="card cursed"><h1><small>${game.TUT ? 'Sometimes you get' : `Act ${a} · cursed!`}</small>Pick your curse</h1>
+    <div class="nextup"><span>Lasts 1 act</span><span>Pick the least bad</span><span>Survive it: ☠</span></div>
     <div class="perks">${pool3.map(c => `<button class="perk" data-id="${c.id}"><b>${c.name}</b><span>${c.desc}</span></button>`).join('')}</div></div>`;
   ov.querySelectorAll('.perk').forEach(
     b =>
       (b.onclick = () => {
-        game.curse = b.dataset.id;
+        if (!game.TUT) game.curse = b.dataset.id;
         startAct(a);
       }),
   );
@@ -128,7 +153,7 @@ function offerPerks(a, skipAd) {
         }
         if (id === 'shield') game.shield = (game.shield || 0) + 3;
         if (id === 'comboSave') game.comboSaves = pk('comboSave');
-        if (!game.TUT && a >= 3 && a <= FINAL && Math.random() < (window.__curse ? 1 : 0.5)) offerCurse(a);
+        if (game.TUT || (a <= FINAL && (window.__curse || (game.curseActs || []).includes(a)))) offerCurse(a);
         else startAct(a);
       }),
   );
@@ -141,4 +166,4 @@ export function initPerks() {
   game.comboSaves = 0;
 }
 
-export { CURSES, actBpm, addScore, cursed, drawCurse, endActFx, fx, gw, offerPerks, pk, pw };
+export { planCurses, CURSES, actBpm, addScore, cursed, drawCurse, endActFx, fx, gw, offerPerks, pk, pw };

@@ -92,6 +92,9 @@ function Game() {
           textZoom={100}
           webviewDebuggingEnabled
           onMessage={onMessage}
+          // the WebView's renderer was killed in the background (black screen): load the game again
+          onRenderProcessGone={() => web.current && web.current.reload()}
+          onContentProcessDidTerminate={() => web.current && web.current.reload()}
           onLoadEnd={() => {
             SplashScreen.hideAsync().catch(() => {});
             if (PlayGames) {

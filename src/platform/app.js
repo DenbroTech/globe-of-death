@@ -25,7 +25,29 @@ function nativeBack() {
   toNative({ type: 'exit' });
 }
 
+/* Android can throw away the 3D context while the app is in the background, which left a black screen
+   until the app was closed. If that happens: keep the fans from the ride, then reload the game as soon as
+   it's on screen again (you land on the home screen instead of a black one). */
+function watchGL() {
+  const c = document.getElementById('c');
+  if (!c) return;
+  let lost = false;
+  const reload = () => {
+    if (lost && !document.hidden) setTimeout(() => location.reload(), 150);
+  };
+  c.addEventListener('webglcontextlost', e => {
+    e.preventDefault();
+    if (lost) return;
+    lost = true;
+    try {
+      if (game.running) quitToMenu();
+    } catch (err) {}
+    reload();
+  });
+  document.addEventListener('visibilitychange', reload);
+}
 function initApp() {
+  watchGL();
   if (!isApp) return;
   document.documentElement.classList.add('app');
   window.__nativeBack = nativeBack;
@@ -43,7 +65,8 @@ function initApp() {
 const playGamesOn = () => isApp && !!window.__playGames;
 function submitScores(run) {
   if (!playGamesOn()) return;
-  for (const [board, value] of Object.entries(run)) if (value > 0) toNative({ type: 'score', board, value: Math.floor(value) });
+  for (const [board, value] of Object.entries(run))
+    if (value > 0) toNative({ type: 'score', board, value: Math.floor(value) });
 }
 const showPlayLeaderboards = () => toNative({ type: 'leaderboards' });
 

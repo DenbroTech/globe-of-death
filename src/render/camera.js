@@ -17,9 +17,13 @@ function cycleCam() {
   cam.mode = MODES[(MODES.indexOf(cam.mode) + 1) % MODES.length];
   $('#camName').textContent = NAMES[cam.mode];
   tutEv('cam');
-  try {
-    localStorage.setItem('god-cam5', cam.mode);
-  } catch (e) {}
+}
+/* every ride starts on Centre (the zoomed-out view), whatever you ended on last time */
+function resetCam() {
+  if (!cam) return;
+  cam.mode = 'centre';
+  cam.snap = true;
+  $('#camName').textContent = NAMES[cam.mode];
 }
 let pinch = 0;
 const upP = e => {
@@ -160,10 +164,6 @@ export function initCamera() {
     up: new V3(0, 1, 0),
     snap: false,
   };
-  try {
-    const m = localStorage.getItem('god-cam5');
-    if (MODES.includes(m)) cam.mode = m;
-  } catch (e) {}
   $('#camName').textContent = NAMES[cam.mode];
   $('#camBtn').onclick = cycleCam;
   ptr = new Map();
@@ -209,4 +209,4 @@ export function initCamera() {
   if (window.ResizeObserver) new ResizeObserver(resize).observe(app);
 }
 
-export { cam, cycleCam, resize, updateCamera };
+export { cam, cycleCam, resize, updateCamera, resetCam };

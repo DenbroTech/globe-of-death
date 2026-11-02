@@ -14,12 +14,12 @@ import { awardFans } from '../ui/leaderboard.js';
 import { resetMelody } from '../audio/songs.js';
 import { freeClock, holdClock } from './judging.js';
 import { endStunt, gestures, heldKeys, jk } from '../input/controls.js';
-import { cam } from '../render/camera.js';
+import { cam, resetCam } from '../render/camera.js';
 import { leaveGarage, rebuildPlayerBike } from '../ui/garage.js';
 import { tutDraw, tutEl } from '../ui/tutorial.js';
 import { $, R } from '../core/constants.js';
 import { showStart } from '../ui/menus.js';
-import { endActFx } from './perks.js';
+import { endActFx, planCurses } from './perks.js';
 
 function start() {
   resetMelody();
@@ -66,7 +66,9 @@ function start() {
   game.boostEnd = 0;
   game.perks = {};
   game.shield = 0;
-  endActFx();
+  endActFx(false);
+  planCurses();
+  resetCam();
   game.boostWasReady = false;
   leaveGarage();
   rebuildPlayerBike();
@@ -85,6 +87,7 @@ function start() {
   // forget any old pause (Lesson-complete card, ad, perk, app in background): a stale pause time made the
   // next perk/resume shove the music clock minutes back, leaving the rider circling the bottom with no moves
   game.heldAt = null;
+  game.heldB = null;
   game.lastB = null;
   fixLatency();
   game.score = 0;
@@ -136,7 +139,7 @@ function quitToMenu() {
     awardFans(false);
   }
   resetInput();
-  endActFx();
+  endActFx(false);
   game.TUT = false;
   tutEl.hidden = true;
   game.running = false;
@@ -144,6 +147,7 @@ function quitToMenu() {
   game.pauseMenu = false;
   game.over = null;
   game.heldAt = null;
+  game.heldB = null;
   game.slow = 0;
   game.holdNote = null;
   game.wheelieDown = game.noseDown = false;

@@ -333,3 +333,4 @@ body.lightsout #dark{opacity:1}
 .card.cursed .perk{border-color:rgba(255,77,94,.55);background:rgba(50,8,14,.7)}
 .card.cursed .perk b{color:#ff6b78}
 .card.cursed .perk:hover,.card.cursed .perk:focus-visible{background:rgba(255,77,94,.2)}
+.sk{display:inline-flex;align-items:center;gap:1px;color:#ff6b78;font-size:.9em;white-space:nowrap}.skull{width:1.05em;height:1.05em}

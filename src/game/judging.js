@@ -58,7 +58,7 @@ function finishHold(n) {
   game.holdNote = null;
   n.el.classList.remove('holding');
   n.el.classList.add('ok');
-  const mult = 1 + Math.min(3, Math.floor(game.combo / 8));
+  const mult = cursed('coldCrowd') ? 1 : 1 + Math.min(3, Math.floor(game.combo / 8));
   addScore(400 * mult);
   showJudge('p', n.type === 'nose' ? 'STOPPIE!' : n.type.startsWith('stand') ? 'SEAT STAND!' : 'WHEELIE!');
   game.cheer = 1;
@@ -113,12 +113,12 @@ function press(type, tAt, soft) {
     return;
   }
   if (best && bd <= gw(best.type) * W && okT(best)) {
-    const g = bd <= pw(best.type) * W ? 'p' : 'g';
+    const g = bd <= pw(best.type) * W && !cursed('judges') ? 'p' : 'g';
     best.judged = g;
     best.el.classList.add('ok');
     game.combo++;
     game.stats.maxCombo = Math.max(game.stats.maxCombo, game.combo);
-    const mult = 1 + Math.min(3, Math.floor(game.combo / 8)),
+    const mult = cursed('coldCrowd') ? 1 : 1 + Math.min(3, Math.floor(game.combo / 8)),
       both = game.holdNote && !best.len;
     addScore((g === 'p' ? 300 : 120) * mult * (both ? 2 : 1));
     game.stats[g === 'p' ? 'perfect' : 'good']++;
@@ -205,15 +205,26 @@ function loseCombo() {
   }
   game.combo = 0;
 }
+/* pausing (perk / curse / ad / pause menu) freezes the show on the exact beat it was on; resuming
+   re-anchors the tempo map so it carries on from that beat, whatever the audio clock did meanwhile
+   (suspended, rebuilt, jumped) — never a fast-forward to catch up */
 function holdClock() {
-  if (game.heldAt == null) game.heldAt = now();
+  if (game.heldAt == null) {
+    game.heldAt = now();
+    game.heldB = game.tempos && game.tempos.length ? beatAt(now() - lat()) : null;
+  }
   if (game.engineOsc && ac) game.engineOsc.g.gain.setTargetAtTime(0, ac.currentTime, 0.05);
 }
 function freeClock() {
   if (ac && ac.state !== 'running') ac.resume().catch(() => {});
   if (game.heldAt == null) return;
-  const d = now() - game.heldAt;
+  let d = now() - game.heldAt;
+  if (game.heldB != null) {
+    d = now() - lat() - timeAt(game.heldB);
+    game.lastB = game.heldB;
+  }
   game.heldAt = null;
+  game.heldB = null;
   game.tempos.forEach(x => (x.time += d));
   game.boostEnd += d;
   player.hopT0 += d;
