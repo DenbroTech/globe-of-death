@@ -9,6 +9,9 @@ import { quitToMenu, start } from '../game/run.js';
 import { $ } from '../core/constants.js';
 import { playGamesOn, showPlayLeaderboards, submitScores } from '../platform/app.js';
 import { ICO } from './menus.js';
+import { ARENAS } from '../arenas/arenas.js';
+import { arenaId, setArena } from '../arenas/current.js';
+import { isNew, markSeen } from '../game/unlocks.js';
 
 let board = { show: [], combo: [], free: [] },
   riderName = 'Rider';
@@ -133,9 +136,35 @@ function countPlay(win) {
   } catch (e) {}
   game.over.fansUp = awardFans(win);
 }
+/* a level unlocked on this run: switch to it behind a small card (camera circles the new arena, its song
+   plays) with Ride here / Later, before the usual results */
+function showNewLevel(id) {
+  const prev = arenaId;
+  markSeen('arena', id);
+  setArena(id);
+  ov.hidden = false;
+  ov.classList.add('newlv');
+  ov.innerHTML = `<div class="card nlcard"><div class="nltag">New level</div><h1>${ARENAS[id].name}</h1>
+    <div class="nlbtns"><button class="go" id="nlRide">Ride here</button><button class="go ghost" id="nlLater">Later</button></div></div>`;
+  $('#nlRide').onclick = () => {
+    ov.classList.remove('newlv');
+    start();
+  };
+  $('#nlLater').onclick = () => {
+    ov.classList.remove('newlv');
+    setArena(prev);
+    showOver();
+  };
+}
 function showOver() {
   app.classList.add('menu');
   ov.hidden = false;
+  ov.classList.remove('newlv');
+  const fresh = !game.TUT && Object.keys(ARENAS).find(k => isNew('arena', k));
+  if (fresh && game.over && !game.over.previewed) {
+    game.over.previewed = true;
+    return showNewLevel(fresh);
+  }
   const btns = lbt =>
     `${nameBox()}<button class="go big" id="start">Ride again</button><div class="hicons three"><button id="menu"><svg viewBox="0 0 24 24" class="hi"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span></button><button id="gar">${ICO('gar')}<span>Garage</span></button><button id="lbbtn">${ICO('lb')}<span>Scores</span></button></div>`;
   const wire = lbt => {

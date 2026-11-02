@@ -308,3 +308,10 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 /* "Show joystick": fixed at the bottom middle, just above the handlebars; dim until you touch */
 .stick{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 200px);margin:0 0 0 -75px;width:150px;height:150px}
 .stick.hint{opacity:.45}.stick .hintTxt{display:none}
+
+/* new level unlocked: the arena shows behind a small card at the bottom */
+#ov.newlv{justify-content:flex-end;background:linear-gradient(rgba(7,6,10,0) 55%,rgba(7,6,10,.85) 80%);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px)}
+.nlcard{margin-block:auto 0;text-align:center;align-items:center}
+.nltag{font:700 12px var(--f-u);letter-spacing:.2em;text-transform:uppercase;color:var(--gold);animation:hintPulse 1.2s ease-in-out infinite}
+.nlbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.lvrow{position:relative}
