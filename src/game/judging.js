@@ -137,6 +137,7 @@ function press(type, tAt, soft) {
   } else if (best && bd <= gw(best.type)) {
     game.combo = 0;
     showJudge('m', 'WRONG BUTTON');
+    if (!game.TUT) game.boostCharge = 0;
     addBal(-(6 + game.act));
     if (DIRS.includes(type)) freeSteer(type, t);
   } else if (DIRS.includes(type)) {
@@ -156,6 +157,7 @@ function miss(n) {
   n.judged = 'm';
   n.el.classList.add('miss');
   game.combo = 0;
+  if (!game.TUT) game.boostCharge = 0; // a miss empties the NOS
   if (n.len) {
     showJudge(
       'm',
