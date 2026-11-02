@@ -80,6 +80,9 @@ function start() {
   game.over = null;
   game.paused = false;
   game.pauseMenu = false;
+  // forget any old pause (Lesson-complete card, ad, perk, app in background): a stale pause time made the
+  // next perk/resume shove the music clock minutes back, leaving the rider circling the bottom with no moves
+  game.heldAt = null;
   game.score = 0;
   game.combo = 0;
   game.balance = 100;
