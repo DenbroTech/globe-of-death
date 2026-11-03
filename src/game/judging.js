@@ -155,13 +155,13 @@ function press(type, tAt, soft) {
     if (DIRS.includes(type)) freeSteer(type, t);
   } else if (DIRS.includes(type)) {
     freeSteer(type, t);
-    game.combo = 0;
+    loseCombo();
     game.score = Math.max(0, game.score - 100);
     addBal(-4);
     showJudge('m', 'OFF SCRIPT -100');
   } else if (type !== 'wheelie' && type !== 'nose') {
     if (game.combo > 0) showJudge('m', 'OFF BEAT');
-    game.combo = 0;
+    loseCombo();
     addBal(-5);
   }
 }
