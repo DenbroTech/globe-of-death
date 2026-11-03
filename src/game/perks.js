@@ -16,9 +16,9 @@ import { $ } from '../core/constants.js';
 const PERKS = [
   { id: 'lockNos', name: 'Locked NOS', desc: "A charged NOS isn't lost when you miss.", once: 1 },
   { id: 'doubleNos', name: 'Double NOS', desc: 'Your next NOS lasts twice as long.' },
-  { id: 'hot', name: 'Hot NOS', desc: 'NOS keeps charging even after a miss.', once: 1 },
+  { id: 'hot', name: 'Hot NOS', desc: "NOS normally only charges at full balance. Now it charges at any balance.", once: 1 },
   { id: 'shield', name: 'Shield', desc: 'Your next 3 misses cost nothing.' },
-  { id: 'comboSave', name: 'Combo saver', desc: 'Your combo survives one miss every act.' },
+  { id: 'comboSave', name: 'Combo saver', desc: 'Your first combo break every act is saved. Pick it again to save the first 2.' },
   { id: 'slowmo', name: 'Slow-mo', desc: 'Next act plays 10 BPM slower.', act: 1 },
   { id: 'overheal', name: 'Double balance', desc: 'Your balance bar fills to double, right now.' },
   { id: 'bigTank', name: 'Big tank', desc: 'Your balance bar can grow to double size.', once: 1 },
@@ -54,6 +54,15 @@ const CURSES = [
   { id: 'halfPerfect', name: 'Half marks', desc: 'Your perfect count is cut in half.', score: 1 },
 ];
 const curseOf = id => CURSES.find(x => x.id === id);
+/* fair Fisher–Yates shuffle (sorting with a random comparator favoured the first items in each list) */
+function shuffle(a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 const pk = id => game.perks[id] || 0,
   fx = id => (game.actFx && game.actFx[id]) || 0,
   cursed = id => !game.TUT && game.curse === id;
@@ -108,15 +117,15 @@ function endActFx(survived = true) {
 function planCurses() {
   const r = Math.random(),
     n = r < 0.25 ? 0 : r < 0.75 ? 1 : 2,
-    acts = [3, 4, 5, 6, 7, 8, 9, 10].sort(() => Math.random() - 0.5);
+    acts = shuffle([3, 4, 5, 6, 7, 8, 9, 10]);
   game.curseActs = acts.slice(0, n);
   game.cursesSurvived = 0;
 }
 function offerCurse(a) {
   // always one ride-as-normal score curse in the three
-  const play = CURSES.filter(c => !c.score).sort(() => Math.random() - 0.5),
-    sc = CURSES.filter(c => c.score).sort(() => Math.random() - 0.5);
-  const pool3 = [play[0], play[1], sc[0]].sort(() => Math.random() - 0.5);
+  const play = shuffle(CURSES.filter(c => !c.score)),
+    sc = shuffle(CURSES.filter(c => c.score));
+  const pool3 = shuffle([play[0], play[1], sc[0]]);
   ov.innerHTML = `<div class="card cursed"><h1><small>${game.TUT ? 'Sometimes you get' : `Act ${a} · cursed!`}</small>Pick your curse</h1>
     <div class="nextup"><span>Lasts 1 act</span><span>Pick the least bad</span><span>Survive it: ☠</span></div>
     <div class="perks">${pool3.map(c => `<button class="perk" data-id="${c.id}"><b>${c.name}</b><span>${c.desc}</span></button>`).join('')}</div></div>`;
@@ -152,8 +161,7 @@ function offerPerks(a, skipAd) {
   holdClock();
   game.cheer = 1;
   crowd.wave();
-  const pool3 = PERKS.filter(p => !(p.once && pk(p.id)))
-    .sort(() => Math.random() - 0.5)
+  const pool3 = shuffle(PERKS.filter(p => !(p.once && pk(p.id))))
     .slice(0, 3);
   ov.hidden = false;
   ov.innerHTML = `<div class="card"><h1><small>${game.TUT ? 'Act complete' : `Act ${a - 1} complete`}</small>Pick a perk</h1>
