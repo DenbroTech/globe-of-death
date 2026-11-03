@@ -19,7 +19,7 @@ import { leaveGarage, rebuildPlayerBike } from '../ui/garage.js';
 import { tutDraw, tutEl } from '../ui/tutorial.js';
 import { $, R } from '../core/constants.js';
 import { showStart } from '../ui/menus.js';
-import { endActFx, planCurses } from './perks.js';
+import { drawStash, endActFx, planCurses } from './perks.js';
 
 function start() {
   resetMelody();
@@ -66,6 +66,8 @@ function start() {
   game.boostEnd = 0;
   game.perks = {};
   game.shield = 0;
+  game.stash = null;
+  drawStash();
   endActFx(false);
   planCurses();
   resetCam();

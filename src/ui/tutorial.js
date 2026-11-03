@@ -3,7 +3,7 @@ import { crowd } from '../arenas/crowd.js';
 import { beatAt, lat, now } from '../audio/clock.js';
 import { addNote } from '../game/chart.js';
 import { ov, showJudge } from './hud.js';
-import { offerPerks } from '../game/perks.js';
+import { drawStash, offerPerks } from '../game/perks.js';
 import { resetCam } from '../render/camera.js';
 import { boostActive } from '../game/boost.js';
 import { holdClock } from '../game/judging.js';
@@ -112,6 +112,18 @@ const TUT_STEPS = [
     gen: b => {
       addNote(b * 4, b % 2 ? 'left' : 'right');
       if (!boostActive()) game.boostCharge = 100;
+    },
+  },
+  {
+    t: 'Action',
+    d: 'Some perks are stored for later (shown in gold at the top). Quick swipe down to use one. Holding down is still a wheelie.',
+    need: 1,
+    ev: 'action',
+    gen: () => {
+      if (!game.stash) {
+        game.stash = 'refill';
+        drawStash();
+      }
     },
   },
   {

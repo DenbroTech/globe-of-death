@@ -10,6 +10,7 @@ import { SONGS, songFor } from '../audio/songs.js';
 import { showAd } from '../platform/ads.js';
 import { tutEv } from '../ui/tutorial.js';
 import { $ } from '../core/constants.js';
+import { useBoost } from './boost.js';
 
 /* ---------- perks (picked between acts, reset every run) ----------
    `act: 1` perks only last for the act about to start (game.actFx, cleared at the next act). */
@@ -28,12 +29,14 @@ const PERKS = [
   { id: 'score', name: 'Showman', desc: 'Every point you score is worth 25% more.' },
   { id: 'nitro', name: 'Nitro tank', desc: 'NOS charges 50% faster.' },
   { id: 'revive', name: 'Second wind', desc: 'Next time you would crash, bounce back to half balance.' },
-  { id: 'refill', name: 'Pit stop', desc: 'Full balance and +50% NOS, right now.' },
+  // stored perks: kept in your one action slot, used with a quick swipe down
+  { id: 'refill', name: 'Pit stop', desc: 'Stored. Quick swipe down for full balance and +50% NOS.', stored: 1 },
+  { id: 'spareNos', name: 'Spare NOS', desc: 'Stored. Quick swipe down for a 6-second NOS, any time.', stored: 1 },
 ];
 /* ---------- curses: sometimes after the perk (from act 3). Pick the least bad; it lasts one act, ×2 points ---------- */
 const CURSES = [
   { id: 'mirror', name: 'Mirror', desc: 'Left is right and right is left.' },
-  { id: 'wheelies', name: 'Wheelie mania', desc: 'A long press in every bar.' },
+  { id: 'wheelies', name: 'Wheelie mania', desc: 'Wheelie between every move. Drop it just before each move, then wheelie again. Not wheelieing costs balance.' },
   { id: 'blind', name: 'Blind spot', desc: 'Moves vanish just before the circle.' },
   { id: 'fast', name: 'Fast forward', desc: '+15 BPM.' },
   { id: 'glass', name: 'Glass bones', desc: 'Misses cost double balance.' },
@@ -90,6 +93,35 @@ function startAct(a) {
     const c = curseOf(game.curse);
     toast(c.score ? `CURSE · ${c.name.toUpperCase()}` : `${c.name.toUpperCase()} · ×2 POINTS`, 2200);
   } else toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
+}
+const STASH_NAME = { refill: 'Pit stop', spareNos: 'Spare NOS' };
+function drawStash() {
+  const el = $('#stash');
+  if (!el) return;
+  el.hidden = !game.stash;
+  if (game.stash) el.textContent = '▼ ' + STASH_NAME[game.stash] + ' · quick swipe down';
+}
+/* the action slot: a quick swipe down (flick and let go) fires whatever is stored */
+function useStash() {
+  const id = game.stash;
+  if (!id || !game.running || game.paused || game.over) return false;
+  if (id === 'spareNos') {
+    if (cursed('noNos')) {
+      toast('NOS JAMMED', 900);
+      return true;
+    }
+    useBoost(6);
+    toast('SPARE NOS!', 900);
+  } else {
+    game.balance = Math.max(game.balance, game.balMax || 100);
+    game.boostCharge = Math.min(100, game.boostCharge + 50);
+    drawHearts();
+    toast('PIT STOP!', 900);
+  }
+  game.stash = null;
+  drawStash();
+  tutEv('action');
+  return true;
 }
 function drawCurse() {
   const el = $('#curse');
@@ -172,13 +204,28 @@ function offerPerks(a, skipAd) {
       (b.onclick = () => {
         const id = b.dataset.id,
           p = PERKS.find(x => x.id === id);
+        // one action slot: picking a different stored perk asks before replacing
+        if (p.stored && game.stash && game.stash !== id) {
+          const old = PERKS.find(x => x.id === game.stash);
+          ov.innerHTML = `<div class="card"><h1><small>One slot only</small>Replace it?</h1>
+            <p>You have a ${old.name} stored. Swap it for ${p.name}?</p>
+            <div class="perks"><button class="perk" id="swapY"><b>Take ${p.name}</b></button><button class="perk" id="swapN"><b>Keep ${old.name}</b></button></div></div>`;
+          $('#swapY').onclick = () => {
+            game.stash = id;
+            drawStash();
+            startAct(a);
+          };
+          $('#swapN').onclick = () => startAct(a);
+          return;
+        }
+        if (p.stored) {
+          game.stash = id;
+          drawStash();
+          if (game.TUT) return offerCurse(a);
+          return startAct(a);
+        }
         if (p.act) game.actFx[id] = 1;
         else game.perks[id] = pk(id) + 1;
-        if (id === 'refill') {
-          game.balance = Math.max(game.balance, game.balMax || 100);
-          game.boostCharge = Math.min(100, game.boostCharge + 50);
-          drawHearts();
-        }
         if (id === 'shield') game.shield = (game.shield || 0) + 3;
         if (id === 'overheal') game.balance = 200;
         if (id === 'bigTank') game.balMax = 200;
@@ -193,8 +240,9 @@ export function initPerks() {
   game.perks = {};
   game.actFx = {};
   game.curse = null;
+  game.stash = null;
   game.shield = 0;
   game.comboSaves = 0;
 }
 
-export { planCurses, CURSES, actBpm, addScore, cursed, drawCurse, endActFx, fx, gw, offerPerks, pk, pw };
+export { drawStash, useStash, planCurses, CURSES, actBpm, addScore, cursed, drawCurse, endActFx, fx, gw, offerPerks, pk, pw };

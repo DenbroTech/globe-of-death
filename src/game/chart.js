@@ -138,7 +138,7 @@ function genBarNotes(b) {
     slots = pick === P1 ? [b % 2 ? 2 : 0] : pick[Math.floor(Math.random() * pick.length)];
   }
   const actEnd = (ACT_START.find(x => x > b) || 9999) * 4;
-  const mania = cursed('wheelies');
+  const mania = false; // Wheelie mania is now a rule (wheelie in the gaps), see loop.js
   if (
     b >= 5 &&
     b - game.lastWheelieBar >= (mania ? 1 : 3) &&

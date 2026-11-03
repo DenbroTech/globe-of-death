@@ -2,7 +2,7 @@ import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
 import { initAudio } from '../audio/synth.js';
 import { lat, now, timeAt } from '../audio/clock.js';
-import { gw } from '../game/perks.js';
+import { gw, useStash } from '../game/perks.js';
 import { turnRate } from '../game/path.js';
 import { fStick, fx, fy } from '../game/freeride.js';
 import { player } from '../game/objects.js';
@@ -55,6 +55,15 @@ const tEnd = e => {
   }
   const g = gestures.get(e.pointerId);
   if (!g) return;
+  // a QUICK swipe down (flick and let go) fires the stored action; holding it down stays a wheelie
+  if (
+    g.kind === 'stunt' &&
+    game.stuntState === 'wheelie' &&
+    e.timeStamp - g.t0 < 260 &&
+    game.stash &&
+    !(game.holdNote && game.holdNote.type === 'wheelie')
+  )
+    useStash();
   if (g.kind === 'stunt' && game.stuntPtr === e.pointerId) endStunt();
   gestures.delete(e.pointerId);
   if (e.pointerId === game.stickPtr) {

@@ -36,18 +36,20 @@ function nosEnd(b1) {
   }
   return b1;
 }
-function useBoost() {
+function useBoost(spare) {
   initAudio();
-  if (!game.running || game.paused || game.over || game.boostCharge < 100 || boostActive()) return;
+  if (!game.running || game.paused || game.over || boostActive()) return;
+  if (!spare && game.boostCharge < 100) return;
   if (cursed('noNos')) return toast('NOS JAMMED', 900);
-  tutEv('nos');
-  let len = 3;
+  if (!spare) tutEv('nos');
+  let len = spare || 3;
+  const keep = spare ? game.boostCharge : 0;
   if (pk('doubleNos') > 0) {
     game.perks.doubleNos--;
     len *= 2;
   }
   game.boostEnd = now() + len;
-  game.boostCharge = 0;
+  game.boostCharge = keep; // a Spare NOS doesn't use up your normal charge
   boostB0 = beatAt(now() - lat());
   game.boostB1 = nosEnd(beatAt(game.boostEnd - lat()));
   game.boostEnd = Math.max(game.boostEnd, timeAt(game.boostB1) + lat() + 0.05);

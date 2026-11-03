@@ -39,7 +39,9 @@ let clock = 0,
   lastBeatInt = -1;
 /* NOS afterburner: two additive cones (orange outer, white-hot core) out of the back of your bike + a warm light */
 let nosFlame = null;
-let rate0 = null,
+let maniaT = 0,
+  maniaMsg = 0,
+  rate0 = null,
   wasBlind = false,
   wasDark = false,
   dizzy = 0;
@@ -213,6 +215,25 @@ function frame(nowMs) {
       }
     }
     stuntTick(dt, B);
+    // Wheelie mania curse: in the gaps between moves you must be in a wheelie; drop it just before each
+    // move (0.6 beat either side is free), then wheelie again. Not wheelieing drains balance.
+    if (cursed('wheelies') && !game.TUT) {
+      const a0 = (ACT_START[game.act - 1] || 0) * 4 + 4;
+      const near = game.notes.some(
+        n => !n.decoy && B > n.beat - 0.6 && B < n.beat + (n.len || 0) + 0.6,
+      );
+      if (B > a0 && !near && !game.wheelieDown) {
+        maniaT += dt;
+        if (maniaT > 0.25) {
+          addBal(-1.5);
+          maniaT = 0.1;
+          if (clock - maniaMsg > 1.2) {
+            maniaMsg = clock;
+            showJudge('m', 'WHEELIE!');
+          }
+        }
+      } else maniaT = 0;
+    }
     if (game.over) return;
     const bar = Math.floor(B / 4);
     if (bar !== game.lastBarShown) {
