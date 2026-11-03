@@ -64,7 +64,7 @@ function freeReset() {
     s.mark.visible = false;
   });
   fr = [];
-  frNext = 20; // seconds of free ride before the first rider joins
+  frNext = 10; // seconds of free ride (a warm-up, no points) before the first rider's ghost arrives
   frLastB = 0;
   frTime = 0;
   frNear = 0;
@@ -149,9 +149,12 @@ function freeTick(dt, T, B) {
   const tNow = T - timeAt(INTRO),
     gain = Math.max(0, tNow - frTime);
   frTime = tNow;
-  game.score += (gain * 10 * (1 + fr.length * 0.3) * (P.fs || FR_CRUISE)) / FR_CRUISE;
-  if (game.wheelieDown || game.noseDown) game.score += gain * 45;
-  // riders join at 20 s, then after 30 s, 40 s, 50 s… (each wait 10 s longer)
+  // points only start once the first rider's ghost arrives (the first 10 s are a warm-up)
+  if (fr.length) {
+    game.score += (gain * 10 * (1 + fr.length * 0.3) * (P.fs || FR_CRUISE)) / FR_CRUISE;
+    if (game.wheelieDown || game.noseDown) game.score += gain * 45;
+  }
+  // riders join at 10 s, then after 30 s, 40 s, 50 s… (each wait 10 s longer)
   if (!frWarned && frTime >= frNext - 3 && fr.length < pool.length) {
     frWarned = true;
     const s = pool.find(x => !x.busy);
