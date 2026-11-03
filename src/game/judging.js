@@ -39,6 +39,7 @@ function release(type) {
   else {
     showJudge('m', 'DROPPED IT');
     n.el.classList.add('miss');
+    addBal(-missCost() * 0.5); // letting go early costs half a miss
     tutEv('drop', n.type);
   }
 }
@@ -97,10 +98,10 @@ function press(type, tAt, soft) {
         (n.type === 'standl' && isL) ||
         (n.type === 'standr' && isR) ||
         // while holding a long press, any left-ish swipe counts for any left move (same for right)
-        (game.holdNote &&
+        ((game.holdNote || game.stuntHold) &&
           !n.len &&
           ((isL && ['left', 'ul', 'dl'].includes(n.type)) || (isR && ['right', 'ur', 'dr'].includes(n.type)))));
-  const W = soft ? 2 : game.holdNote ? 1.5 : 1;
+  const W = soft ? 2 : game.holdNote || game.stuntHold ? 1.5 : 1;
   if (soft && !(best && bd <= gw(best.type) * W && okT(best))) return;
   if (best && best.decoy && bd <= gw(best.type) * W && okT(best)) {
     // Decoys curse: hitting a crossed-out move is a mistake
