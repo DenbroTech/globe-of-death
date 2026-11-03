@@ -112,7 +112,7 @@ function showBoard(back) {
   app.classList.add('menu');
   ov.hidden = false;
   ov.innerHTML = `<div class="card"><h1><small>On this phone</small>Leaderboard</h1>
-  <div class="arenas"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride time</button><button class="chip" data-lb="freepts" aria-pressed="${game.lbTab === 'freepts'}">Free ride points</button></div>
+  <div class="arenas lbgrid"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride time</button><button class="chip" data-lb="freepts" aria-pressed="${game.lbTab === 'freepts'}">Free ride points</button></div>
   ${boardRows(game.lbTab, game.lastEntry ? (game.lastEntry.mode === game.lbTab ? game.lastEntry.e : game.lbTab === 'combo' || game.lbTab === 'freepts' ? game.lastEntry.ce : null) : null)}
   <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${playGamesOn() ? '<button class="go ghost" id="lbplay">Google Play</button>' : ''}${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
   ov.querySelectorAll('[data-lb]').forEach(

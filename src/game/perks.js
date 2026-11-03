@@ -20,9 +20,10 @@ const PERKS = [
   { id: 'shield', name: 'Shield', desc: 'Your next 3 misses cost nothing.' },
   { id: 'comboSave', name: 'Combo saver', desc: 'Your combo survives one miss every act.' },
   { id: 'slowmo', name: 'Slow-mo', desc: 'Next act plays 10 BPM slower.', act: 1 },
-  { id: 'perfHeal', name: 'Perfect heal', desc: 'Perfects give back double balance.' },
+  { id: 'overheal', name: 'Double balance', desc: 'Your balance bar fills to double, right now.' },
+  { id: 'bigTank', name: 'Big tank', desc: 'Your balance bar can grow to double size.', once: 1 },
   { id: 'showtime', name: 'Showtime', desc: 'Double points for the next act.', act: 1 },
-  { id: 'wide', name: 'Wide window', desc: 'Much easier timing for the next act.', act: 1 },
+  { id: 'wide', name: 'Wide window', desc: 'Much easier timing for the rest of the show.', once: 1 },
   { id: 'armor', name: 'Thick skin', desc: 'Misses knock 25% less off your balance.' },
   { id: 'score', name: 'Showman', desc: 'Every point you score is worth 25% more.' },
   { id: 'nitro', name: 'Nitro tank', desc: 'NOS charges 50% faster.' },
@@ -56,7 +57,7 @@ const curseOf = id => CURSES.find(x => x.id === id);
 const pk = id => game.perks[id] || 0,
   fx = id => (game.actFx && game.actFx[id]) || 0,
   cursed = id => !game.TUT && game.curse === id;
-const winMul = () => 1 + (fx('wide') ? 0.6 : 0);
+const winMul = () => 1 + (pk('wide') ? 0.6 : 0);
 const pw = t => PW * winMul() * statMul(kindOf(t)),
   gw = t => GW * winMul() * statMul(kindOf(t));
 function addScore(v) {
@@ -132,10 +133,19 @@ function offerCurse(a) {
       }),
   );
 }
+const have = id => (id === 'shield' ? game.shield || 0 : pk(id));
 function offerPerks(a, skipAd) {
   if (!skipAd && !game.TUT && (a - 1) % 3 === 0) {
     showAd(() => offerPerks(a, true));
     return;
+  }
+  // a curse act gets the curse card INSTEAD of a perk (the Lesson shows both, one after the other)
+  if (!game.TUT && a <= FINAL && (window.__curse || (game.curseActs || []).includes(a))) {
+    resetInput();
+    game.paused = true;
+    holdClock();
+    ov.hidden = false;
+    return offerCurse(a);
   }
   resetInput();
   game.paused = true;
@@ -148,7 +158,7 @@ function offerPerks(a, skipAd) {
   ov.hidden = false;
   ov.innerHTML = `<div class="card"><h1><small>${game.TUT ? 'Act complete' : `Act ${a - 1} complete`}</small>Pick a perk</h1>
     ${game.TUT ? '' : `<div class="nextup"><span>Act ${a}</span><span>${ridersFor(a) ? '+' + ridersFor(a) + ' rider' + (ridersFor(a) > 1 ? 's' : '') : 'Solo'}</span><span>${bpmOfAct(a)} BPM</span></div>`}
-    <div class="perks">${pool3.map(p => `<button class="perk" data-id="${p.id}"><b>${p.name}</b><span>${p.desc}</span>${pk(p.id) && !p.act ? `<i>You have ${pk(p.id)}</i>` : ''}</button>`).join('')}</div></div>`;
+    <div class="perks">${pool3.map(p => `<button class="perk" data-id="${p.id}"><b>${p.name}</b><span>${p.desc}</span>${have(p.id) && !p.act ? `<i>You have ${have(p.id)}${p.id === 'shield' ? ' left' : ''}</i>` : ''}</button>`).join('')}</div></div>`;
   ov.querySelectorAll('.perk').forEach(
     b =>
       (b.onclick = () => {
@@ -157,13 +167,16 @@ function offerPerks(a, skipAd) {
         if (p.act) game.actFx[id] = 1;
         else game.perks[id] = pk(id) + 1;
         if (id === 'refill') {
-          game.balance = 100;
+          game.balance = Math.max(game.balance, game.balMax || 100);
           game.boostCharge = Math.min(100, game.boostCharge + 50);
           drawHearts();
         }
         if (id === 'shield') game.shield = (game.shield || 0) + 3;
+        if (id === 'overheal') game.balance = 200;
+        if (id === 'bigTank') game.balMax = 200;
+        drawHearts();
         if (id === 'comboSave') game.comboSaves = pk('comboSave');
-        if (game.TUT || (a <= FINAL && (window.__curse || (game.curseActs || []).includes(a)))) offerCurse(a);
+        if (game.TUT) offerCurse(a);
         else startAct(a);
       }),
   );

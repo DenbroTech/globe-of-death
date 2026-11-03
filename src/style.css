@@ -339,3 +339,7 @@ body.lightsout #dark{opacity:1}
 .card.cursed .perk:hover,.card.cursed .perk:focus-visible{background:rgba(255,77,94,.2)}
 .sk{display:inline-flex;align-items:center;gap:1px;color:#ff6b78;font-size:.9em;white-space:nowrap}.skull{width:1.05em;height:1.05em}
 .note.blank{background:#2a2a30!important;border-color:#77777f!important;color:transparent!important}.note.blank svg{opacity:0}
+
+.lbgrid{display:grid!important;grid-template-columns:1fr 1fr;gap:8px}.lbgrid .chip{width:100%;margin:0;justify-content:center;text-align:center}
+.bal{position:relative}.bal #balX{position:absolute;left:0;top:0;bottom:0;width:0;background:#0d8f4a;border-radius:5px;transition:width .2s}
+.bal.big{outline:1px dashed rgba(60,220,130,.7);outline-offset:1px}

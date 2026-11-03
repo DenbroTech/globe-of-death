@@ -122,7 +122,7 @@ function press(type, tAt, soft) {
       both = game.holdNote && !best.len;
     addScore((g === 'p' ? 300 : 120) * mult * (both ? 2 : 1));
     game.stats[g === 'p' ? 'perfect' : 'good']++;
-    addBal(g === 'p' ? 7 * (1 + pk('perfHeal')) : 3);
+    addBal(g === 'p' ? 7 : 3);
     chargeBoost(g === 'p' ? 14 : 7);
     if (best.type === 'jump') {
       game.cheer = 1;

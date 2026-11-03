@@ -11,17 +11,17 @@ import { tutEv } from '../ui/tutorial.js';
 let cam, ptr, tp, tl, tu, gpos;
 
 /* ---------- camera ---------- */
-const MODES = ['centre', 'chase', 'chest', 'outside', 'arena'],
+const MODES = ['arena', 'outside', 'chase', 'centre', 'chest'],
   NAMES = { outside: 'Outside', chest: 'Chest', chase: 'Chase', centre: 'Centre', arena: 'Arena' };
 function cycleCam() {
   cam.mode = MODES[(MODES.indexOf(cam.mode) + 1) % MODES.length];
   $('#camName').textContent = NAMES[cam.mode];
   tutEv('cam');
 }
-/* every ride starts on Centre (the zoomed-out view), whatever you ended on last time */
+/* every ride starts on Arena (the zoomed-out view), whatever you ended on last time */
 function resetCam() {
   if (!cam) return;
-  cam.mode = 'centre';
+  cam.mode = 'arena';
   cam.snap = true;
   $('#camName').textContent = NAMES[cam.mode];
 }
@@ -154,7 +154,7 @@ function resize() {
 export function initCamera() {
   cam = {
     oaz: 0,
-    mode: 'centre',
+    mode: 'arena',
     az: 0.7,
     el: 0.3,
     zoom: 1,

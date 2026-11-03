@@ -93,6 +93,7 @@ function start() {
   game.score = 0;
   game.combo = 0;
   game.balance = 100;
+  game.balMax = 100;
   game.act = 1;
   game.slow = 0;
   game.lastBarShown = -1;
