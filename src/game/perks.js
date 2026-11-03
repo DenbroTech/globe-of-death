@@ -36,7 +36,7 @@ const PERKS = [
 /* ---------- curses: sometimes after the perk (from act 3). Pick the least bad; it lasts one act, ×2 points ---------- */
 const CURSES = [
   { id: 'mirror', name: 'Mirror', desc: 'Left is right and right is left.' },
-  { id: 'wheelies', name: 'Wheelie mania', desc: 'Wheelie between every move. Drop it just before each move, then wheelie again. Not wheelieing costs balance.' },
+  { id: 'wheelies', name: 'Wheelie mania', desc: 'Long press (wheelie) between every move. Let go just before each move, then go back into it.' },
   { id: 'blind', name: 'Blind spot', desc: 'Moves vanish just before the circle.' },
   { id: 'fast', name: 'Fast forward', desc: '+15 BPM.' },
   { id: 'glass', name: 'Glass bones', desc: 'Misses cost double balance.' },
