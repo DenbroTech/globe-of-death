@@ -268,8 +268,12 @@ button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
 .adx{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:14px;width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font:700 17px inherit;border:0}.adx:disabled{opacity:.6}
 
 /* tutorial: pulsing ring on the camera button during the camera step */
-.ib.hint{animation:hintPulse 1s ease-in-out infinite;border-color:var(--amber)}
-@keyframes hintPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,179,71,.7)}50%{box-shadow:0 0 0 7px rgba(255,179,71,0)}}
+.ib.hint{position:relative;z-index:5;animation:hintPulse .9s ease-in-out infinite;border:2px solid var(--amber);background:var(--amber);color:#1a0f02}
+.ib.hint svg{stroke:#1a0f02}
+@keyframes hintPulse{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,179,71,.9),0 0 18px 4px rgba(255,179,71,.8)}50%{transform:scale(1.18);box-shadow:0 0 0 16px rgba(255,179,71,0),0 0 34px 12px rgba(255,179,71,.9)}}
+/* a bouncing "TAP" arrow under the camera button while the Lesson asks for it */
+.ib.hint::after{content:"▲ TAP";position:absolute;top:calc(100% + 10px);left:50%;transform:translateX(-50%);font:700 13px var(--f-u);letter-spacing:.14em;color:var(--amber);white-space:nowrap;text-shadow:0 2px 8px rgba(0,0,0,.8);animation:hintBob .6s ease-in-out infinite alternate}
+@keyframes hintBob{to{margin-top:6px}}
 
 /* garage: buttons sit over the 3D scene, so give them a 50% dark backing; the chosen one is solid */
 .gcard .item,.gcard .cat,.gcard .seg,.gcard .tab{background:rgba(14,11,16,.5);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
