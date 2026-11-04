@@ -353,3 +353,4 @@ body.lightsout #dark{opacity:1}
 .bal #balX{border-radius:0 5px 5px 0}
 @media (max-width:420px){.bal.wide{width:min(132px,32vw)}}
 .bal.big{outline:0;border:1px dashed rgba(60,220,130,.75)}
+#mult{font-style:normal;color:var(--gold);font-weight:800;letter-spacing:.04em}

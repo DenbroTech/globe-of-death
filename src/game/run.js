@@ -68,6 +68,7 @@ function start() {
   game.shield = 0;
   game.stash = null;
   game.snaps = [];
+  $('#mult').textContent = ''; // free ride rider multiplier badge
   drawStash();
   endActFx(false);
   planCurses();

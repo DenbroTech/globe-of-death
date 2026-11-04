@@ -12,6 +12,7 @@ import { $, D, HIT, R, V3, YAX, clamp } from '../core/constants.js';
 /* ---------- free ride: dodge riders on their own loops for as long as you can ---------- */
 let fr = [],
   frNext = 0,
+  frMultShown = -1,
   frLastB = 0,
   frTime = 0,
   frNear = 0,
@@ -64,6 +65,7 @@ function freeReset() {
     s.mark.visible = false;
   });
   fr = [];
+  frMultShown = -1;
   frNext = 10; // seconds of free ride (a warm-up, no points) before the first rider's ghost arrives
   frLastB = 0;
   frTime = 0;
@@ -150,9 +152,16 @@ function freeTick(dt, T, B) {
     gain = Math.max(0, tNow - frTime);
   frTime = tNow;
   // points only start once the first rider's ghost arrives (the first 10 s are a warm-up)
+  // every rider in the globe adds to the multiplier: 1 rider ×2, 2 riders ×3… (shown by the score)
+  const mult = fr.length + 1;
+  if (mult !== frMultShown) {
+    frMultShown = mult;
+    const el = document.getElementById('mult');
+    if (el) el.textContent = mult > 1 ? '×' + mult : '';
+  }
   if (fr.length) {
-    game.score += (gain * 10 * (1 + fr.length * 0.3) * (P.fs || FR_CRUISE)) / FR_CRUISE;
-    if (game.wheelieDown || game.noseDown) game.score += gain * 45;
+    game.score += ((gain * 10 * (P.fs || FR_CRUISE)) / FR_CRUISE) * mult;
+    if (game.wheelieDown || game.noseDown) game.score += gain * 45 * mult;
   }
   // riders join at 10 s, then after 30 s, 40 s, 50 s… (each wait 10 s longer)
   if (!frWarned && frTime >= frNext - 3 && fr.length < pool.length) {
@@ -187,7 +196,7 @@ function freeTick(dt, T, B) {
       if (P.h > 0.4) {
         if (!r.jumped) {
           r.jumped = true;
-          game.score += 300;
+          game.score += 300 * (fr.length + 1);
           showJudge('p', 'CLEARED!');
           game.cheer = 1;
           crowd.wave();
@@ -202,7 +211,7 @@ function freeTick(dt, T, B) {
       if (r.minD < 1.4) {
         frNear++;
         frChain = Math.min(frChain + 1, 9);
-        game.score += 100 * frChain;
+        game.score += 100 * frChain * (fr.length + 1);
         showJudge('g', 'NEAR MISS x' + frChain);
         game.cheer = Math.max(game.cheer, 0.8);
         crowd.wave();
