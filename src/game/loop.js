@@ -485,7 +485,7 @@ function frame(nowMs) {
       }
       while (
         game.notes.length &&
-        game.notes[0].beat + game.notes[0].len < B - 2 &&
+        game.notes[0].beat + game.notes[0].len < B - 24 && // kept a while so Rewind can bring them back
         game.notes[0].judged &&
         !game.notes[0].slot &&
         game.notes[0] !== game.holdNote

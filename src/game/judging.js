@@ -116,6 +116,7 @@ function press(type, tAt, soft) {
   }
   if (best && bd <= gw(best.type) * W && okT(best)) {
     const g = bd <= pw(best.type) * W && !cursed('judges') ? 'p' : 'g';
+    snap(best);
     best.judged = g;
     best.el.classList.add('ok');
     game.combo++;
@@ -169,6 +170,7 @@ function press(type, tAt, soft) {
 }
 function miss(n) {
   tutEv('miss', n.type);
+  snap(n);
   n.judged = 'm';
   n.el.classList.add('miss');
   loseCombo();
@@ -197,6 +199,21 @@ function miss(n) {
     n.slot.dodgeB = beatAt(now() - lat());
   } else sfxNoise(0.4, 300, 0.4, 'crash');
   addBal(-missCost());
+}
+/* Rewind keeps the state from just before each of the last few judged moves */
+function snap(n) {
+  if (game.TUT) return;
+  const S = game.snaps || (game.snaps = []);
+  S.push({
+    n,
+    beat: n.beat,
+    score: game.score,
+    combo: game.combo,
+    balance: game.balance,
+    boostCharge: game.boostCharge,
+    stats: Object.assign({}, game.stats),
+  });
+  if (S.length > 12) S.shift();
 }
 /* a mistake breaks the combo, unless Combo saver has one left this act */
 function loseCombo() {
@@ -340,4 +357,4 @@ export function initJudging() {
   });
 }
 
-export { finale, finishHold, freeClock, gameOver, holdClock, miss, press, release, ridersFor, tumble };
+export { snap, finale, finishHold, freeClock, gameOver, holdClock, miss, press, release, ridersFor, tumble };

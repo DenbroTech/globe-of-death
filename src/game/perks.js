@@ -1,7 +1,7 @@
 import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
 import { garage, saveGarage } from './save.js';
-import { FINAL, GW, PW, bpmOfAct } from '../audio/clock.js';
+import { ACT_START, FINAL, GW, PW, bpmOfAct, lat, now, timeAt } from '../audio/clock.js';
 import { drawHearts, ov, toast } from '../ui/hud.js';
 import { freeClock, holdClock, ridersFor } from './judging.js';
 import { resetInput } from './run.js';
@@ -33,6 +33,7 @@ const PERKS = [
   // stored perks: kept in your one action slot, used with a quick swipe down
   { id: 'refill', name: 'Pit stop', desc: 'Stored. Quick swipe down for full balance and +50% NOS.', stored: 1 },
   { id: 'spareNos', name: 'Spare NOS', desc: 'Stored. Quick swipe down for a 6-second NOS, any time.', stored: 1 },
+  { id: 'rewind', name: 'Rewind', desc: 'Stored. Quick swipe down to go back 5 moves and try them again.', stored: 1 },
   { id: 'teaBreak', name: 'Tea break', desc: 'Stored. Quick swipe down to pause, then 3-2-1 back in with +20 balance.', stored: 1 },
 ];
 /* ---------- curses: sometimes after the perk (from act 3). Pick the least bad; it lasts one act, ×2 points ---------- */
@@ -97,7 +98,7 @@ function startAct(a) {
     toast(c.score ? `CURSE · ${c.name.toUpperCase()}` : `${c.name.toUpperCase()} · ×2 POINTS`, 2200);
   } else toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
 }
-const STASH_NAME = { refill: 'Pit stop', spareNos: 'Spare NOS', teaBreak: 'Tea break' };
+const STASH_NAME = { refill: 'Pit stop', spareNos: 'Spare NOS', teaBreak: 'Tea break', rewind: 'Rewind' };
 function drawStash() {
   const el = $('#stash');
   if (!el) return;
@@ -115,6 +116,14 @@ function useStash() {
     }
     useBoost(6);
     toast('SPARE NOS!', 900);
+  } else if (id === 'rewind') {
+    if (!rewind()) {
+      toast('NOTHING TO REWIND YET', 900);
+      return true; // keep it stored
+    }
+    game.stash = null;
+    drawStash();
+    return true;
   } else if (id === 'teaBreak') {
     game.stash = null;
     drawStash();
@@ -129,6 +138,54 @@ function useStash() {
   game.stash = null;
   drawStash();
   tutEv('action');
+  return true;
+}
+/* Rewind: back to just before the 5th-last judged move (not past the start of this act), with score,
+   combo, balance and stats as they were then; those moves come round again. Then a 3-2-1 back in. */
+function rewind() {
+  const S = game.snaps || [],
+    actB = (ACT_START[game.act - 1] || 0) * 4;
+  let k = Math.max(0, S.length - 5);
+  while (k < S.length && S[k].beat < actB + 2) k++;
+  if (k >= S.length) return false;
+  const s = S[k],
+    target = Math.max(actB + 1, s.beat - 1.5);
+  Object.assign(game, { score: s.score, combo: s.combo, balance: s.balance, boostCharge: s.boostCharge });
+  Object.assign(game.stats, s.stats);
+  game.snaps = S.slice(0, k);
+  game.boostEnd = 0;
+  game.holdNote = null;
+  game.wheelieDown = game.noseDown = false;
+  for (const n of game.notes)
+    if (n.beat >= target - 0.01 && n.judged) {
+      n.judged = null;
+      n.el.classList.remove('ok', 'miss', 'holding');
+      n.el.style.opacity = '';
+      if (n.slot) n.slot.dodgeB = null;
+      if (n.len) n.lastTick = n.beat;
+    }
+  // move the show clock back so `target` is now
+  const d = now() - lat() - timeAt(target);
+  game.tempos.forEach(x => (x.time += d));
+  game.lastB = target;
+  game.schedStep = Math.ceil(target * 2);
+  drawHearts();
+  resetInput();
+  game.paused = true;
+  holdClock();
+  ov.hidden = false;
+  let c = 3;
+  ov.innerHTML = `<div class="card" style="align-items:center"><h1><small>Rewind</small><span id="rwN">3</span></h1></div>`;
+  const t = setInterval(() => {
+    c--;
+    if (c > 0) $('#rwN').textContent = c;
+    else {
+      clearInterval(t);
+      game.paused = false;
+      ov.hidden = true;
+      freeClock();
+    }
+  }, 600);
   return true;
 }
 /* Tea break: a proper pause when you're under the cosh, then a 3-2-1 back in with +20 balance */

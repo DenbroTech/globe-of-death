@@ -67,6 +67,7 @@ function start() {
   game.perks = {};
   game.shield = 0;
   game.stash = null;
+  game.snaps = [];
   drawStash();
   endActFx(false);
   planCurses();
