@@ -39,7 +39,9 @@ let clock = 0,
   lastBeatInt = -1;
 /* NOS afterburner: two additive cones (orange outer, white-hot core) out of the back of your bike + a warm light */
 let nosFlame = null;
-let maniaT = 0,
+let revT = 0,
+  wasRev = false,
+  maniaT = 0,
   maniaMsg = 0,
   rate0 = null,
   wasBlind = false,
@@ -307,6 +309,9 @@ function frame(nowMs) {
       hs = (T - lat() - P.hopT0) / (MOON ? 0.7 : 0.42);
     P.h = hs > 0 && hs < 1 ? (MOON ? 1.9 : 1.2) * Math.sin(Math.PI * hs) : 0;
     orientOnWall(P.bike.g, P.p, P.t, 0);
+    // Reverse curse: the bike rides round the globe backwards (rear first)
+    revT += ((cursed('reverse') ? 1 : 0) - revT) * Math.min(1, dt * 3);
+    if (revT > 0.001) P.bike.g.rotateY(Math.PI * revT);
     P.bike.g.position.copy(P.p).multiplyScalar(R - P.h);
     if (P.h > 0) P.bike.g.rotateX(-0.35 * Math.sin(Math.PI * hs));
     P.wh += ((game.wheelieDown ? 1 : 0) - P.wh) * Math.min(1, dt * 10);
@@ -318,7 +323,7 @@ function frame(nowMs) {
     P.bike.m.rotation.x = -0.55 * P.wh + 0.42 * P.nw;
     P.bike.m.position.y = 0.18 * P.wh + 0.2 * P.nw;
     P.bike.m.position.z = -0.1 * P.wh + 0.16 * P.nw;
-    P.bike.wheels.forEach(w => (w.rotation.x += dt * (boostActive() ? 55 : 25)));
+    P.bike.wheels.forEach(w => (w.rotation.x += dt * (boostActive() ? 55 : 25) * (revT > 0.5 ? -1 : 1)));
     // ribbon of where you've been (starts once you're up on the wall)
     if (B >= INTRO) {
       if (!myRing.visible) resetRibbon(myRing, P.p);
@@ -447,6 +452,13 @@ function frame(nowMs) {
       const w = trackEl.clientWidth,
         hx = 24,
         ppb = (w - hx - 24) / LOOK;
+      // Reverse curse: moves travel left to right and the circle sits on the right
+      const rev = cursed('reverse'),
+        rx = v => (rev ? w - v : v);
+      if (rev !== wasRev) {
+        wasRev = rev;
+        trackEl.classList.toggle('rev', rev);
+      }
       const blind = cursed('blind'),
         mystery = cursed('mystery'),
         bpmNow = game.tempos[game.tempos.length - 1].bpm;
@@ -456,7 +468,7 @@ function frame(nowMs) {
       }
       for (const n of game.notes) {
         const x = hx + (n.beat - B) * ppb;
-        n.el.style.transform = `translateX(${x}px)`;
+        n.el.style.transform = `translateX(${rx(x) - (rev && n.len ? n.len * ppb : 0)}px)`;
         n.el.hidden = x > w + 30;
         // Blind spot curse: moves fade out in the last beat and a bit before the circle
         if (blind && !n.len) n.el.style.opacity = n.judged ? 1 : clamp(n.beat - B - 0.8, 0, 1);
@@ -495,7 +507,7 @@ function frame(nowMs) {
               hx +
               (game.boostB1 - B) * ppb +
               (game.notes.some(n => n.len && Math.abs(n.beat + n.len - game.boostB1) < 0.15) ? 22 : 0);
-          bb.style.transform = `translateX(${x0}px)`;
+          bb.style.transform = `translateX(${rev ? w - x1 : x0}px)`;
           bb.style.width = Math.max(0, x1 - x0) + 'px';
         }
       }
@@ -506,14 +518,14 @@ function frame(nowMs) {
           show = !game.FREE && B >= INTRO && x < w + 10 && x > -10;
         al.hidden = !show;
         if (show) {
-          al.style.transform = `translateX(${x}px)`;
+          al.style.transform = `translateX(${rx(x)}px)`;
           $('#actlineTxt').textContent = game.act >= FINAL && !game.encore ? 'FINALE' : 'PERK';
         }
       }
       for (let i = 0; i < barLines.length; i++) {
         const b = Math.ceil(B) + i,
           x = hx + (b - B) * ppb;
-        barLines[i].style.transform = `translateX(${x}px)`;
+        barLines[i].style.transform = `translateX(${rx(x)}px)`;
         barLines[i].className = 'bl' + (b % 4 === 0 ? ' bar' : '');
         barLines[i].hidden = x > w;
       }

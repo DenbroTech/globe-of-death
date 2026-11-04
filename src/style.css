@@ -345,3 +345,11 @@ body.lightsout #dark{opacity:1}
 .bal.big{outline:1px dashed rgba(60,220,130,.7);outline-offset:1px}
 #stash{align-self:center;margin:6px auto 0;width:max-content;padding:5px 14px;border-radius:999px;background:rgba(60,40,0,.85);border:1px solid var(--gold);color:var(--gold);font-family:var(--f-d);font-size:14px;letter-spacing:.06em;text-transform:uppercase;animation:stashPulse 1s ease-in-out infinite alternate}
 @keyframes stashPulse{to{box-shadow:0 0 16px rgba(255,194,61,.75)}}
+/* Reverse curse: track runs left to right, circle on the right */
+.track.rev .hit{left:auto;right:24px;margin:-23px -23px 0 0}
+.track.rev .note.wheelie,.track.rev .note.nose,.track.rev .note.standl,.track.rev .note.standr{flex-direction:row-reverse;padding-left:0;padding-right:9px}
+.track.rev .note.standl,.track.rev .note.standr{background:linear-gradient(270deg,#2a2a30 0 36px,rgba(111,211,255,.18) 36px)}
+.bal{transition:width .35s ease}.bal.wide{width:172px}
+.bal #balX{border-radius:0 5px 5px 0}
+@media (max-width:420px){.bal.wide{width:min(132px,32vw)}}
+.bal.big{outline:0;border:1px dashed rgba(60,220,130,.75)}

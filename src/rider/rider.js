@@ -274,7 +274,10 @@ function riderKit(par, M) {
       const shell = helmetDeform(new THREE.SphereGeometry(r, 56, 40), r);
       {
         const Pp = shell.attributes.position,
-          C = new Float32Array(Pp.count * 3);
+          C = new Float32Array(Pp.count * 3),
+          // sharp helmet: the centre stripe and side swoosh are drawn per pixel from these coordinates
+          sharp = M.helm.userData.hsharp && !M.hdesign,
+          HV = sharp ? new Float32Array(Pp.count * 4) : null;
         for (let i = 0; i < Pp.count; i++) {
           const x = Pp.getX(i) / r,
             y = Pp.getY(i) / r,
@@ -286,7 +289,10 @@ function riderKit(par, M) {
             blk: { r: BLK, g: BLK, b: BLK },
           };
           let c = hp.main;
-          if (y < -0.55) c = hp.blk;
+          if (sharp) {
+            HV.set([x, y, z, 2], i * 4);
+            if (y < -0.55) c = hp.blk;
+          } else if (y < -0.55) c = hp.blk;
           else if (Math.abs(x) < 0.13 && y > 0.18 && z < 0.7) c = hp.sec;
           else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.085) c = hp.sec;
           else if (Math.abs(x) > 0.45 && z < 0.35 && Math.abs(y - (0.02 - 0.42 * z)) < 0.13) c = hp.blk;
@@ -296,6 +302,7 @@ function riderKit(par, M) {
           C[i * 3 + 2] = c.b;
         }
         shell.setAttribute('color', new THREE.BufferAttribute(C, 3));
+        if (sharp) shell.setAttribute('chev', new THREE.BufferAttribute(HV, 4));
       }
       shell.applyMatrix4(orient);
       mesh(shell, M.helm);
@@ -759,6 +766,44 @@ function sharpChevron(mat, pal) {
   };
   mat.customProgramCacheKey = () => prevKey + '|chev';
 }
+/* helmet centre stripe and side swoosh drawn per pixel (the helmet carries its shell coordinates in the
+   'chev' attribute with w = 2), so the edges are crisp instead of vertex-colour stair-steps */
+function sharpHelmet(mat, hp) {
+  mat.userData.hsharp = true;
+  mat.extensions = Object.assign(mat.extensions || {}, { derivatives: true });
+  const prev = mat.onBeforeCompile,
+    prevKey = mat.customProgramCacheKey ? mat.customProgramCacheKey() : '';
+  mat.onBeforeCompile = (sh, r) => {
+    if (prev) prev(sh, r);
+    sh.uniforms.uHSec = { value: hp.sec };
+    sh.uniforms.uHBlk = { value: hp.blk };
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec4 chev;\nvarying vec4 vHg;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvHg = chev;');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uHSec;\nuniform vec3 uHBlk;\nvarying vec4 vHg;')
+      .replace(
+        '#include <color_fragment>',
+        `#include <color_fragment>
+        if (vHg.w > 1.5 && vHg.y >= -0.55) {
+          vec3 h = vHg.xyz;
+          float ax = abs(h.x);
+          // centre stripe
+          float d1 = max(ax - 0.13, max(0.18 - h.y, h.z - 0.7));
+          float a1 = max(fwidth(d1), 1e-4);
+          // side swoosh: black edge band with a stripe inside it
+          float e = abs(h.y - (0.02 - 0.42 * h.z));
+          float gate = max(0.45 - ax, h.z - 0.35);
+          float dB = max(e - 0.13, gate), dS = max(e - 0.085, gate);
+          float aB = max(fwidth(dB), 1e-4), aS = max(fwidth(dS), 1e-4);
+          diffuseColor.rgb = mix(diffuseColor.rgb, uHBlk, 1.0 - smoothstep(-aB, aB, dB));
+          diffuseColor.rgb = mix(diffuseColor.rgb, uHSec, 1.0 - smoothstep(-aS, aS, dS));
+          diffuseColor.rgb = mix(diffuseColor.rgb, uHSec, 1.0 - smoothstep(-a1, a1, d1));
+        }`,
+      );
+  };
+  mat.customProgramCacheKey = () => prevKey + '|hsharp';
+}
 /* trim in a neon or a pattern: the trim panels (vertex colour = the trim colour, plus the shader-drawn
    chevron) glow like neon tubes, or show the real pattern texture instead of its flat base colour */
 function trimFx(mat, pal, it) {
@@ -853,6 +898,7 @@ function riderMats(o, C, P) {
   }
   // chest/back chevron drawn per pixel (sharp edge) on plain leathers; see riderKit torso
   if (!(D && D.design) && !C.ghost) sharpChevron(suit, pal);
+  if (!(D && D.helmet) && !C.ghost && helm.userData.neon == null) sharpHelmet(helm, hpal);
   const CODE = { MAIN, SEC, BLK, DIM };
   return {
     suit,

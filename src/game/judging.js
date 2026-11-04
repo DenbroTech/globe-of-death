@@ -12,7 +12,7 @@ import { player, pool } from './objects.js';
 import { DIRS } from './chart.js';
 import { addBal, ov, showJudge, toast } from '../ui/hud.js';
 import { chargeBoost, useBoost } from './boost.js';
-import { addScore, cursed, drawCurse, gw, pk, pw } from './perks.js';
+import { addScore, cursed, drawCurse, fx, gw, pk, pw } from './perks.js';
 import { countPlay, recordRun, showOver } from '../ui/leaderboard.js';
 import { tutEv } from '../ui/tutorial.js';
 import { resetInput } from './run.js';
@@ -98,6 +98,7 @@ function press(type, tAt, soft) {
         (n.type === 'standl' && isL) ||
         (n.type === 'standr' && isR) ||
         // while holding a long press, any left-ish swipe counts for any left move (same for right)
+        (fx('anyDir') && !n.len && DIRS.includes(n.type) && (isL || isR || DIRS.includes(type))) ||
         ((game.holdNote || game.stuntHold) &&
           !n.len &&
           ((isL && ['left', 'ul', 'dl'].includes(n.type)) || (isR && ['right', 'ur', 'dr'].includes(n.type)))));

@@ -24,10 +24,19 @@ const HEART =
 function drawHearts() {
   const b = $('#balBar'),
     x = $('#balX');
-  // balance above 100 (Double balance / Big tank perks) shows as a second, deeper green layer
-  b.style.width = Math.min(100, game.balance) + '%';
-  if (x) x.style.width = Math.max(0, game.balance - 100) + '%';
-  b.parentNode.classList.toggle('big', (game.balMax || 100) > 100);
+  // Double balance / Big tank: the bar itself grows to double length (to the right). Double balance's extra
+  // half is dark green and wears away first; Big tank's extra half starts empty and fills in normal green
+  const big = (game.balMax || 100) > 100,
+    over = game.balance > 100,
+    wide = big || over,
+    k = wide ? 0.5 : 1;
+  b.parentNode.classList.toggle('wide', wide);
+  b.parentNode.classList.toggle('big', big);
+  b.style.width = (big ? game.balance : Math.min(100, game.balance)) * k + '%';
+  if (x) {
+    x.style.left = '50%';
+    x.style.width = !big && over ? (game.balance - 100) * k + '%' : '0';
+  }
   b.style.background = game.balance > 60 ? 'var(--ok)' : game.balance > 30 ? 'var(--amber)' : 'var(--red)';
 }
 function addBal(d) {

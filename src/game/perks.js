@@ -20,6 +20,7 @@ const PERKS = [
   { id: 'hot', name: 'Hot NOS', desc: "NOS normally only charges at full balance. Now it charges at any balance.", once: 1 },
   { id: 'shield', name: 'Shield', desc: 'Your next 3 misses cost nothing.' },
   { id: 'comboSave', name: 'Combo saver', desc: 'Your first combo break every act is saved. Pick it again to save the first 2.' },
+  { id: 'anyDir', name: 'Any way', desc: 'For the next act, any direction swipe counts for any direction move.', act: 1 },
   { id: 'slowmo', name: 'Slow-mo', desc: 'Next act plays 10 BPM slower.', act: 1 },
   { id: 'overheal', name: 'Double balance', desc: 'Your balance bar fills to double, right now.' },
   { id: 'bigTank', name: 'Big tank', desc: 'Your balance bar can grow to double size.', once: 1 },
@@ -32,6 +33,7 @@ const PERKS = [
   // stored perks: kept in your one action slot, used with a quick swipe down
   { id: 'refill', name: 'Pit stop', desc: 'Stored. Quick swipe down for full balance and +50% NOS.', stored: 1 },
   { id: 'spareNos', name: 'Spare NOS', desc: 'Stored. Quick swipe down for a 6-second NOS, any time.', stored: 1 },
+  { id: 'teaBreak', name: 'Tea break', desc: 'Stored. Quick swipe down to pause, then 3-2-1 back in with +20 balance.', stored: 1 },
 ];
 /* ---------- curses: sometimes after the perk (from act 3). Pick the least bad; it lasts one act, ×2 points ---------- */
 const CURSES = [
@@ -45,6 +47,7 @@ const CURSES = [
   { id: 'dark', name: 'Lights out', desc: 'The arena goes dark.' },
   { id: 'dizzy', name: 'Dizzy', desc: 'The world rolls round.' },
   { id: 'double', name: 'Double time', desc: 'Much busier moves.' },
+  { id: 'reverse', name: 'Reverse', desc: 'Your bike rides backwards round the globe, and moves come from the left.' },
   { id: 'mystery', name: 'Mystery moves', desc: 'Moves stay blank until 1 second before you press.' },
   // score curses: ride as normal, but your points suffer (no ×2 on these)
   { id: 'pickpocket', name: 'Pickpocket', desc: 'Points are worth 10%.', score: 1 },
@@ -94,7 +97,7 @@ function startAct(a) {
     toast(c.score ? `CURSE · ${c.name.toUpperCase()}` : `${c.name.toUpperCase()} · ×2 POINTS`, 2200);
   } else toast(a === FINAL ? `Grand finale · ${SONGS[songFor(a)].name}` : `Act ${a} · ${SONGS[songFor(a)].name}`, 1600);
 }
-const STASH_NAME = { refill: 'Pit stop', spareNos: 'Spare NOS' };
+const STASH_NAME = { refill: 'Pit stop', spareNos: 'Spare NOS', teaBreak: 'Tea break' };
 function drawStash() {
   const el = $('#stash');
   if (!el) return;
@@ -112,6 +115,11 @@ function useStash() {
     }
     useBoost(6);
     toast('SPARE NOS!', 900);
+  } else if (id === 'teaBreak') {
+    game.stash = null;
+    drawStash();
+    teaBreak();
+    return true;
   } else {
     game.balance = Math.max(game.balance, game.balMax || 100);
     game.boostCharge = Math.min(100, game.boostCharge + 50);
@@ -122,6 +130,32 @@ function useStash() {
   drawStash();
   tutEv('action');
   return true;
+}
+/* Tea break: a proper pause when you're under the cosh, then a 3-2-1 back in with +20 balance */
+function teaBreak() {
+  resetInput();
+  game.paused = true;
+  holdClock();
+  ov.hidden = false;
+  ov.innerHTML = `<div class="card"><h1><small>Tea break</small>Take a breather</h1>
+    <div class="perks"><button class="perk" id="teaGo"><b>Back on the bike</b></button></div></div>`;
+  $('#teaGo').onclick = () => {
+    let n = 3;
+    ov.innerHTML = `<div class="card" style="align-items:center"><h1 id="teaN">3</h1></div>`;
+    const t = setInterval(() => {
+      n--;
+      if (n > 0) $('#teaN').textContent = n;
+      else {
+        clearInterval(t);
+        game.balance = Math.min(game.balance + 20, Math.max(game.balMax || 100, game.balance));
+        drawHearts();
+        game.paused = false;
+        ov.hidden = true;
+        freeClock();
+        tutEv('action');
+      }
+    }, 700);
+  };
 }
 function drawCurse() {
   const el = $('#curse');
