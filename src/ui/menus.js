@@ -11,6 +11,7 @@ import { startTutorial, tutDone } from './tutorial.js';
 import { anyNew, isNew, isUnlocked, markSeen } from '../game/unlocks.js';
 import { start } from '../game/run.js';
 import { $ } from '../core/constants.js';
+import { mountGlobe, unmountGlobe } from './levelGlobe.js';
 
 const ARENA_ART = {
   bigtop: 'repeating-linear-gradient(90deg,#b3151f 0 10px,#efe3cc 10px 20px)',
@@ -23,6 +24,7 @@ const ARENA_ART = {
 const ICO = n =>
   `<svg viewBox="0 0 24 24" class="hi">${{ gar: `<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-7h10v7"/>`, lb: `<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 6h3v2a3 3 0 0 1-3 3M7 6H4v2a3 3 0 0 0 3 3"/>`, learn: `<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><path d="M12 17.5v.5"/>`, set: `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>` }[n]}</svg>`;
 function showStart() {
+  unmountGlobe(); // leaving the Levels screen any way (back button, etc.) stops its globe
   app.classList.add('menu');
   parkBike();
   ov.hidden = false;
@@ -59,28 +61,41 @@ function showLevels() {
   const ok = '<svg viewBox="0 0 24 24" class="st-i"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     lk =
       '<svg viewBox="0 0 24 24" class="st-i"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
-  ov.innerHTML = `<div class="card"><h1>Levels</h1><div class="lvlist">${Object.entries(ARENAS)
+  const status = k => (k === arenaId ? ok + 'Selected' : arenaOpen(k) ? 'Unlocked' : lk + reqText(k).replace(' to unlock', ''));
+  ov.innerHTML = `<div class="card lvcard"><h1>Levels</h1><div class="lglobe" id="lglobe"></div><div class="lvlist">${Object.entries(ARENAS)
     .map(([k, A]) => {
       const open = arenaOpen(k);
-      return `<button class="lvrow${k === arenaId ? ' sel' : ''}${open ? '' : ' lock'}" data-lv="${k}">${isNew('arena', k) ? '<i class="newdot"></i>' : ''}<span class="lvname">${A.name}</span><span class="lvst">${k === arenaId ? ok + 'Selected' : open ? 'Unlocked' : lk + reqText(k).replace(' to unlock', '')}</span></button>`;
+      return `<button class="lvrow${k === arenaId ? ' sel' : ''}${open ? '' : ' lock'}" data-lv="${k}">${isNew('arena', k) ? '<i class="newdot"></i>' : ''}<span class="lvname">${A.name}</span><span class="lvst">${status(k)}</span></button>`;
     })
     .join('')}</div>
   <button class="go" id="lvBack">Back</button></div>`;
-  ov.querySelectorAll('[data-lv]').forEach(
-    b =>
-      (b.onclick = () => {
-        const k = b.dataset.lv;
-        if (!arenaOpen(k)) {
-          toast(reqText(k), 1600);
-          return;
-        }
-        if (isUnlocked('arena', k)) markSeen('arena', k);
-        setArena(k);
-        parkBike();
-        showLevels();
-      }),
-  );
-  $('#lvBack').onclick = showStart;
+  // the world globe: unlocked levels sit on it (the Moon base is a moon); locked ones aren't shown
+  const G = mountGlobe($('#lglobe'), arenaOpen, arenaId, k => pick(k));
+  G.setLabel(ARENAS[arenaId].name);
+  function pick(k) {
+    if (!arenaOpen(k)) {
+      toast(reqText(k), 1600);
+      return;
+    }
+    if (isUnlocked('arena', k)) markSeen('arena', k);
+    G.aim(k);
+    G.setLabel(ARENAS[k].name);
+    if (k === arenaId) return;
+    setArena(k);
+    parkBike();
+    // refresh the rows in place (rebuilding the screen would restart the globe)
+    ov.querySelectorAll('[data-lv]').forEach(b => {
+      const id = b.dataset.lv;
+      b.classList.toggle('sel', id === arenaId);
+      b.querySelector('.lvst').innerHTML = status(id);
+      if (id === k) b.querySelector('.newdot')?.remove();
+    });
+  }
+  ov.querySelectorAll('[data-lv]').forEach(b => (b.onclick = () => pick(b.dataset.lv)));
+  $('#lvBack').onclick = () => {
+    unmountGlobe();
+    showStart();
+  };
 }
 function showSettings() {
   ov.hidden = false;
