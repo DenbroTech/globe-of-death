@@ -32,13 +32,15 @@ const PREMIUM_SONGS = [
     mv: 0.08,
   },
   {
+    // a proper sea shanty: the traditional "Drunken Sailor" tune (public domain), D dorian, stomping 2-beat feel
     name: 'Sea Shanty',
-    prog: [50, 55, 50, 45],
-    kick: [0, 3, 6], snare: [2, 5], hat: 4,
-    bass: [0, null, 7, 0, null, 7, 5, null], bw: 'triangle', bcut: 900, bdec: 0.3, chord: [1, 4, 7],
-    mel: [62,0,65,69,0,65,62,0, 67,0,70,0,67,65,62,0, 69,0,72,0,69,65,69,0, 64,0,67,69,0,64,null,null,
-          74,0,72,69,0,65,69,0, 70,0,67,65,0,62,65,67, 69,0,65,62,0,65,69,0, 64,0,67,0,64,0,null,null],
-    mv: 0.09,
+    prog: [50, 50, 48, 48],
+    qual: [0, 0, 1, 1], // D minor, D minor, C major, C major
+    kick: [0, 4], snare: [2, 6], hat: 4, clap: [2, 6],
+    bass: [0, null, 7, null, 0, null, 7, null], bw: 'triangle', bcut: 900, bdec: 0.25, chord: [2, 6],
+    mel: [69,69,69,69,69,0,62,0, 65,0,69,0,null,null,null,null, 67,67,67,67,67,0,60,0, 64,0,67,0,null,null,null,null,
+          69,69,69,69,69,0,71,72, 74,0,72,0,69,0,67,0, 64,0,0,0,62,0,62,0, 62,0,null,null,null,null,null,null],
+    mv: 0.11,
   },
   {
     name: 'Royal Fanfare',
@@ -68,14 +70,14 @@ const PREMIUM_SONGS = [
     mv: 0.075,
   },
   {
-    // the Big Top's new main tune (SONGS index 18): a bouncy circus kart-racer romp in C
+    // the Big Top's main tune (SONGS index 18): a fast oom-pah circus march with chromatic runs, in C
     name: 'Big Top Bounce',
-    prog: [48, 53, 48, 43], maj: 1,
-    kick: [0, 4], snare: [2, 6], hat: 8,
-    bass: [0, null, 7, null, 0, null, 7, null], bw: 'triangle', bcut: 700, bdec: 0.3,
-    mel: [64,67,72,0,67,64,67,0, 65,69,72,0,69,65,69,0, 67,64,60,64,67,0,72,0, 71,0,74,0,71,67,0,null,
-          64,67,72,0,76,0,72,0, 77,0,76,74,72,0,69,0, 67,0,72,0,64,67,0,null, 74,0,71,0,67,0,null,null],
-    mv: 0.09,
+    prog: [48, 43, 48, 43], maj: 1,
+    kick: [0, 4], snare: [2, 6], hat: 8, clap: [6],
+    bass: [0, null, 7, null, 0, null, 7, null], bw: 'triangle', bcut: 800, bdec: 0.22,
+    mel: [72,71,72,71,72,0,67,0, 71,70,71,70,71,0,67,0, 72,71,72,76,74,72,71,69, 67,0,66,67,69,0,71,0,
+          72,71,72,71,72,0,67,0, 74,73,74,73,74,0,71,0, 72,74,76,74,72,71,69,71, 72,0,67,0,60,0,null,null],
+    mv: 0.1,
   },
 ];
 

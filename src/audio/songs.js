@@ -309,8 +309,9 @@ function playStep(S, k, bar, a, t, spb) {
     }
   }
   if (S.stab && S.stab.includes(k)) [12, 16, 19].forEach(i => voice(K.stab || 'organ', t, root + i, 0.03, 0.14));
-  if (S.chord && S.chord.includes(k)) [12, S.maj ? 16 : 15, 19].forEach(i => voice(K.stab || 'tri', t, root + i, 0.028, 0.16));
-  comp(t, root, k, S.maj, spb);
+  const maj = S.qual ? S.qual[bar % 4] : S.maj; // a song can set major/minor per bar
+  if (S.chord && S.chord.includes(k)) [12, maj ? 16 : 15, 19].forEach(i => voice(K.stab || 'tri', t, root + i, 0.028, 0.16));
+  comp(t, root, k, maj, spb);
   // stadium: tom fill rolling into every 4th bar
   if (K.toms && bar % 4 === 3 && k >= 5) tom(t, [196, 164, 130][k - 5]);
   if (S.rim && S.rim.includes(k)) rim(t);

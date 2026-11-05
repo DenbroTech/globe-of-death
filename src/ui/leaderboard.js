@@ -88,7 +88,7 @@ function boardRows(mode, hi) {
   // scores live on this phone, so rows show the run itself rather than a name
   const what = e =>
     mode === 'free'
-      ? `${e.riders} rider${e.riders === 1 ? '' : 's'}`
+      ? 'Free ride'
       : mode === 'freepts'
         ? `${fmtT(e.time)} ride`
         : e.win
@@ -100,7 +100,7 @@ function boardRows(mode, hi) {
   return `<ol class="lb">${L.map(
     (e, i) =>
       `<li class="${hi && hi === e ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${what(e)}${mode === 'show' || mode === 'combo' ? skulls(e) : ''}</span><span class="sc">${mode === 'free' ? fmtT(e.v) : mode === 'combo' ? '×' + e.v : e.v.toLocaleString()}</span>
-    <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : mode === 'freepts' ? e.riders + ' riders · ' : ''}${day(e)}</span></li>`,
+    <span class="sub">${mode === 'show' ? 'combo ' + e.combo + ' · ' : mode === 'combo' ? (e.score || 0).toLocaleString() + ' pts · ' : ''}${day(e)}</span></li>`,
   ).join('')}</ol>`;
 }
 function nameBox() {

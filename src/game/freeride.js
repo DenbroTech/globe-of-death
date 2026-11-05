@@ -167,7 +167,7 @@ function freeTick(dt, T, B) {
   if (!frWarned && frTime >= frNext - 3 && fr.length < pool.length) {
     frWarned = true;
     const s = pool.find(x => !x.busy);
-    if (s) toast(`${s.name} incoming!`, 1800);
+    if (s) toast(`${s.name} incoming!`, 2800);
   }
   if (frTime >= frNext && fr.length < pool.length) {
     frSpawn(B);
