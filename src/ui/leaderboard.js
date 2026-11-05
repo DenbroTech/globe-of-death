@@ -1,3 +1,4 @@
+import { prog, saveProg } from '../game/progress.js';
 import { game } from '../core/state.js';
 import { app } from '../render/renderer.js';
 import { crowd } from '../arenas/crowd.js';
@@ -23,6 +24,14 @@ const saveBoard = () => {
 const esc = t =>
   String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 function recordRun() {
+  // per-level record for the Levels screen: best show score and whether the show was finished there
+  if (!game.TUT && !game.FREE) {
+    const L = (prog.lv = prog.lv || {}),
+      r = (L[arenaId] = L[arenaId] || { best: 0, done: false });
+    r.best = Math.max(r.best || 0, Math.floor(game.score));
+    if (game.over && game.over.win) r.done = true;
+    saveProg();
+  }
   if (!game.TUT)
     submitScores(
       game.FREE

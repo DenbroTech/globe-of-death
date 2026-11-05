@@ -8,19 +8,20 @@ import * as THREE from 'three';
 
 // where each level sits: latitude / longitude in degrees ('moon' orbits instead)
 const SPOTS = {
-  bigtop: { lat: 48, lon: 8 },
-  beach: { lat: 18, lon: -72 },
-  stadium: { lat: 40, lon: -4 },
-  crane: { lat: 38, lon: 120 },
-  under: { lat: -12, lon: -140 },
+  bigtop: { lat: 46, lon: 4 }, // Europe
+  beach: { lat: 16, lon: -70 }, // Caribbean
+  stadium: { lat: -20, lon: -56 }, // South America
+  crane: { lat: 36, lon: 118 }, // East Asia
+  under: { lat: -12, lon: -140 }, // Pacific
   moon: { moon: true },
-  cavern: { lat: 30, lon: 62 },
-  garden: { lat: 53, lon: -2 },
+  cavern: { lat: 32, lon: 78 }, // Himalaya
+  garden: { lat: 50, lon: -96 }, // North America
   solar: { orbit: true },
-  pirate: { lat: -8, lon: -32 },
-  castle: { lat: 52, lon: 22 },
-  dino: { lat: -4, lon: 24 },
-  matrix: { lat: 62, lon: 95 },
+  pirate: { lat: -12, lon: -28 }, // Atlantic
+  castle: { lat: 58, lon: 42 }, // far east of Europe
+  dino: { lat: -4, lon: 24 }, // Africa
+  matrix: { lat: 64, lon: 100 }, // Siberia
+  arctic: { lat: -78, lon: 10 }, // South pole
 };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const onSphere = (lat, lon, r = 1) => {
@@ -162,6 +163,30 @@ function mapTexture() {
     g.fillStyle = ig;
     g.fillRect(0, y0 ? y0 - 20 : y1, W, 30);
   }
+  // ground decals so each level's model sits into the land / sea rather than on top of it
+  const decal = (id, col, rx, ry) => {
+    const sp = SPOTS[id];
+    if (!sp || sp.lat == null) return;
+    const [x, y] = px(sp.lat, sp.lon),
+      gr = g.createRadialGradient(x, y, 0, x, y, rx);
+    gr.addColorStop(0, col);
+    gr.addColorStop(0.7, col);
+    gr.addColorStop(1, col.replace(/[\d.]+\)$/, '0)'));
+    g.fillStyle = gr;
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, 0, 0, 7);
+    g.fill();
+  };
+  decal('beach', 'rgba(240,215,140,1)', 34, 22);
+  decal('garden', 'rgba(110,190,70,1)', 30, 20);
+  decal('stadium', 'rgba(70,160,80,1)', 26, 18);
+  decal('bigtop', 'rgba(200,170,110,1)', 24, 16);
+  decal('castle', 'rgba(150,140,125,1)', 26, 18);
+  decal('dino', 'rgba(40,95,35,1)', 40, 28);
+  decal('cavern', 'rgba(105,95,110,1)', 30, 20);
+  decal('matrix', 'rgba(20,60,35,1)', 28, 18);
+  decal('pirate', 'rgba(40,130,190,1)', 40, 26);
+  decal('under', 'rgba(20,70,140,1)', 50, 32);
   // sky crane city: a grey patch with a street grid
   {
     const [x, y] = px(SPOTS.crane.lat, SPOTS.crane.lon);
@@ -277,15 +302,17 @@ function marker(id) {
     g.userData.bubbles = true;
   }
   else if (id === 'cavern') {
-    // a rocky peak with a cave mouth and glowing crystals
-    add(new THREE.ConeGeometry(0.075, 0.1, 7), M(0x6a6170, { flatShading: true }), 0, 0.05);
-    add(new THREE.SphereGeometry(0.022, 10, 8), M(0x111015), 0, 0.02, 0.06);
+    // a dark hole in the ground with a rocky rim and crystals glowing down inside
+    const hole = add(new THREE.CircleGeometry(0.05, 20), new THREE.MeshBasicMaterial({ color: 0x07060a }), 0, 0.003);
+    hole.rotation.x = -Math.PI / 2;
+    const rim = add(new THREE.TorusGeometry(0.052, 0.012, 6, 20), M(0x6a6170, { flatShading: true }), 0, 0.004);
+    rim.rotation.x = Math.PI / 2;
     for (const [x, z, c] of [
-      [0.04, 0.05, 0x7ef2ff],
-      [-0.05, 0.04, 0xc58cff],
-      [0.06, -0.02, 0xff7ad9],
+      [0.015, 0.01, 0x7ef2ff],
+      [-0.018, 0.005, 0xc58cff],
+      [0.002, -0.02, 0xff7ad9],
     ])
-      add(new THREE.OctahedronGeometry(0.014, 0), M(c, { emissive: c, emissiveIntensity: 1 }), x, 0.015, z).scale.set(1, 2, 1);
+      add(new THREE.OctahedronGeometry(0.009, 0), M(c, { emissive: c, emissiveIntensity: 1.4 }), x, 0.006, z).scale.set(1, 1.8, 1);
   } else if (id === 'garden') {
     // a tiny shed, a fence and a giant flower
     add(new THREE.CylinderGeometry(0.07, 0.07, 0.004, 20), M(0x4c9a35), 0, 0.002);
@@ -326,13 +353,29 @@ function marker(id) {
     add(new THREE.BoxGeometry(0.07, 0.003, 0.07), new THREE.MeshBasicMaterial({ color: 0x1aff6a, wireframe: true }), 0, 0.002);
     for (let k = 0; k < 6; k++) add(new THREE.BoxGeometry(0.012, 0.02 + (k % 3) * 0.02, 0.012), M(0x0f5a2a, { emissive: 0x1aff6a, emissiveIntensity: 0.8 }), ((k % 3) - 1) * 0.025, 0.02, (k > 2 ? 1 : -1) * 0.015);
   }
+  else if (id === 'arctic') {
+    add(new THREE.SphereGeometry(0.03, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), M(0xf4f8fc), 0, 0);
+    add(new THREE.CircleGeometry(0.01, 10, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0xffb04a }), 0, 0.001, 0.03);
+    add(new THREE.CylinderGeometry(0.008, 0.012, 0.035, 8), M(0x15161c), 0.05, 0.018, 0.01);
+    add(new THREE.SphereGeometry(0.008, 8, 6), M(0xf4f4f0), 0.05, 0.016, 0.019);
+  }
   return g;
+}
+/* a little green flag planted by a level you've finished */
+function flag() {
+  const f = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.16, 6), new THREE.MeshStandardMaterial({ color: 0xdddddd }));
+  pole.position.y = 0.08;
+  const cloth = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.045), new THREE.MeshStandardMaterial({ color: 0x2fd35a, side: THREE.DoubleSide, emissive: 0x0f6a28, emissiveIntensity: 0.6 }));
+  cloth.position.set(0.035, 0.135, 0);
+  f.add(pole, cloth);
+  return f;
 }
 
 let R = null; // the live globe (renderer, scene…) while the Levels screen is open
 
 /* build the globe into `host`; `open(id)` says whether a level is unlocked; `sel` is the selected level */
-function mountGlobe(host, open, sel, onPick) {
+function mountGlobe(host, open, sel, onPick, done = () => false) {
   unmountGlobe();
   const w = host.clientWidth || 320,
     h = host.clientHeight || 260,
@@ -343,7 +386,9 @@ function mountGlobe(host, open, sel, onPick) {
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene(),
     cam = new THREE.PerspectiveCamera(32, w / h, 0.1, 50);
-  cam.position.set(0, 0.35, 5.2);
+  // pull back on tall screens so the whole planet fits the width
+  const dist = Math.max(5.2, 1.3 / (Math.tan((16 * Math.PI) / 180) * (w / h)));
+  cam.position.set(0, 0.35, dist);
   cam.lookAt(0, 0, 0);
   scene.add(new THREE.HemisphereLight(0xdfefff, 0x203040, 0.8));
   const sun = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -372,8 +417,15 @@ function mountGlobe(host, open, sel, onPick) {
       n = onSphere(sp.lat, sp.lon);
     m.position.copy(n);
     m.quaternion.setFromUnitVectors(V(0, 1, 0), n);
-    m.scale.setScalar(2.6);
+    m.scale.setScalar(1.9);
     planet.add(m);
+    if (done(id)) {
+      const f = flag();
+      f.position.copy(onSphere(sp.lat + 2.5, sp.lon + 2.5));
+      f.quaternion.setFromUnitVectors(V(0, 1, 0), f.position.clone().normalize());
+      f.scale.setScalar(1.6);
+      planet.add(f);
+    }
     pins[id] = { obj: m, normal: n };
   }
   // the Moon base: a moon on its own orbit (only once that level is unlocked)
@@ -443,14 +495,20 @@ function mountGlobe(host, open, sel, onPick) {
   // drag to spin by hand
   const el = renderer.domElement;
   el.addEventListener('pointerdown', e => {
-    drag = { x: e.clientX, q: planet.quaternion.clone(), moved: 0 };
+    drag = { x: e.clientX, y: e.clientY, q: planet.quaternion.clone(), moved: 0 };
     el.setPointerCapture(e.pointerId);
   });
   el.addEventListener('pointermove', e => {
     if (!drag) return;
     const dx = e.clientX - drag.x;
     drag.moved = Math.max(drag.moved, Math.abs(dx));
-    planet.quaternion.copy(drag.q).premultiply(new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), dx * 0.01));
+    const dy = e.clientY - drag.y;
+    drag.moved = Math.max(drag.moved, Math.abs(dy));
+    // spin freely: sideways turns it round, up/down tips it over (so the poles come into view)
+    planet.quaternion
+      .copy(drag.q)
+      .premultiply(new THREE.Quaternion().setFromAxisAngle(V(0, 1, 0), dx * 0.01))
+      .premultiply(new THREE.Quaternion().setFromAxisAngle(V(1, 0, 0), dy * 0.01));
     target.copy(planet.quaternion);
   });
   el.addEventListener('pointerup', e => {

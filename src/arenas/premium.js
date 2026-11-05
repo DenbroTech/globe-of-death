@@ -3,6 +3,7 @@ import { cv, tex } from '../render/textures.js';
 import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
+import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
 import { moreCastle, moreCavern, moreDino, moreGarden, moreMatrix, morePirate, moreSolar } from './premiumMore.js';
 
 /* ---------- the 7 premium arenas ----------
@@ -451,15 +452,15 @@ function buildSolar() {
       x.fillRect(i, 0, 1, 8);
     }
   });
-  const rg = new THREE.RingGeometry(4.3, 6.8, 96, 1),
+  const rg = new THREE.RingGeometry(3.7, 5.6, 128, 1),
     rp = rg.attributes.position,
     uv = rg.attributes.uv;
   for (let i = 0; i < rp.count; i++) {
     const r = Math.hypot(rp.getX(i), rp.getY(i));
-    uv.setXY(i, (r - 4.3) / 2.5, 0.5);
+    uv.setXY(i, (r - 3.7) / 1.9, 0.5);
   }
   const rings = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: ringTex, transparent: true, side: THREE.DoubleSide, depthWrite: false }));
-  rings.rotation.x = -Math.PI / 2 + 0.12;
+  rings.rotation.x = -Math.PI / 2 + 0.42; // tilted like Saturn's rings so it reads as going round the cage
   rings.position.y = 4.05;
   g.add(rings);
   // the floor is a slab of asteroid rock the crowd stands on, floating in space
@@ -531,9 +532,30 @@ function buildPirate() {
   // the sea, gently heaving
   const seaGeo = new THREE.PlaneGeometry(300, 300, 60, 60);
   seaGeo.rotateX(-Math.PI / 2);
-  const sea = new THREE.Mesh(seaGeo, std(0x1f6f93, { roughness: 0.25, metalness: 0.3, flatShading: true }));
+  const ripple = canvasTex(
+    256,
+    256,
+    (x, w, h) => {
+      x.fillStyle = '#1b6f8c';
+      x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 420; i++) {
+        x.strokeStyle = `rgba(${rnd() < 0.7 ? '150,220,235' : '10,60,90'},${0.15 + rnd() * 0.3})`;
+        x.lineWidth = 1 + rnd() * 2;
+        const y = rnd() * h,
+          x0 = rnd() * w;
+        x.beginPath();
+        x.moveTo(x0, y);
+        x.quadraticCurveTo(x0 + 10, y - 3, x0 + 20 + rnd() * 20, y);
+        x.stroke();
+      }
+    },
+    [24, 24],
+  );
+  const sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, map: ripple, roughness: 0.18, metalness: 0.15 }));
+  g.userData.ripple = ripple;
   sea.position.y = -1.1; // the hull sits in the water
   g.add(sea);
+  seaGeo.computeVertexNormals();
   const sp = seaGeo.attributes.position,
     base = Float32Array.from(sp.array);
   // the ship is its own group: scaled so the globe sits on a sensibly sized deck, and it rocks on the swell
@@ -708,6 +730,7 @@ function buildPirate() {
       sp.array[i * 3 + 1] = Math.sin(x * 0.08 + t * 1.2) * 0.6 + Math.cos((z - t * 7) * 0.1) * 0.55;
     }
     sp.needsUpdate = true;
+    ripple.offset.y = -(t * 0.05) % 1;
     sails.forEach(s => {
       const b = s.userData.base,
         a = s.geometry.attributes.position;
@@ -1094,9 +1117,232 @@ function buildMatrix() {
   return g;
 }
 
+
+/* ======================= 8. ARCTIC (south pole) ======================= */
+function lathe(points, segs = 20) {
+  return new THREE.LatheGeometry(points.map(([x, y]) => new THREE.Vector2(x, y)), segs);
+}
+function penguin() {
+  const p = new THREE.Group();
+  // a smooth lathe-turned body: black back, white front, orange beak and feet
+  const body = new THREE.Mesh(lathe([[0, 0], [0.42, 0.08], [0.55, 0.45], [0.5, 0.9], [0.36, 1.2], [0.3, 1.38], [0.33, 1.55], [0.25, 1.75], [0, 1.82]]), std(0x15161c, { roughness: 0.5 }));
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.46, 18, 14), std(0xf4f4f0, { roughness: 0.6 }));
+  belly.scale.set(0.85, 1.35, 0.6);
+  belly.position.set(0, 0.68, 0.2);
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10), std(0xf4f4f0));
+  face.scale.set(1, 0.9, 0.6);
+  face.position.set(0, 1.5, 0.2);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 8), std(0xff8a1a));
+  beak.rotation.x = Math.PI / 2;
+  beak.position.set(0, 1.5, 0.42);
+  p.add(body, belly, face, beak);
+  for (const x of [-0.1, 0.1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), std(0x111111));
+    eye.position.set(x, 1.6, 0.31);
+    p.add(eye);
+  }
+  const wings = [];
+  for (const sx of [-1, 1]) {
+    const w = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), std(0x15161c));
+    w.scale.set(0.12, 0.9, 0.35);
+    w.geometry.translate(0, -0.4, 0);
+    w.position.set(sx * 0.5, 1.15, 0);
+    p.add(w);
+    wings.push(w);
+    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 6), std(0xff8a1a));
+    foot.scale.set(1, 0.35, 1.6);
+    foot.position.set(sx * 0.18, 0.04, 0.15);
+    p.add(foot);
+  }
+  p.userData.wings = wings;
+  return p;
+}
+function buildArctic() {
+  const g = new THREE.Group(),
+    rnd = seeded(81);
+  // wind-swept snow
+  const snowTex = canvasTex(
+    256,
+    256,
+    (x, w, h) => {
+      x.fillStyle = '#e8f0f8';
+      x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2600; i++) {
+        x.fillStyle = rnd() < 0.5 ? 'rgba(170,195,225,.35)' : 'rgba(255,255,255,.8)';
+        x.fillRect(rnd() * w, rnd() * h, 6 + rnd() * 20, 1 + rnd() * 2);
+      }
+    },
+    [10, 10],
+  );
+  g.add(ground(160, std(0xffffff, { map: snowTex, roughness: 0.95 })));
+  // snow drifts
+  const drift = new THREE.SphereGeometry(1, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2);
+  g.add(
+    instances(drift, std(0xf2f6fb, { roughness: 1 }), Array.from({ length: 40 }, () => (o) => {
+      const [a, r] = [rnd() * 6.28, 24 + rnd() * 60];
+      o.position.set(Math.cos(a) * r, -0.2, Math.sin(a) * r);
+      o.scale.set(3 + rnd() * 7, 0.8 + rnd() * 1.8, 2 + rnd() * 4);
+      o.rotation.y = rnd() * 3;
+    })),
+  );
+  // icebergs and ice cliffs: faceted, glassy blue
+  const ice = std(0xbfe6ff, { roughness: 0.15, metalness: 0.05, flatShading: true, emissive: 0x2a5a8a, emissiveIntensity: 0.15 });
+  for (let i = 0; i < 14; i++) {
+    const a = rnd() * 6.28,
+      r = 55 + rnd() * 35,
+      m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), ice);
+    const p = m.geometry.attributes.position;
+    for (let k = 0; k < p.count; k++) p.setY(k, p.getY(k) * (0.8 + rnd() * 0.6) + (p.getY(k) > 0.3 ? rnd() * 0.5 : 0));
+    m.geometry.computeVertexNormals();
+    m.position.set(Math.cos(a) * r, 2, Math.sin(a) * r);
+    m.scale.set(6 + rnd() * 10, 6 + rnd() * 16, 6 + rnd() * 10);
+    m.rotation.y = rnd() * 3;
+    g.add(m);
+  }
+  // igloos: domes with block lines, a tunnel and a warm glow inside
+  const blocks = canvasTex(128, 64, (x, w, h) => {
+    x.fillStyle = '#f4f8fc';
+    x.fillRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(120,150,190,.55)';
+    for (let y = 0; y < h; y += 10) {
+      x.beginPath();
+      x.moveTo(0, y);
+      x.lineTo(w, y);
+      x.stroke();
+      for (let xx = (y / 10) % 2 ? 8 : 0; xx < w; xx += 16) {
+        x.beginPath();
+        x.moveTo(xx, y);
+        x.lineTo(xx, y + 10);
+        x.stroke();
+      }
+    }
+  });
+  for (let i = 0; i < 4; i++) {
+    const a = 0.9 + i * 1.6,
+      r = 30 + (i % 2) * 6,
+      ig = new THREE.Group();
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(3, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { map: blocks }));
+    const tun = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 2.4, 16, 1, true, 0, Math.PI), std(0xffffff, { map: blocks, side: THREE.DoubleSide }));
+    tun.rotation.set(Math.PI / 2, 0, 0);
+    tun.position.set(0, 0, 3);
+    const door = new THREE.Mesh(new THREE.CircleGeometry(0.9, 16, 0, Math.PI), new THREE.MeshBasicMaterial({ color: 0xffb04a }));
+    door.position.set(0, 0, 4.2);
+    const gl = glow('#ffb04a', 4, 0.7);
+    gl.position.set(0, 0.6, 4.3);
+    ig.add(dome, tun, door, gl);
+    ig.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    ig.lookAt(0, 0, 0);
+    g.add(ig);
+  }
+  // a waddle of penguins
+  const pens = Array.from({ length: 12 }, (_, i) => {
+    const p = penguin();
+    p.scale.setScalar(1.3 + rnd() * 0.5);
+    p.userData.r = 19 + (i % 4) * 2.2;
+    p.userData.a = rnd() * 6.28;
+    p.userData.s = (rnd() < 0.5 ? 1 : -1) * (0.02 + rnd() * 0.03);
+    p.userData.ph = rnd() * 6;
+    g.add(p);
+    return p;
+  });
+  // the aurora: wavy curtains of light across the sky
+  const aur = [];
+  ['#3dffb0', '#7a5cff', '#3dc8ff'].forEach((c, i) => {
+    const geo = new THREE.PlaneGeometry(160, 26, 60, 1),
+      grad = canvasTex(4, 128, (x, w, h) => {
+        const gg = x.createLinearGradient(0, 0, 0, h);
+        gg.addColorStop(0, c + '00');
+        gg.addColorStop(0.6, c + 'aa');
+        gg.addColorStop(1, c + '00');
+        x.fillStyle = gg;
+        x.fillRect(0, 0, w, h);
+      });
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: grad, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+    m.position.set(0, 52 + i * 6, -70 + i * 12);
+    m.rotation.x = 0.35;
+    m.userData.base = Float32Array.from(geo.attributes.position.array);
+    m.userData.ph = i * 2;
+    g.add(m);
+    aur.push(m);
+  });
+  // stars
+  const pos = new Float32Array(1500 * 3);
+  for (let i = 0; i < 1500; i++) {
+    const v = new V3(rnd() - 0.5, rnd() * 0.8 + 0.15, rnd() - 0.5).normalize().multiplyScalar(88);
+    pos.set([v.x, v.y, v.z], i * 3);
+  }
+  const sg = new THREE.BufferGeometry();
+  sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.3, fog: false })));
+  // the blizzard: snow streaming sideways on the wind
+  const NS = 1400,
+    sp = new Float32Array(NS * 3),
+    seed = Array.from({ length: NS }, () => [rnd() * 140 - 70, rnd() * 40, rnd() * 140 - 70, 0.6 + rnd()]);
+  const snowGeo = new THREE.BufferGeometry();
+  snowGeo.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+  const flakes = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.35, transparent: true, opacity: 0.85, depthWrite: false }));
+  flakes.frustumCulled = false;
+  g.add(flakes);
+  g.userData.tick = t => {
+    for (let i = 0; i < NS; i++) {
+      const [x, y, z, v] = seed[i];
+      sp[i * 3] = ((x + t * 14 * v + 70) % 140) - 70;
+      sp[i * 3 + 1] = ((y - t * 4 * v) % 40 + 40) % 40;
+      sp[i * 3 + 2] = z + Math.sin(t * 2 + i) * 1.5;
+    }
+    snowGeo.attributes.position.needsUpdate = true;
+    pens.forEach(p => {
+      const u = p.userData,
+        a = u.a + t * u.s;
+      p.position.set(Math.cos(a) * u.r, Math.abs(Math.sin(t * 6 + u.ph)) * 0.12, Math.sin(a) * u.r);
+      p.rotation.set(0, -a + (u.s > 0 ? Math.PI : 0), Math.sin(t * 6 + u.ph) * 0.12);
+      u.wings[0].rotation.z = 0.2 + Math.max(0, Math.sin(t * 3 + u.ph)) * 0.6;
+      u.wings[1].rotation.z = -u.wings[0].rotation.z;
+    });
+    aur.forEach(m => {
+      const b = m.userData.base,
+        a = m.geometry.attributes.position;
+      for (let i = 0; i < a.count; i++) a.array[i * 3 + 2] = Math.sin(b[i * 3] * 0.06 + t * 0.5 + m.userData.ph) * 8;
+      a.needsUpdate = true;
+      m.material.opacity = 0.6 + 0.3 * Math.sin(t * 0.4 + m.userData.ph);
+    });
+  };
+  return g;
+}
+
 /* ---------- arena table entries (merged into ARENAS) ---------- */
-const crowdRing = (o = {}) => Object.assign({ tiers: 6, r0: 14, dr: 1.4, y0: 0.5, dy: 0.8, gap: 0.66, stepCol: 0x55575e }, o);
+// lower stands (4 tiers) with two wide gaps, at angle 0 and opposite, so the scenery behind shows through
+const GAPS = [
+  [0.42, Math.PI - 0.84],
+  [Math.PI + 0.42, Math.PI - 0.84],
+];
+const crowdRing = (o = {}) => Object.assign({ tiers: 4, r0: 14, dr: 1.4, y0: 0.5, dy: 0.7, gap: 0.66, stepCol: 0x55575e, arcs: GAPS }, o);
 const PREMIUM = {
+  arctic: {
+    name: 'South pole',
+    premium: true,
+    songs: [19, 11],
+    env: {
+      bg: 0x0a1630,
+      fog: [0xa8c0dc, 40, 150],
+      sky: [
+        [0, '#06102a'],
+        [0.6, '#1d3a6a'],
+        [1, '#9ab8d8'],
+      ],
+      hemi: [0xdfefff, 0x6a7f99, 0.75],
+      sun: 0.9,
+      sunPos: [-40, 25, 30],
+      sunCol: 0xcfe4ff,
+      spots: 0.5,
+      spotCol: 0xdfefff,
+      beams: 0,
+      exp: 1.05,
+    },
+    crowdGlow: 0.5,
+    crowd: crowdRing({ stepCol: 0xcfdcea }),
+    build: buildArctic,
+  },
   cavern: {
     name: 'Crystal cavern',
     premium: true,
@@ -1139,7 +1385,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x6a4a2a }),
-    build: () => moreGarden(buildGarden()),
+    build: () => extraGarden(moreGarden(buildGarden())),
   },
   solar: {
     name: 'Solar system',
@@ -1189,7 +1435,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.35,
     // no stand: a few rows of people at the bow and the stern, standing on the deck
-    crowd: crowdRing({ r0: 7.4, tiers: 3, dr: 0.9, y0: 0, dy: 0.25, gap: 0.62, steps: false, empty: 0.15, arcs: [[Math.PI / 2 - 0.3, 0.6], [-Math.PI / 2 - 0.3, 0.6]] }),
+    crowd: crowdRing({ r0: 7.4, tiers: 3, dr: 0.9, y0: 0.35, dy: 0.3, gap: 0.62, steps: false, empty: 0.15, arcs: [[Math.PI / 2 - 0.3, 0.6], [-Math.PI / 2 - 0.3, 0.6]] }),
     build: () => morePirate(buildPirate()),
   },
   castle: {
@@ -1203,17 +1449,17 @@ const PREMIUM = {
         [0, '#3f6fb8'],
         [1, '#cfe2f8'],
       ],
-      hemi: [0xf0f4ff, 0x5a5040, 0.5],
-      sun: 1.05,
+      hemi: [0xf0f4ff, 0x7a7060, 0.85],
+      sun: 1.5,
       sunPos: [30, 50, 20],
       sunCol: 0xfff0d8,
       spots: 0.4,
       beams: 0,
-      exp: 1.0,
+      exp: 1.15,
     },
-    crowdGlow: 0.35,
+    crowdGlow: 0.65,
     crowd: crowdRing({ stepCol: 0x6e6a62 }),
-    build: () => moreCastle(buildCastle()),
+    build: () => extraCastle(moreCastle(buildCastle())),
   },
   dino: {
     name: 'Dino valley',
@@ -1257,7 +1503,7 @@ const PREMIUM = {
     },
     crowdGlow: 1.0,
     crowd: crowdRing({ stepCol: 0x0a2a14 }),
-    build: () => moreMatrix(buildMatrix()),
+    build: () => extraMatrix(moreMatrix(buildMatrix())),
   },
 };
 

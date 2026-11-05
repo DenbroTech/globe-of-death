@@ -79,10 +79,21 @@ const PREMIUM_SONGS = [
           72,71,72,71,72,0,67,0, 74,73,74,73,74,0,71,0, 72,74,76,74,72,71,69,71, 72,0,67,0,60,0,null,null],
     mv: 0.1,
   },
+  {
+    // South pole (SONGS index 19): a sparkly, skating major-key tune
+    name: 'Snowball Slide',
+    prog: [53, 50, 46, 48], qual: [1, 0, 1, 1], maj: 1,
+    kick: [0, 4], snare: [2, 6], hat: 8, shk: [1, 3, 5, 7],
+    bass: [0, null, 7, null, 12, null, 7, null], bw: 'triangle', bcut: 900, bdec: 0.3,
+    mel: [72,0,69,0,65,0,69,72, 74,0,69,0,65,0,62,0, 70,0,74,0,77,0,74,70, 72,0,67,0,64,0,null,null,
+          77,0,76,74,72,0,69,0, 74,0,72,69,65,0,69,0, 70,0,74,0,72,70,69,67, 65,0,null,null,null,null,null,null],
+    mv: 0.09,
+  },
 ];
 
 /* their sound worlds (merged into THEMES) */
 const PREMIUM_THEMES = {
+  arctic: { mel: 'drop', lead: 'glass', stab: 'glass', hit: 'drop', jump: 'drop', sfx: 1.3, bass: 'pluck', kick: 'soft', snare: 'brush', comp: 'uke', pad: 'space', space: { dur: 3.2, decay: 1.8, wet: 0.35 }, echo: { beats: 0.75, fb: 0.35, wet: 0.2 }, amb: null },
   cavern: { mel: 'drop', lead: 'glass', stab: 'glass', hit: 'drop', jump: 'drop', sfx: 1.3, bass: 'sub', kick: 'soft', snare: 'snare', comp: 'none', pad: 'dark', space: { dur: 4.5, decay: 1.5, wet: 0.45 }, echo: { beats: 0.75, fb: 0.45, wet: 0.25 }, amb: 'deep' },
   garden: { mel: 'drop', lead: 'uke', stab: 'uke', hit: 'pluck', jump: 'pluck', sfx: 1.15, bass: 'pluck', kick: 'soft', snare: 'brush', comp: 'uke', space: { dur: 0.8, decay: 3, wet: 0.1 }, amb: null },
   solar: { mel: 'pluck', lead: 'synth', stab: 'glass', hit: 'blip', jump: 'blip', sfx: 1.25, bass: 'sub', kick: 'punch', snare: 'snare', comp: 'arp', pad: 'space', space: { dur: 4, decay: 1.6, wet: 0.35 }, echo: { beats: 1.5, fb: 0.45, wet: 0.25 }, amb: 'space' },
