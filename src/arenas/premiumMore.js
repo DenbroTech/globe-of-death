@@ -182,7 +182,7 @@ function moreGarden(g) {
   // giant sunflowers facing the arena
   for (let i = 0; i < 4; i++) {
     const a = 1.1 + i * 0.5,
-      r = 40 + i * 4,
+      r = 50 + i * 4,
       f = new THREE.Group(),
       h = 22 + i * 3;
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, h, 10), std(0x4f8f2a));
@@ -311,6 +311,54 @@ function moreGarden(g) {
     c.position.set(Math.cos(a) * 80, 55 + rnd() * 15, Math.sin(a) * 80);
     g.add(c);
   }
+  // a column of ants marching round the lawn, carrying crumbs
+  const NA = 18,
+    seg = new THREE.SphereGeometry(0.22, 10, 8),
+    antM = std(0x1a0f0a, { roughness: 0.35, metalness: 0.2 }),
+    antBody = new THREE.InstancedMesh(seg, antM, NA * 3),
+    antLeg = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 4), antM, NA * 6),
+    crumbs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 0.25, 0.3), std(0xe8c27a), NA);
+  g.add(antBody, antLeg, crumbs);
+  const _o = new THREE.Object3D(),
+    _m = new THREE.Matrix4();
+  const ants = t => {
+    for (let i = 0; i < NA; i++) {
+      const a = t * 0.06 - i * 0.045,
+        r = 10.5 + Math.sin(a * 5) * 0.6,
+        x = Math.cos(a) * r,
+        z = Math.sin(a) * r,
+        heading = -a - Math.PI / 2;
+      _o.rotation.set(0, heading, 0);
+      // head, thorax, abdomen along the heading
+      [
+        [0.42, 0.24, 1],
+        [0, 0.26, 0.8],
+        [-0.5, 0.3, 1.35],
+      ].forEach(([f, y, sc], k) => {
+        _o.position.set(x + Math.sin(heading + Math.PI / 2) * f, y, z + Math.cos(heading + Math.PI / 2) * f);
+        _o.scale.set(sc, sc * 0.8, sc * (k === 2 ? 1.4 : 1));
+        _o.updateMatrix();
+        antBody.setMatrixAt(i * 3 + k, _o.matrix);
+      });
+      // six legs scurrying
+      for (let k = 0; k < 6; k++) {
+        const side = k % 2 ? 1 : -1,
+          f = (Math.floor(k / 2) - 1) * 0.22,
+          sw = Math.sin(t * 18 + i + k * 1.7) * 0.4;
+        _o.position.set(x + Math.sin(heading + Math.PI / 2) * f + Math.sin(heading) * side * 0.25, 0.15, z + Math.cos(heading + Math.PI / 2) * f + Math.cos(heading) * side * 0.25);
+        _o.rotation.set(0, heading + sw, side * 1.1);
+        _o.scale.set(1, 1, 1);
+        _o.updateMatrix();
+        antLeg.setMatrixAt(i * 6 + k, _o.matrix);
+      }
+      // every other ant carries a crumb
+      _o.rotation.set(0, heading, 0);
+      _o.position.set(x, i % 2 ? 0.62 : -5, z);
+      _o.updateMatrix();
+      crumbs.setMatrixAt(i, _o.matrix);
+    }
+    antBody.instanceMatrix.needsUpdate = antLeg.instanceMatrix.needsUpdate = crumbs.instanceMatrix.needsUpdate = true;
+  };
   let hopAt = 0;
   addTick(g, t => {
     bees.forEach(b => {
@@ -328,6 +376,7 @@ function moreGarden(g) {
     frog.position.y = 0.6 + h;
     frog.rotation.y = Math.floor(t / 4) * 1.3;
     ball.rotation.y = t * 0.1;
+    ants(t);
   });
   return g;
 }
@@ -432,6 +481,7 @@ function morePirate(g) {
   const rnd = seeded(141);
   const wood = std(0x5e3a1e),
     brass = std(0xc9952a, { metalness: 0.8, roughness: 0.3 });
+  const ship = g.userData.ship || g;
   // the ship's wheel at the stern
   const wheel = new THREE.Group();
   wheel.add(new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.14, 8, 28), wood));
@@ -444,7 +494,7 @@ function morePirate(g) {
   wheel.position.set(0, 3, 36);
   const post = new THREE.Mesh(new THREE.BoxGeometry(0.8, 3, 0.8), wood);
   post.position.set(0, 1.5, 36.6);
-  g.add(wheel, post);
+  ship.add(wheel, post);
   // lanterns hanging along the rails
   for (let i = 0; i < 8; i++) {
     const z = -30 + i * 9,
@@ -453,20 +503,20 @@ function morePirate(g) {
       gl = glow('#ffb347', 3.2, 0.85);
     lamp.position.set(x, 3.1, z);
     gl.position.set(x, 3.1, z);
-    g.add(lamp, gl);
+    ship.add(lamp, gl);
   }
   // coiled ropes, crates and a pile of gold coins by the chest
-  g.add(instances(new THREE.TorusGeometry(0.9, 0.25, 6, 16).rotateX(Math.PI / 2), std(0xb08a50), 6, (o, i) => o.position.set(-12 + (i % 3) * 1.2, 0.25 + Math.floor(i / 3) * 0.4, -30 + (i % 3) * 0.5)));
-  g.add(instances(new THREE.BoxGeometry(1.6, 1.6, 1.6), std(0x8a5a2e), 5, (o, i) => (o.position.set(9 + (i % 3) * 1.7, 0.8 + (i > 2 ? 1.6 : 0), 20), o.rotation.y = i * 0.3)));
+  ship.add(instances(new THREE.TorusGeometry(0.9, 0.25, 6, 16).rotateX(Math.PI / 2), std(0xb08a50), 6, (o, i) => o.position.set(-12 + (i % 3) * 1.2, 0.25 + Math.floor(i / 3) * 0.4, -30 + (i % 3) * 0.5)));
+  ship.add(instances(new THREE.BoxGeometry(1.6, 1.6, 1.6), std(0x8a5a2e), 5, (o, i) => (o.position.set(9 + (i % 3) * 1.7, 0.8 + (i > 2 ? 1.6 : 0), 20), o.rotation.y = i * 0.3)));
   const coin = new THREE.CylinderGeometry(0.25, 0.25, 0.06, 12);
-  g.add(instances(coin, brass, 60, o => {
+  ship.add(instances(coin, brass, 60, o => {
     o.position.set(11 + (rnd() - 0.5) * 3, 0.05 + rnd() * 0.5, -10 + rnd() * 2);
     o.rotation.set(rnd() * 3, rnd() * 3, 0);
   }));
   const sparkles = Array.from({ length: 5 }, (_, i) => {
     const s = glow('#fff2a8', 1.5, 1);
     s.position.set(10 + i * 0.6, 0.6, -9.5 + (i % 2));
-    g.add(s);
+    ship.add(s);
     return s;
   });
   // a parrot circling the main mast
@@ -486,7 +536,7 @@ function morePirate(g) {
     wr = new THREE.Mesh(wg, wm);
   wr.rotation.y = Math.PI;
   parrot.add(pb, tail, beak, wl, wr);
-  g.add(parrot);
+  ship.add(parrot);
   // shark fins circling the ship
   const finG = new THREE.ConeGeometry(0.9, 2.2, 3);
   finG.scale(0.25, 1, 1);
@@ -496,12 +546,84 @@ function morePirate(g) {
     g.add(f);
     return f;
   });
-  // cannon smoke puffs now and then
-  const puffs = Array.from({ length: 4 }, (_, i) => {
-    const p = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#dddddd'), transparent: true, depthWrite: false, opacity: 0 }));
-    p.userData = { side: i % 2 ? 1 : -1, z: -18 + i * 10, ph: i * 3.3 };
-    g.add(p);
-    return p;
+  // a rival galleon on the horizon: every so often our cannons fire, a ball arcs over, it bursts into
+  // flame and sinks; a new one sails in later
+  const rival = new THREE.Group(),
+    dark = std(0x2a1a10);
+  const rhull = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), dark);
+  rhull.scale.set(9, 3.5, 3);
+  rival.add(rhull);
+  const rdeck = new THREE.Mesh(new THREE.BoxGeometry(16, 0.6, 5.2), std(0x5e3a1e));
+  rival.add(rdeck);
+  const blackSail = new THREE.MeshStandardMaterial({ color: 0x1c1c1c, side: THREE.DoubleSide });
+  for (const [x, h] of [
+    [-3.5, 13],
+    [3.5, 15],
+  ]) {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, h, 6), wood);
+    m.position.set(x, h / 2, 0);
+    const sl = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 1).scale(1, 1, 1), blackSail);
+    sl.geometry = new THREE.PlaneGeometry(6, 6);
+    sl.position.set(x, h * 0.55, 0);
+    sl.rotation.y = Math.PI / 2;
+    rival.add(m, sl);
+  }
+  const rflag = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.4), new THREE.MeshBasicMaterial({ color: 0xc7202c, side: THREE.DoubleSide }));
+  rflag.position.set(3.5, 15.6, 1.2);
+  rflag.rotation.y = Math.PI / 2;
+  rival.add(rflag);
+  g.add(rival);
+  const fireGlow = glow('#ff7a2a', 14, 0);
+  g.add(fireGlow);
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), std(0x111111, { metalness: 0.6 }));
+  g.add(ball);
+  const flash = glow('#ffd27a', 5, 0),
+    smoke = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#cfcfcf'), transparent: true, depthWrite: false, opacity: 0 })),
+    boom = glow('#ffb040', 20, 0),
+    splash = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, opacity: 0 }));
+  g.add(flash, smoke, boom, splash);
+  const RIV = new V3(62, -0.8, -30),
+    gun = new V3(),
+    P_ = 26; // seconds per battle
+  const battle = t => {
+    const k = t % P_;
+    // the cannon on our starboard side, in world space (the ship rocks)
+    gun.set(15.5, 1.3, -8).applyMatrix4(ship.matrixWorld);
+    // rival: sails in, gets hit at 7.5 s, burns and sinks, gone until the next battle
+    const sink = Math.max(0, Math.min(1, (k - 7.5) / 7));
+    rival.visible = k < 16;
+    rival.position.set(RIV.x, RIV.y - sink * sink * 14 + Math.sin(t * 0.8) * 0.3, RIV.z + (k < 7.5 ? (7.5 - k) * 3 : 0));
+    rival.rotation.set(sink * 0.5, -0.4, Math.sin(t * 0.6) * 0.04 + sink * 0.7);
+    fireGlow.position.copy(rival.position).add(new V3(0, 5, 0));
+    fireGlow.material.opacity = k > 7.5 && k < 13 ? 0.9 * (1 - (k - 7.5) / 5.5) * (0.8 + 0.2 * Math.sin(t * 20)) : 0;
+    // FIRE at 6 s: muzzle flash + smoke at the gun, ball arcs over 1.5 s
+    const fk = k - 6;
+    flash.position.copy(gun);
+    flash.material.opacity = fk > 0 && fk < 0.25 ? 1 - fk / 0.25 : 0;
+    smoke.position.copy(gun).add(new V3(fk * 1.5, fk * 1.2, 0));
+    smoke.scale.setScalar(2 + Math.max(0, fk) * 5);
+    smoke.material.opacity = fk > 0 && fk < 2.5 ? 0.75 * (1 - fk / 2.5) : 0;
+    ball.visible = fk > 0 && fk < 1.5;
+    if (ball.visible) {
+      const f = fk / 1.5,
+        tgt = rival.position.clone().add(new V3(0, 2, 0));
+      ball.position.copy(gun).lerp(tgt, f);
+      ball.position.y += Math.sin(f * Math.PI) * 12;
+    }
+    // hit: a fireball and a big splash
+    const hk = k - 7.5;
+    boom.position.copy(rival.position).add(new V3(0, 3, 0));
+    boom.material.opacity = hk > 0 && hk < 0.8 ? 1 - hk / 0.8 : 0;
+    boom.scale.setScalar(10 + Math.max(0, hk) * 25);
+    splash.position.copy(rival.position).add(new V3(-2, 2 + Math.max(0, hk) * 6, 3));
+    splash.scale.set(6, 4 + Math.max(0, hk) * 14, 1);
+    splash.material.opacity = hk > 0 && hk < 1.2 ? 0.8 * (1 - hk / 1.2) : 0;
+  };
+  // foam streaming back along both sides of the hull: we're under way
+  const foam = Array.from({ length: 22 }, () => {
+    const f = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex('#ffffff'), transparent: true, depthWrite: false, opacity: 0 }));
+    g.add(f);
+    return f;
   });
   // pink sunset clouds
   for (let i = 0; i < 7; i++) {
@@ -524,12 +646,12 @@ function morePirate(g) {
       f.position.set(Math.cos(b) * u.r, -1.3, Math.sin(b) * u.r);
       f.rotation.y = -b;
     });
-    puffs.forEach(p => {
-      const u = p.userData,
-        k = ((t + u.ph) % 9) / 9;
-      p.position.set(u.side * (17 + k * 6), 1.5 + k * 3, u.z);
-      p.scale.setScalar(1 + k * 8);
-      p.material.opacity = k < 0.5 ? 0.7 * (1 - k * 2) : 0;
+    battle(t);
+    foam.forEach((f, i) => {
+      const k = ((t * 0.35 + i / foam.length) % 1);
+      f.position.set((i % 2 ? 1 : -1) * (10.5 + k * 3), -1.7, -26 + k * 62);
+      f.material.opacity = 0.55 * Math.sin(k * Math.PI);
+      f.scale.setScalar(2 + k * 4);
     });
   });
   return g;

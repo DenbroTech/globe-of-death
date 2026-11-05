@@ -80,6 +80,12 @@ function arenaTick(t) {
   if (b.g.userData.tick) b.g.userData.tick(t);
   if (b.life) b.life(t);
   if (game.bubbleMesh && game.bubbleMesh.visible) bubbleMat.uniforms.uTime.value = t;
+  // the pirate ship rocks on the swell: the globe and crowd move with the deck
+  if (A.env.rock) {
+    globe.rotation.z = Math.sin(t * 0.6) * 0.035;
+    globe.rotation.x = Math.sin(t * 0.43) * 0.02;
+    b.c.grp.rotation.copy(globe.rotation);
+  }
   if (A.env.sway) {
     globe.rotation.z = Math.sin(t * 0.5) * 0.035;
     globe.rotation.x = Math.sin(t * 0.37) * 0.025;

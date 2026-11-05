@@ -228,18 +228,49 @@ function buildGarden() {
     [10, 10],
   );
   g.add(ground(140, std(0x6aa84a, { map: lawn })));
-  // giant grass blades all round (we're tiny)
-  const blade = new THREE.ConeGeometry(0.5, 1, 3);
-  blade.translate(0, 0.5, 0);
-  const gm = std(0x4f9a35, { flatShading: true });
+  // giant grass blades all round (we're tiny): curved, tapering blades with a dark base and a light tip
+  const blade = (() => {
+    const segs = 5,
+      pos = [],
+      col = [],
+      idx = [];
+    for (let i = 0; i <= segs; i++) {
+      const f = i / segs,
+        w = 0.5 * (1 - f) + 0.02,
+        bend = f * f * 0.8;
+      pos.push(-w, f, bend, w, f, bend);
+      const c = new THREE.Color(0x2c6b1e).lerp(new THREE.Color(0x9ad25a), f);
+      col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      if (i < segs) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return geo;
+  })();
+  const gm = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.7 });
+  // tall blades from just behind the stands out to the fence
   g.add(
-    instances(blade, gm, Array.from({ length: 420 }, () => (o) => {
+    instances(blade, gm, Array.from({ length: 1400 }, () => (o) => {
       const a = rnd() * 6.28,
-        r = 32 + rnd() * 60;
+        r = 42 + rnd() * 52,
+        h = 5 + rnd() * rnd() * 16;
       o.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-      o.rotation.set((rnd() - 0.5) * 0.5, rnd() * 6.28, (rnd() - 0.5) * 0.5);
-      const h = 4 + rnd() * 12;
-      o.scale.set(0.5 + rnd() * 0.6, h, 0.25);
+      o.rotation.set(0, rnd() * 6.28, (rnd() - 0.5) * 0.3);
+      o.scale.set(0.8 + rnd() * 0.9, h, h * 0.35);
+    })),
+  );
+  // a short lawn layer closer in
+  g.add(
+    instances(blade, gm, Array.from({ length: 1100 }, () => (o) => {
+      const a = rnd() * 6.28,
+        r = 21.5 + rnd() * 10,
+        h = 0.8 + rnd() * 2.2;
+      o.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      o.rotation.set(0, rnd() * 6.28, 0);
+      o.scale.set(0.5 + rnd() * 0.4, h, h * 0.4);
     })),
   );
   // giant flowers: stem, leaves, petals and a centre
@@ -249,7 +280,7 @@ function buildGarden() {
   petal.translate(1.5, 0, 0);
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * 6.28 + rnd() * 0.4,
-      r = 24 + rnd() * 22,
+      r = 40 + rnd() * 18,
       h = 9 + rnd() * 12,
       x = Math.cos(a) * r,
       z = Math.sin(a) * r,
@@ -505,6 +536,11 @@ function buildPirate() {
   g.add(sea);
   const sp = seaGeo.attributes.position,
     base = Float32Array.from(sp.array);
+  // the ship is its own group: scaled so the globe sits on a sensibly sized deck, and it rocks on the swell
+  const ship = new THREE.Group();
+  ship.scale.setScalar(0.6);
+  g.add(ship);
+  g.userData.ship = ship;
   // the ship's deck: planks, hull sides, rails, masts, sails and rigging
   const planks = canvasTex(
     256,
@@ -528,25 +564,25 @@ function buildPirate() {
   deckShape.lineTo(-16, -40);
   const deck = new THREE.Mesh(new THREE.ShapeGeometry(deckShape, 24), std(0xffffff, { map: planks }));
   deck.rotation.x = -Math.PI / 2;
-  g.add(deck);
+  ship.add(deck);
   const hullGeo = new THREE.ExtrudeGeometry(deckShape, { depth: 9, bevelEnabled: true, bevelSize: 1.2, bevelThickness: 1.5, bevelSegments: 2, curveSegments: 24 });
   const hull = new THREE.Mesh(hullGeo, std(0x4a2a16, { roughness: 0.8 }));
   hull.rotation.x = -Math.PI / 2;
   hull.position.y = -9.05;
-  g.add(hull);
+  ship.add(hull);
   // gold stripe along the hull
   const stripe = new THREE.Mesh(new THREE.ExtrudeGeometry(deckShape, { depth: 0.6, bevelEnabled: false, curveSegments: 24 }), std(0xc9952a, { metalness: 0.6, roughness: 0.4 }));
   stripe.rotation.x = -Math.PI / 2;
   stripe.position.y = -2.4;
   stripe.scale.set(1.04, 1.02, 1);
-  g.add(stripe);
+  ship.add(stripe);
   // rail posts round the edge
   const pts = deckShape.getSpacedPoints(70);
-  g.add(
+  ship.add(
     instances(new THREE.CylinderGeometry(0.18, 0.22, 2.2, 6), std(0x6b4223), pts.map(p => (o) => o.position.set(p.x, 1.1, -p.y))),
   );
   const railCurve = new THREE.CatmullRomCurve3(pts.map(p => new V3(p.x, 2.2, -p.y)), true);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(railCurve, 140, 0.2, 6, true), std(0x6b4223)));
+  ship.add(new THREE.Mesh(new THREE.TubeGeometry(railCurve, 140, 0.2, 6, true), std(0x6b4223)));
   // masts, yards, sails
   const wood = std(0x5e3a1e),
     sailTex = canvasTex(128, 128, (x, w, h) => {
@@ -568,28 +604,28 @@ function buildPirate() {
   ].forEach(([x, z, h]) => {
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, h, 10), wood);
     mast.position.set(x, h / 2, z);
-    g.add(mast);
+    ship.add(mast);
     [0.42, 0.72].forEach((k, i) => {
       const w = 18 - i * 5,
         yard = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, w, 8), wood);
       yard.rotation.z = Math.PI / 2;
       yard.position.set(x, h * k + 7, z);
-      g.add(yard);
+      ship.add(yard);
       const sg = new THREE.PlaneGeometry(w - 1, 8, 10, 4);
       const sail = new THREE.Mesh(sg, sailM);
       sail.position.set(x, h * k + 3, z + 0.3);
       sail.userData.base = Float32Array.from(sg.attributes.position.array);
-      g.add(sail);
+      ship.add(sail);
       sails.push(sail);
     });
     // crow's nest
     const nest = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.2, 1.4, 12, 1, true), std(0x5e3a1e, { side: THREE.DoubleSide }));
     nest.position.set(x, h - 2, z);
-    g.add(nest);
+    ship.add(nest);
     // rigging lines down to the rails
     const rope = new THREE.LineBasicMaterial({ color: 0x2a1c10 });
     for (const sx of [-14, 14])
-      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new V3(x, h - 2, z), new V3(sx, 2.2, z - 4), new V3(x, h * 0.6, z), new V3(sx, 2.2, z + 4)]), rope));
+      ship.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new V3(x, h - 2, z), new V3(sx, 2.2, z - 4), new V3(x, h * 0.6, z), new V3(sx, 2.2, z + 4)]), rope));
   });
   // the Jolly Roger
   const flagTex = canvasTex(128, 80, (x, w, h) => {
@@ -619,7 +655,7 @@ function buildPirate() {
   const flag = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ map: flagTex, side: THREE.DoubleSide }));
   flag.position.set(0, 42, -26);
   flag.userData.base = Float32Array.from(flagGeo.attributes.position.array);
-  g.add(flag);
+  ship.add(flag);
   // cannons along both sides
   const iron = std(0x232327, { metalness: 0.7, roughness: 0.4 });
   for (const side of [-1, 1])
@@ -629,34 +665,28 @@ function buildPirate() {
       c.position.set(side * 15.5, 1.1, -18 + i * 10);
       const carriage = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1.6), wood);
       carriage.position.set(side * 14.2, 0.4, -18 + i * 10);
-      g.add(c, carriage);
+      ship.add(c, carriage);
     }
   // barrels and a treasure chest
   const barrel = new THREE.CylinderGeometry(0.9, 0.9, 1.8, 14);
-  g.add(instances(barrel, std(0x7a4a24), Array.from({ length: 8 }, (_, i) => (o) => o.position.set(-11 + (i % 2) * 2, 0.9 + (i > 5 ? 1.8 : 0), 14 + (i % 4)))));
+  ship.add(instances(barrel, std(0x7a4a24), Array.from({ length: 8 }, (_, i) => (o) => o.position.set(-11 + (i % 2) * 2, 0.9 + (i > 5 ? 1.8 : 0), 14 + (i % 4)))));
   const chest = new THREE.Mesh(new THREE.BoxGeometry(2.8, 1.6, 1.8), std(0x6b3d1b));
   chest.position.set(11, 0.8, -12);
   const gold = glow('#ffcf4a', 4, 0.8);
   gold.position.set(11, 1.9, -12);
-  g.add(chest, gold);
+  ship.add(chest, gold);
   // a distant island and a rival ship
+  const island = new THREE.Group();
   const isl = new THREE.Mesh(new THREE.ConeGeometry(18, 7, 24), std(0xe2c983));
-  isl.position.set(-80, -2, -60);
-  g.add(isl);
+  isl.position.y = -2;
+  island.add(isl);
   for (let i = 0; i < 4; i++) {
     const palm = makePalm(8 + rnd() * 4, rnd);
-    palm.position.set(-80 + (rnd() - 0.5) * 14, 1.2, -60 + (rnd() - 0.5) * 10);
-    g.add(palm);
+    palm.position.set((rnd() - 0.5) * 14, 1.2, (rnd() - 0.5) * 10);
+    island.add(palm);
   }
-  const rival = new THREE.Group();
-  const rh = new THREE.Mesh(new THREE.BoxGeometry(14, 4, 4), std(0x2a1a10));
-  const rm = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 14, 6), wood);
-  rm.position.y = 8;
-  const rs = new THREE.Mesh(new THREE.PlaneGeometry(9, 7), new THREE.MeshStandardMaterial({ color: 0x222222, side: THREE.DoubleSide }));
-  rs.position.y = 9;
-  rival.add(rh, rm, rs);
-  rival.position.set(70, -1, -90);
-  g.add(rival);
+  island.position.set(-80, 0, -60);
+  g.add(island);
   // gulls
   const gullGeo = new THREE.BufferGeometry();
   gullGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, -1, 0.3, 0, -0.2, 0, 0.2, 0, 0, 0, 1, 0.3, 0, 0.2, 0, 0.2]), 3));
@@ -670,7 +700,8 @@ function buildPirate() {
     for (let i = 0; i < sp.count; i++) {
       const x = base[i * 3],
         z = base[i * 3 + 2];
-      sp.array[i * 3 + 1] = Math.sin(x * 0.08 + t * 1.2) * 0.6 + Math.cos(z * 0.1 + t) * 0.5;
+      // waves roll from bow to stern: we're under way
+      sp.array[i * 3 + 1] = Math.sin(x * 0.08 + t * 1.2) * 0.6 + Math.cos((z - t * 7) * 0.1) * 0.55;
     }
     sp.needsUpdate = true;
     sails.forEach(s => {
@@ -679,7 +710,9 @@ function buildPirate() {
       for (let i = 0; i < a.count; i++) {
         const x = b[i * 3],
           y = b[i * 3 + 1];
-        a.array[i * 3 + 2] = (1 - (x * x) / 80) * (1 - (y * y) / 30) * (1.6 + Math.sin(t * 1.5) * 0.3);
+        // billowing in the wind, with gusts and ripples running across the canvas
+        const gust = 1.7 + Math.sin(t * 0.7) * 0.5 + Math.sin(t * 2.3) * 0.25;
+        a.array[i * 3 + 2] = (1 - (x * x) / 80) * (1 - (y * y) / 30) * gust + Math.sin(x * 0.7 - t * 4) * 0.12 * (1 - (y * y) / 30);
       }
       a.needsUpdate = true;
     });
@@ -689,7 +722,12 @@ function buildPirate() {
       for (let i = 0; i < a.count; i++) a.array[i * 3 + 2] = Math.sin(b[i * 3] * 1.1 - t * 6) * 0.35 * (b[i * 3] / 7);
       a.needsUpdate = true;
     }
-    rival.position.x = 70 - ((t * 0.6) % 160);
+    // the island slides past as we sail
+    island.position.z = -160 + ((t * 2.5) % 320);
+    // the ship rocks on the swell (the globe and crowd rock with it: env.rock in arenaTick)
+    ship.rotation.z = Math.sin(t * 0.6) * 0.035;
+    ship.rotation.x = Math.sin(t * 0.43) * 0.02;
+    ship.position.y = Math.sin(t * 0.9) * 0.15;
     gulls.forEach(m => {
       const u = m.userData,
         a = t * u.s + u.ph;
@@ -1143,9 +1181,10 @@ const PREMIUM = {
       spots: 0.3,
       beams: 0,
       exp: 1.0,
+      rock: 1,
     },
     crowdGlow: 0.35,
-    crowd: crowdRing({ r0: 13.5, tiers: 4, stepCol: 0x6b4223 }),
+    crowd: crowdRing({ r0: 7.6, tiers: 3, dr: 1.1, stepCol: 0x6b4223 }),
     build: () => morePirate(buildPirate()),
   },
   castle: {
