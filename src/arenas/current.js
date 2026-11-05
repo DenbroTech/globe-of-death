@@ -1,3 +1,4 @@
+import { MOBILE } from '../render/renderer.js';
 import * as THREE from 'three';
 import { game } from '../core/state.js';
 import { renderer, scene } from '../render/renderer.js';
@@ -72,12 +73,14 @@ function setArena(id) {
   globe.rotation.set(0, 0, 0);
   if (moodLP) applyArenaAudio(id);
 }
+let lifeF = 0;
 function arenaTick(t) {
   NEON_T.value = t;
   const A = ARENAS[arenaId],
     b = built[arenaId];
   if (!b) return;
-  if (b.g.userData.tick) b.g.userData.tick(t);
+  // background life: every frame on desktop, every other frame on phones (cuts CPU, the eye can't tell)
+  if (b.g.userData.tick && (!MOBILE || (lifeF++ & 1) === 0)) b.g.userData.tick(t);
   if (b.life) b.life(t);
   if (game.bubbleMesh && game.bubbleMesh.visible) bubbleMat.uniforms.uTime.value = t;
   // the pirate ship rocks on the swell: the globe and crowd move with the deck

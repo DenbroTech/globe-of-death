@@ -10,22 +10,25 @@ export function initRenderer() {
   app = $('#app');
   canvas = $('#c');
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: true });
+    // phones: no logarithmic depth buffer (it writes depth per pixel and kills early-z: a big GPU/heat cost)
+    const phone = Math.min(innerWidth, innerHeight) < 700;
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, logarithmicDepthBuffer: !phone, powerPreference: phone ? 'low-power' : 'high-performance' });
   } catch (e) {
     bootFail('This device or app view could not start 3D graphics (WebGL). Try opening the link in Safari or Chrome.');
     return;
   }
   MOBILE = Math.min(innerWidth, innerHeight) < 700;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.5 : 2));
+  // phones start at 1.25× resolution; the frame loop lowers it further if the phone struggles (see perf in loop.js)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MOBILE ? 1.25 : 2));
   renderer.outputEncoding = THREE.sRGBEncoding;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = !MOBILE; // the real-time shadow pass re-draws every caster each frame: off on phones
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x07060a);
   scene.fog = new THREE.Fog(0x07060a, 22, 50);
-  camera = new THREE.PerspectiveCamera(72, 1, 0.05, 420);
+  camera = new THREE.PerspectiveCamera(72, 1, MOBILE ? 0.1 : 0.05, 420);
   (function () {
     const pm = new THREE.PMREMGenerator(renderer),
       es = new THREE.Scene();

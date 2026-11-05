@@ -380,7 +380,7 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
   const w = host.clientWidth || 320,
     h = host.clientHeight || 260,
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
   renderer.setSize(w, h);
   renderer.outputEncoding = THREE.sRGBEncoding;
   host.appendChild(renderer.domElement);
@@ -534,8 +534,11 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
     if (best) onPick(best);
   });
 
-  const loop = () => {
+  let last = 0;
+  const loop = ms => {
     raf = requestAnimationFrame(loop);
+    if (ms - last < 31) return; // 30 fps is plenty for a spinning globe (saves battery / heat)
+    last = ms;
     const t = (performance.now() - t0) / 1000;
     if (!drag) planet.quaternion.slerp(target, 0.12);
     if (ringed) {

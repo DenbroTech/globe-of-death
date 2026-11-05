@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { game } from '../core/state.js';
-import { camera, renderer, scene } from '../render/renderer.js';
+import { MOBILE, camera, renderer, scene } from '../render/renderer.js';
 import { inner } from '../render/lights.js';
 import { crowd } from '../arenas/crowd.js';
 import { ARENAS, turntable } from '../arenas/arenas.js';
@@ -106,8 +106,41 @@ function riderPos(s, B, out) {
   }
   return out.normalize();
 }
+/* ---------- performance governor (phones overheated) ----------
+   - frame cap: 60 fps in a ride (120 Hz phones would otherwise draw twice as often), 30 fps in menus / paused
+   - nothing behind the full-screen Levels globe is drawn
+   - adaptive resolution: if frames run slow, the pixel ratio steps down (to 0.7); if there's headroom, back up */
+let lastDraw = 0,
+  perfT = 0,
+  perfN = 0,
+  perfAcc = 0;
+function governor(nowMs) {
+  const live = game.running && !game.over && !game.paused;
+  if (nowMs - lastDraw < (live ? 15.5 : 31)) return false;
+  const gap = nowMs - lastDraw;
+  lastDraw = nowMs;
+  if (live && gap < 200) {
+    perfAcc += gap;
+    perfN++;
+    if (nowMs - perfT > 2500 && perfN > 20) {
+      const avg = perfAcc / perfN,
+        pr = renderer.getPixelRatio(),
+        cap = MOBILE ? 1.25 : 2;
+      if (avg > 21 && pr > 0.71) renderer.setPixelRatio(Math.max(0.7, pr - 0.15));
+      else if (avg < 17.5 && pr < cap - 0.01) renderer.setPixelRatio(Math.min(cap, pr + 0.1));
+      perfT = nowMs;
+      perfN = perfAcc = 0;
+    }
+  }
+  return true;
+}
 function frame(nowMs) {
   requestAnimationFrame(frame);
+  if (!governor(nowMs)) return;
+  if (ov && !ov.hidden && ov.classList.contains('lvdim') && !game.running) {
+    game.lastT = nowMs; // the Levels globe covers the screen: skip the arena behind it
+    return;
+  }
   const dt = Math.min(0.05, (nowMs - game.lastT) / 1000);
   game.lastT = nowMs;
   // safety net: a ride must never sit paused with no card on screen; show the pause menu instead
