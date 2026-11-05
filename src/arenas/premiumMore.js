@@ -649,9 +649,9 @@ function morePirate(g) {
     battle(t);
     foam.forEach((f, i) => {
       const k = ((t * 0.35 + i / foam.length) % 1);
-      f.position.set((i % 2 ? 1 : -1) * (10.5 + k * 3), -1.7, -26 + k * 62);
+      f.position.set((i % 2 ? 1 : -1) * (5 + k * 2.5), -0.9, -14 + k * 30);
       f.material.opacity = 0.55 * Math.sin(k * Math.PI);
-      f.scale.setScalar(2 + k * 4);
+      f.scale.setScalar(1.2 + k * 2.5);
     });
   });
   return g;

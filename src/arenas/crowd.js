@@ -14,41 +14,42 @@ function makeCrowd(c) {
     roughness: 0.95,
     side: THREE.DoubleSide,
   });
-  for (let t = 0; t < c.tiers; t++) {
-    const r = c.r0 + t * c.dr,
-      y = c.y0 + t * c.dy,
-      arc = c.arc || Math.PI * 2,
-      a0 = c.a0 || 0,
-      n = Math.floor((arc * r) / c.gap);
-    if (c.steps !== false) {
-      const st = new THREE.Mesh(new THREE.RingGeometry(r - c.dr / 2, r + c.dr / 2, 96, 1, a0, arc), stepMat);
-      st.rotation.x = Math.PI / 2;
-      st.position.y = y - 0.02;
-      st.receiveShadow = true;
-      grp.add(st);
-      if (t > 0 && c.dy > 0) {
-        const rs = new THREE.Mesh(
-          new THREE.CylinderGeometry(r - c.dr / 2, r - c.dr / 2, c.dy, 96, 1, true, Math.PI / 2 - a0 - arc, arc),
-          stepMat,
-        );
-        rs.position.y = y - c.dy / 2;
-        grp.add(rs);
+  // `arcs`: several [start, length] pieces per tier (e.g. people at both ends of the pirate ship)
+  const ARCS = c.arcs || [[c.a0 || 0, c.arc || Math.PI * 2]];
+  for (let t = 0; t < c.tiers; t++)
+    for (const [a0, arc] of ARCS) {
+      const r = c.r0 + t * c.dr,
+        y = c.y0 + t * c.dy,
+        n = Math.floor((arc * r) / c.gap);
+      if (c.steps !== false) {
+        const st = new THREE.Mesh(new THREE.RingGeometry(r - c.dr / 2, r + c.dr / 2, 96, 1, a0, arc), stepMat);
+        st.rotation.x = Math.PI / 2;
+        st.position.y = y - 0.02;
+        st.receiveShadow = true;
+        grp.add(st);
+        if (t > 0 && c.dy > 0) {
+          const rs = new THREE.Mesh(
+            new THREE.CylinderGeometry(r - c.dr / 2, r - c.dr / 2, c.dy, 96, 1, true, Math.PI / 2 - a0 - arc, arc),
+            stepMat,
+          );
+          rs.position.y = y - c.dy / 2;
+          grp.add(rs);
+        }
+      }
+      for (let i = 0; i < n; i++) {
+        if (Math.random() < (c.empty ?? 0.08)) continue;
+        list.push({
+          a: a0 + ((i + 0.5) / n) * arc + (Math.random() - 0.5) * 0.01,
+          r: r + (Math.random() - 0.5) * 0.2,
+          y,
+          ph: Math.random() * 6.28,
+          s: (c.size || 1.25) * (0.9 + Math.random() * 0.2),
+          v: CHARS[Math.floor(Math.random() * CHARS.length)],
+          hype: 0,
+          up: -1,
+        });
       }
     }
-    for (let i = 0; i < n; i++) {
-      if (Math.random() < (c.empty ?? 0.08)) continue;
-      list.push({
-        a: a0 + ((i + 0.5) / n) * arc + (Math.random() - 0.5) * 0.01,
-        r: r + (Math.random() - 0.5) * 0.2,
-        y,
-        ph: Math.random() * 6.28,
-        s: (c.size || 1.25) * (0.9 + Math.random() * 0.2),
-        v: CHARS[Math.floor(Math.random() * CHARS.length)],
-        hype: 0,
-        up: -1,
-      });
-    }
-  }
   {
     const ord = list.map((_, i) => i).sort(() => Math.random() - 0.5);
     ord.forEach((li, r) => (list[li].rank = r));
