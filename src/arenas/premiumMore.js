@@ -248,25 +248,6 @@ function moreGarden(g) {
   hose2.position.y = 1.3;
   hose2.scale.setScalar(0.85);
   g.add(hose, hose2);
-  // a giant football
-  const ballTex = canvasTex(256, 128, (x, w, h) => {
-    x.fillStyle = '#f4f4f4';
-    x.fillRect(0, 0, w, h);
-    x.fillStyle = '#111';
-    for (let i = 0; i < 12; i++) {
-      x.beginPath();
-      const cx = (i % 6) * 44 + (i > 5 ? 22 : 0),
-        cy = i > 5 ? 90 : 36;
-      for (let k = 0; k < 5; k++) {
-        const a = (k / 5) * 6.28;
-        x[k ? 'lineTo' : 'moveTo'](cx + Math.cos(a) * 14, cy + Math.sin(a) * 14);
-      }
-      x.fill();
-    }
-  });
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(4, 28, 18), std(0xffffff, { map: ballTex, roughness: 0.5 }));
-  ball.position.set(22, 4, 34);
-  g.add(ball);
   // daisies scattered in the lawn
   const daisy = new THREE.CircleGeometry(0.5, 8);
   daisy.rotateX(-Math.PI / 2);
@@ -377,7 +358,6 @@ function moreGarden(g) {
     const h = k < 0.15 ? Math.sin((k / 0.15) * Math.PI) * 2.5 : 0;
     frog.position.y = 0.6 + h;
     frog.rotation.y = Math.floor(t / 4) * 1.3;
-    ball.rotation.y = t * 0.1;
     ants(t);
   });
   return g;

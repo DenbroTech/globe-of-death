@@ -912,10 +912,10 @@ function buildDino() {
     256,
     256,
     (x, w, h) => {
-      x.fillStyle = '#6a7a35';
+      x.fillStyle = '#4f9a2a';
       x.fillRect(0, 0, w, h);
       for (let i = 0; i < 3000; i++) {
-        x.fillStyle = ['#7a5a33', '#5d7030', '#8a9a45', '#4f6028'][i % 4];
+        x.fillStyle = ['#8a5a2a', '#3f8a22', '#7cc23a', '#2f6e1c'][i % 4];
         x.globalAlpha = 0.4;
         x.fillRect(rnd() * w, rnd() * h, 3 + rnd() * 6, 3 + rnd() * 6);
       }
@@ -947,7 +947,7 @@ function buildDino() {
       const f = i / 3,
         w = 0.1 * (1 - f) + 0.01;
       pos.push(-w, f, f * f * 0.3, w, f, f * f * 0.3);
-      const c = new THREE.Color(0x3d5a22).lerp(new THREE.Color(0x9ab454), f);
+      const c = new THREE.Color(0x2f7a1a).lerp(new THREE.Color(0x8fd640), f);
       col.push(c.r, c.g, c.b, c.r, c.g, c.b);
       if (i < 3) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
     }
@@ -1428,14 +1428,14 @@ const PREMIUM = {
     premium: true,
     songs: [16, 6],
     env: {
-      bg: 0xd8c08a,
-      fog: [0xd8c79a, 70, 220],
+      bg: 0x8ec8f0,
+      fog: [0xbfe0f0, 80, 240],
       sky: [
-        [0, '#7aa0c8'],
-        [0.6, '#e8c890'],
-        [1, '#f4dca8'],
+        [0, '#3f8fe0'],
+        [0.6, '#9ad0f4'],
+        [1, '#ffe7b0'],
       ],
-      hemi: [0xfff0d0, 0x40502a, 0.5],
+      hemi: [0xfff4d8, 0x3f7a22, 0.6],
       sun: 1.1,
       sunPos: [-30, 45, 40],
       sunCol: 0xffe2b0,

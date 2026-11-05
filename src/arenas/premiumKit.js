@@ -228,7 +228,7 @@ function kitDino(g) {
     const a = (i / 46) * Math.PI * 2 + Math.sin(i * 7.3) * 0.06,
       r = 58 + ((i * 37) % 30),
       kind = i % 3 === 0 ? 'palm-detailed-bend' : i % 3 === 1 ? 'tree-large' : 'palm-detailed-straight';
-    put(g, kind, Math.cos(a) * r, 0, Math.sin(a) * r, a * 3, kind === 'tree-large' ? 9 + (i % 4) : 4 + (i % 3));
+    put(g, kind, Math.cos(a) * r, 0, Math.sin(a) * r, a * 3, (kind === 'tree-large' ? 9 + (i % 4) : 4 + (i % 3)) * 0.6);
   }
   const herd = [];
   const add = (name, len, r, speed, ph, clip) =>

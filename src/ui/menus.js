@@ -64,7 +64,9 @@ function showLevels() {
     lk = '<svg viewBox="0 0 24 24" class="st-i"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
     flagI = '<svg viewBox="0 0 24 24" class="st-i lvflag"><path d="M6 21V4"/><path d="M6 4h11l-2.5 4L17 12H6" fill="currentColor"/></svg>';
   const rec = k => (prog.lv && prog.lv[k]) || { best: 0, done: false },
-    best = k => (rec(k).best ? rec(k).best.toLocaleString() + ' pts' : 'No score yet'),
+    // the best for the mode picked below: show points, or free ride points
+    score = k => (game.gameMode === 'free' ? rec(k).free : rec(k).best) || 0,
+    best = k => (score(k) ? score(k).toLocaleString() + ' pts' : 'No score yet'),
     status = k => (!arenaOpen(k) ? lk + reqText(k).replace(' to unlock', '') : rec(k).done ? flagI + 'Completed' : k === arenaId ? ok + 'Selected' : 'Unlocked');
   // full-screen globe; the current level sits in a bar at the bottom, ▼ opens the full list
   ov.innerHTML = `<div class="lvfull">
@@ -79,13 +81,13 @@ function showLevels() {
     <div class="lvlist">${Object.entries(ARENAS)
       .map(
         ([k, A]) =>
-          `<button class="lvrow${k === arenaId ? ' sel' : ''}${arenaOpen(k) ? '' : ' lock'}" data-lv="${k}">${isNew('arena', k) ? '<i class="newdot"></i>' : ''}<span class="lvname">${A.name}<small>${arenaOpen(k) ? best(k) : ''}</small></span><span class="lvst">${status(k)}</span></button>`,
+          `<button class="lvrow${k === arenaId ? ' sel' : ''}${arenaOpen(k) ? '' : ' lock'}" data-lv="${k}">${isNew('arena', k) ? '<i class="newdot"></i>' : ''}<span class="lvname">${A.name}<small class="lvbest">${arenaOpen(k) ? best(k) : ''}</small></span><span class="lvst">${status(k)}</span></button>`,
       )
       .join('')}</div></div></div>`;
   const G = mountGlobe($('#lglobe'), arenaOpen, arenaId, k => pick(k), k => rec(k).done);
   const bar = () => {
     $('#lvbn').textContent = ARENAS[arenaId].name;
-    $('#lvbs').innerHTML = (rec(arenaId).done ? flagI + 'Completed · ' : '') + 'Best ' + (rec(arenaId).best || 0).toLocaleString();
+    $('#lvbs').innerHTML = (rec(arenaId).done ? flagI + 'Completed · ' : '') + 'Best ' + score(arenaId).toLocaleString();
     G.setLabel(ARENAS[arenaId].name);
   };
   bar();
@@ -125,6 +127,9 @@ function showLevels() {
           localStorage.setItem('god-mode', game.gameMode);
         } catch (e) {}
         ov.querySelectorAll('[data-lmode]').forEach(x => x.setAttribute('aria-pressed', x === b));
+        // scores follow the mode
+        ov.querySelectorAll('[data-lv]').forEach(r => arenaOpen(r.dataset.lv) && (r.querySelector('.lvbest').textContent = best(r.dataset.lv)));
+        bar();
       }),
   );
   $('#lvRide').onclick = () => {

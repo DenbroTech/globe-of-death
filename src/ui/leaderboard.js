@@ -24,12 +24,16 @@ const saveBoard = () => {
 const esc = t =>
   String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 function recordRun() {
-  // per-level record for the Levels screen: best show score and whether the show was finished there
-  if (!game.TUT && !game.FREE) {
+  // per-level record for the Levels screen: best show score, whether the show was finished there, best free ride
+  // (free ride keeps its own best per level in `free`)
+  if (!game.TUT) {
     const L = (prog.lv = prog.lv || {}),
       r = (L[arenaId] = L[arenaId] || { best: 0, done: false });
-    r.best = Math.max(r.best || 0, Math.floor(game.score));
-    if (game.over && game.over.win) r.done = true;
+    if (game.FREE) r.free = Math.max(r.free || 0, Math.floor(game.score));
+    else {
+      r.best = Math.max(r.best || 0, Math.floor(game.score));
+      if (game.over && game.over.win) r.done = true;
+    }
     saveProg();
   }
   if (!game.TUT)
