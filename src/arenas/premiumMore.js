@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { cv, tex } from '../render/textures.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
+import { flap, mkBird, mkWing } from './life.js';
 
 /* ---------- second detail pass for the premium arenas ----------
    Each moreX(g) adds extra scenery and life to the group built in premium.js and chains onto its tick. */
@@ -530,13 +531,11 @@ function morePirate(g) {
   const beak = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.4, 6), std(0xffd040));
   beak.rotation.x = Math.PI / 2;
   beak.position.z = 0.85;
-  const wg = new THREE.PlaneGeometry(1.4, 0.6);
-  wg.translate(0.7, 0, 0);
   const wm = new THREE.MeshStandardMaterial({ color: 0x2fae3a, side: THREE.DoubleSide });
-  const wl = new THREE.Mesh(wg, wm),
-    wr = new THREE.Mesh(wg, wm);
-  wr.rotation.y = Math.PI;
-  parrot.add(pb, tail, beak, wl, wr);
+  const wl = mkWing(wm, { span: 1.6, chord: 0.6 }),
+    wr = mkWing(wm, { span: 1.6, chord: 0.6, mirror: true });
+  parrot.add(pb, tail, beak, wl.root, wr.root);
+  parrot.wings = [wl, wr];
   ship.add(parrot);
   // shark fins circling the ship
   const finG = new THREE.ConeGeometry(0.9, 2.2, 3);
@@ -640,8 +639,7 @@ function morePirate(g) {
     const a = t * 0.45;
     parrot.position.set(Math.cos(a) * 8, 30 + Math.sin(t) * 2, -26 + Math.sin(a) * 8);
     parrot.rotation.y = -a;
-    wl.rotation.z = Math.sin(t * 12) * 0.7;
-    wr.rotation.z = -Math.sin(t * 12) * 0.7;
+    flap(parrot, t * 11, 0.75);
     fins.forEach(f => {
       const u = f.userData,
         b = t * u.s + u.ph;
@@ -737,10 +735,8 @@ function moreCastle(g) {
   }
   const flags = []; // (tower flags now come with the Kenney castle)
   // doves circling
-  const doveG = new THREE.BufferGeometry();
-  doveG.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, -0.9, 0.25, 0, -0.2, 0, 0.3, 0, 0, 0, 0.9, 0.25, 0, 0.2, 0, 0.3]), 3));
   const doves = Array.from({ length: 6 }, () => {
-    const d = new THREE.Mesh(doveG, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+    const d = mkBird(0xffffff, 1.3);
     d.userData = { r: 15 + rnd() * 20, h: 20 + rnd() * 10, s: 0.2 + rnd() * 0.15, ph: rnd() * 6 };
     g.add(d);
     return d;
@@ -758,7 +754,7 @@ function moreCastle(g) {
         a = t * u.s + u.ph;
       d.position.set(Math.cos(a) * u.r, u.h, Math.sin(a) * u.r);
       d.rotation.y = -a;
-      d.scale.y = 1 + Math.sin(t * 9 + u.ph) * 0.7;
+      flap(d, t * 8 + u.ph, 0.7);
     });
   });
   return g;

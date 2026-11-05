@@ -4,6 +4,7 @@ import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
 import { model } from './models.js';
+import { flap, mkBird, mkWing } from './life.js';
 import { kitArctic, kitCastle, kitDino, kitGarden, kitPirate } from './premiumKit.js';
 import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
 import { moreCastle, moreCavern, moreDino, moreGarden, moreMatrix, morePirate, moreSolar } from './premiumMore.js';
@@ -174,14 +175,21 @@ function buildCavern() {
     glows.push(gl);
   }
   // bats flitting overhead
-  const batGeo = new THREE.BufferGeometry();
-  batGeo.setAttribute(
-    'position',
-    new THREE.BufferAttribute(new Float32Array([0, 0, 0, -0.9, 0.15, -0.2, -0.4, 0, 0.3, 0, 0, 0, 0.9, 0.15, -0.2, 0.4, 0, 0.3]), 3),
-  );
-  batGeo.computeVertexNormals();
+  const batM = new THREE.MeshBasicMaterial({ color: 0x0b0a0e, side: THREE.DoubleSide }),
+    batBody = new THREE.SphereGeometry(0.16, 8, 6);
+  const bat = () => {
+    // jointed membrane wings: broad, barely swept
+    const b = new THREE.Group(),
+      L = mkWing(batM, { span: 0.95, chord: 0.42, arm: 0.4, sweep: 0.15 }),
+      Rw = mkWing(batM, { span: 0.95, chord: 0.42, arm: 0.4, sweep: 0.15, mirror: true }),
+      body = new THREE.Mesh(batBody, batM);
+    body.scale.set(0.9, 0.8, 1.6);
+    b.add(L.root, Rw.root, body);
+    b.wings = [L, Rw];
+    return b;
+  };
   const bats = Array.from({ length: 14 }, (_, i) => {
-    const b = new THREE.Mesh(batGeo, new THREE.MeshBasicMaterial({ color: 0x0b0a0e, side: THREE.DoubleSide }));
+    const b = bat();
     b.userData = { r: 14 + rnd() * 20, h: 14 + rnd() * 16, s: 0.25 + rnd() * 0.35, ph: rnd() * 6.28 };
     g.add(b);
     return b;
@@ -201,7 +209,7 @@ function buildCavern() {
         a = t * u.s + u.ph;
       b.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 2 + u.ph) * 1.5, Math.sin(a) * u.r);
       b.rotation.y = -a;
-      b.scale.set(1, 1 + Math.sin(t * 18 + u.ph) * 0.8, 1);
+      flap(b, t * 16 + u.ph, 0.95);
     });
     drips.forEach(d => {
       const u = d.userData,
@@ -382,6 +390,7 @@ function buildGarden() {
   });
   const wing = new THREE.CircleGeometry(1, 12);
   wing.translate(1, 0, 0);
+  wing.rotateX(-Math.PI / 2); // lie flat; flapping turns them about the body (z) axis
   const flyers = Array.from({ length: 7 }, (_, i) => {
     const b = new THREE.Group(),
       col = [0xff8a1f, 0x4fa8ff, 0xffe14a, 0xff5fb0][i % 4],
@@ -406,11 +415,11 @@ function buildGarden() {
     flyers.forEach(b => {
       const u = b.userData,
         a = t * u.s + u.ph,
-        f = Math.sin(t * 14 + u.ph) * 0.9;
-      b.position.set(Math.cos(a) * u.rad, u.h + Math.sin(t * 0.9 + u.ph) * 2, Math.sin(a) * u.rad);
+        f = 0.5 + Math.sin(t * 14 + u.ph) * 0.85; // wings clap up together, then sweep down
+      b.position.set(Math.cos(a) * u.rad, u.h + Math.sin(t * 0.9 + u.ph) * 2 + Math.sin(t * 14 + u.ph) * 0.15, Math.sin(a) * u.rad);
       b.rotation.y = -a;
-      u.l.rotation.x = f;
-      u.r.rotation.x = -f;
+      u.l.rotation.z = f;
+      u.r.rotation.z = f;
     });
   };
   return g;
@@ -505,7 +514,7 @@ function buildSolar() {
   g.userData.tick = t => {
     planets.forEach(m => {
       const u = m.userData,
-        a = t * u.s + u.ph;
+        a = t * u.s * 0.25 + u.ph; // slow, stately orbits
       m.position.set(Math.cos(a) * u.d, 6 + Math.sin(a) * u.d * u.tilt, Math.sin(a) * u.d);
       m.rotation.y = t * 0.3;
     });
@@ -711,10 +720,8 @@ function buildPirate() {
   g.add(island);
   g.userData.island = island;
   // gulls
-  const gullGeo = new THREE.BufferGeometry();
-  gullGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, -1, 0.3, 0, -0.2, 0, 0.2, 0, 0, 0, 1, 0.3, 0, 0.2, 0, 0.2]), 3));
   const gulls = Array.from({ length: 8 }, () => {
-    const m = new THREE.Mesh(gullGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide }));
+    const m = mkBird(0xffffff, 1.7);
     m.userData = { r: 20 + rnd() * 30, h: 22 + rnd() * 12, s: 0.15 + rnd() * 0.2, ph: rnd() * 6 };
     g.add(m);
     return m;
@@ -757,7 +764,7 @@ function buildPirate() {
         a = t * u.s + u.ph;
       m.position.set(Math.cos(a) * u.r, u.h, Math.sin(a) * u.r);
       m.rotation.y = -a;
-      m.scale.y = 1 + Math.sin(t * 8 + u.ph) * 0.6;
+      flap(m, t * 6 + u.ph, 0.75 * (0.15 + 0.85 * Math.min(1, Math.max(0, Math.sin(t * 0.35 + u.ph * 1.7) * 2 + 0.6))));
     });
   };
   return g;
@@ -885,22 +892,16 @@ function longNeck(col) {
 function pterosaur() {
   const p = new THREE.Group(),
     m = new THREE.MeshStandardMaterial({ color: 0x7a4a3a, side: THREE.DoubleSide, roughness: 0.8 });
-  const wingShape = new THREE.Shape();
-  wingShape.moveTo(0, 0);
-  wingShape.lineTo(5, 0.6);
-  wingShape.lineTo(3.4, -1.2);
-  wingShape.lineTo(0, -0.8);
-  const wg = new THREE.ShapeGeometry(wingShape);
-  wg.rotateX(-Math.PI / 2);
-  const l = new THREE.Mesh(wg, m),
-    r = new THREE.Mesh(wg, m);
-  r.scale.x = -1;
+  // big jointed membrane wings; it flies nose toward -z, so the leading edges face -z
+  const l = mkWing(m, { span: 5, chord: 1.5, arm: 0.42, sweep: 0.3 }),
+    r = mkWing(m, { span: 5, chord: 1.5, arm: 0.42, sweep: 0.3, mirror: true });
+  l.root.scale.z = r.root.scale.z = -1;
   const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 3, 8), m);
   body.rotation.x = Math.PI / 2;
   const crest = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1.6, 6), m);
   crest.rotation.x = -2.2;
   crest.position.set(0, 0.4, -1.6);
-  p.add(l, r, body, crest);
+  p.add(l.root, r.root, body, crest);
   p.userData.wings = [l, r];
   return p;
 }
@@ -1004,8 +1005,7 @@ function buildDino() {
         f = Math.sin(t * 3 + u.ph) * 0.5;
       p.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 0.7 + u.ph) * 3, Math.sin(a) * u.r);
       p.rotation.y = -a + Math.PI;
-      p.userData.wings[0].rotation.z = f;
-      p.userData.wings[1].rotation.z = -f;
+      flap(p, t * 3 + u.ph, 0.55);
     });
     smoke.forEach(s => {
       const k = (t * 0.08 + s.userData.ph) % 1;
@@ -1195,7 +1195,7 @@ function buildArctic() {
   // a waddle of penguins
   const pens = Array.from({ length: 12 }, (_, i) => {
     const p = penguin();
-    p.scale.setScalar(1.3 + rnd() * 0.5);
+    p.scale.setScalar(0.42 + rnd() * 0.18);
     p.userData.r = 19 + (i % 4) * 2.2;
     p.userData.a = rnd() * 6.28;
     p.userData.s = (rnd() < 0.5 ? 1 : -1) * (0.02 + rnd() * 0.03);
@@ -1253,7 +1253,7 @@ function buildArctic() {
       const u = p.userData,
         a = u.a + t * u.s;
       p.position.set(Math.cos(a) * u.r, Math.abs(Math.sin(t * 6 + u.ph)) * 0.12, Math.sin(a) * u.r);
-      p.rotation.set(0, -a + (u.s > 0 ? Math.PI : 0), Math.sin(t * 6 + u.ph) * 0.12);
+      p.rotation.set(0, -a + (u.s > 0 ? 0 : Math.PI), Math.sin(t * 6 + u.ph) * 0.12); // the model faces +z
       u.wings[0].rotation.z = 0.2 + Math.max(0, Math.sin(t * 3 + u.ph)) * 0.6;
       u.wings[1].rotation.z = -u.wings[0].rotation.z;
     });

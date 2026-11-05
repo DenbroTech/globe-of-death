@@ -142,7 +142,7 @@ function showSettings() {
   ov.hidden = false;
   const row = (id, label, on) =>
     `<button class="srow" id="${id}"><span>${label}</span><i class="swt${on ? ' on' : ''}"></i></button>`;
-  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show joystick', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}</div><button class="go" id="sBack">Done</button><p class="bstamp">3D models: Kenney Castle &amp; Pirate Kits and Quaternius dinosaurs (CC0); Penguin, Black Bear, Ladybug, Ant, Wasp and Shark by Poly by Google (CC BY 3.0), via Poly Pizza.</p><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
+  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show joystick', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}</div><button class="go" id="sBack">Done</button><p class="bstamp">3D models: Kenney Castle &amp; Pirate Kits and Quaternius dinosaurs (CC0); Penguin, Black Bear, Ladybug, Ant, Wasp, Shark, Helicopter, Airplane, Airship, Submarine and Octopus by Poly by Google, TugBoat by Some Random Person, Spaceship by mastjie (CC BY), via Poly Pizza.</p><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
   $('#sSnd').onclick = () => {
     $('#sndBtn').click();
     showSettings();

@@ -13,6 +13,7 @@ import { NEON_T } from '../render/neon.js';
 import { ac, applyArenaAudio, moodLP } from '../audio/synth.js';
 import { R, V3, YAX } from '../core/constants.js';
 import { LIFE } from './people.js';
+import { VEHICLES } from './vehicles.js';
 
 let arenaId = 'bigtop';
 const built = {};
@@ -28,7 +29,9 @@ function setArena(id) {
     if (k === id) {
       if (!built[k]) {
         built[k] = { g: A.build(), c: makeCrowd(A.crowd) };
-        built[k].life = LIFE[k] ? LIFE[k](built[k].g) : null;
+        const life = LIFE[k] ? LIFE[k](built[k].g) : null,
+          veh = VEHICLES[k] ? VEHICLES[k](built[k].g) : null;
+        built[k].life = life && veh ? t => (life(t), veh(t)) : life || veh;
         if (built[k].g !== bigtop) scene.add(built[k].g);
         scene.add(built[k].c.grp);
       }

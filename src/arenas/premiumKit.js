@@ -118,7 +118,7 @@ function kitArctic(g) {
   const bears = [0, 1].map(i => {
     const b = new THREE.Group();
     model('polarbear').then(m => {
-      m.scale.setScalar(1.4);
+      m.scale.setScalar(0.5);
       b.add(m);
     });
     b.userData = { r: 30 + i * 8, s: 0.035 + i * 0.01, ph: i * 3 };
@@ -184,7 +184,7 @@ function kitPirate(g) {
     // the mast out of the top of the cage
     const wood = new THREE.MeshStandardMaterial({ color: 0x6b4223, roughness: 0.8 });
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 13, 10), wood);
-    mast.position.y = 7.1 + 6.5;
+    mast.position.y = 7.4 + 6.5; // starts clear above the cage top (7.05): nothing goes through the globe
     const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7, 8), wood);
     yard.rotation.z = Math.PI / 2;
     yard.position.y = 17.4;

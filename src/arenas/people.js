@@ -5,7 +5,8 @@ import { CHARS, crowdTx } from './crowd.js';
 import { glowSpr, std } from './arenas.js';
 import { makeSeaLife, mergeG } from './sealife.js';
 import { GY, V3 } from '../core/constants.js';
-import { clock2, flyRound, mkBird, mkBursts, rand } from './life.js';
+import { clock2, flap, flyRound, mkBird, mkBursts, rand } from './life.js';
+import { model } from './models.js';
 import { sculptGeo } from '../rider/rider.js';
 import { dolphinGeo, footballMat, makeSailboat, makeTurtle } from './props.js';
 
@@ -330,9 +331,9 @@ function beachExtras(g) {
     gulls.forEach(b => {
       const u = b.userData;
       flyRound(b, t, u.r, u.h + Math.sin(t * 0.4 + u.ph) * 2, u.w, u.ph, 0.8);
-      const f = Math.sin(t * 6 + u.ph) * 0.7;
-      b.wings[0].rotation.z = f;
-      b.wings[1].rotation.z = -f;
+      // beat, then glide for a while (gulls soar)
+      const glide = 0.12 + 0.88 * Math.min(1, Math.max(0, Math.sin(t * 0.35 + u.ph * 1.7) * 2 + 0.6));
+      flap(b, t * 6 + u.ph, 0.75 * glide);
     });
     dol.forEach(d => {
       d.t += dt;
@@ -536,9 +537,9 @@ const LIFE = {
       gulls.forEach(b => {
         const u = b.userData;
         flyRound(b, t, u.r, u.h, u.w, u.ph, 0.8);
-        const f = Math.sin(t * 7 + u.ph) * 0.7;
-        b.wings[0].rotation.z = f;
-        b.wings[1].rotation.z = -f;
+        // beat, then glide for a while (gulls soar)
+        const glide = 0.12 + 0.88 * Math.min(1, Math.max(0, Math.sin(t * 0.35 + u.ph * 1.7) * 2 + 0.6));
+        flap(b, t * 7 + u.ph, 0.75 * glide);
       });
       {
         const a = t * 0.012 + 1.2;
@@ -668,34 +669,19 @@ const LIFE = {
       fx = mkBursts(g, 600, 0.9);
     let next = 4;
     const heli = new THREE.Group();
+    heli.userData.veh = 'heli';
     {
-      const body = new THREE.Mesh(
-        new THREE.SphereGeometry(0.8, 14, 10),
-        std(0x22252b, { metalness: 0.5, roughness: 0.4 }),
-      );
-      body.scale.set(1, 1, 1.6);
-      heli.add(body);
-      // long tapered tail boom with a fin and a spinning tail rotor
-      const hm = std(0x22252b);
-      const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.26, 4.6, 8), hm);
-      tail.rotation.x = Math.PI / 2;
-      tail.position.set(0, 0.15, -3.4);
-      heli.add(tail);
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.1, 0.55), hm);
-      fin.position.set(0, 0.6, -5.5);
-      fin.rotation.x = -0.35;
-      heli.add(fin);
-      const stab = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.05, 0.35), hm);
-      stab.position.set(0, 0.2, -5.2);
-      heli.add(stab);
-      const trotor = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.3, 0.12), std(0x111));
-      trotor.position.set(0.12, 0.55, -5.7);
-      heli.add(trotor);
-      heli.userData.trotor = trotor;
-      const rotor = new THREE.Mesh(new THREE.BoxGeometry(5, 0.04, 0.18), std(0x111));
-      rotor.position.y = 0.9;
-      heli.add(rotor);
-      heli.userData.rotor = rotor;
+      // the Poly helicopter model (nose along -z, so turned round to face where it flies); its main
+      // rotor is a separate pivot that spins
+      heli.userData.rotor = new THREE.Object3D();
+      heli.userData.trotor = new THREE.Object3D();
+      model('heli').then(m => {
+        m.rotation.y = Math.PI;
+        m.scale.setScalar(1.6);
+        m.position.y = -0.6;
+        heli.add(m);
+        heli.userData.rotor = m.getObjectByName('rotor') || heli.userData.rotor;
+      });
       const beam = new THREE.Mesh(
         new THREE.ConeGeometry(2.6, 14, 16, 1, true),
         new THREE.MeshBasicMaterial({
@@ -711,7 +697,7 @@ const LIFE = {
       heli.add(beam);
       heli.userData.beam = beam;
       const red = glowSpr(0xff2030, 1.2);
-      red.position.set(0, 1.1, -5.7);
+      red.position.set(0, 1.7, -3.3);
       heli.add(red);
       heli.userData.red = red;
     }
@@ -784,10 +770,9 @@ const LIFE = {
       birds.forEach(b => {
         const u = b.userData;
         flyRound(b, t, u.r, u.h, u.w, u.ph, 0.5);
-        const f = Math.sin(t * 9 + u.ph) * 0.7;
-        u.w0 = f;
-        b.wings[0].rotation.z = f;
-        b.wings[1].rotation.z = -f;
+        // beat, then glide for a while (gulls soar)
+        const glide = 0.12 + 0.88 * Math.min(1, Math.max(0, Math.sin(t * 0.35 + u.ph * 1.7) * 2 + 0.6));
+        flap(b, t * 9 + u.ph, 0.75 * glide);
       });
       next -= dt;
       if (next <= 0) {

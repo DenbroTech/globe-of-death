@@ -151,18 +151,69 @@ function mapTexture() {
   // matte land on the roughness map
   rg.fillStyle = '#e0e0e0';
   LAND.forEach(L => (shape(rg, L, 1.02), rg.fill()));
-  // ice caps with a soft edge
-  for (const [y0, y1] of [
-    [0, 52],
-    [H - 60, H],
-  ]) {
-    const ig = g.createLinearGradient(0, y0 ? y0 - 20 : y1 + 20, 0, y0 ? y0 + 10 : y1 - 10);
+  // north: a thin ice cap with a soft edge
+  {
+    const ig = g.createLinearGradient(0, 72, 0, 42);
     ig.addColorStop(0, 'rgba(240,246,250,0)');
     ig.addColorStop(1, '#f0f6fa');
     g.fillStyle = '#f0f6fa';
-    g.fillRect(0, y0, W, y1 - y0);
+    g.fillRect(0, 0, W, 52);
     g.fillStyle = ig;
-    g.fillRect(0, y0 ? y0 - 20 : y1, W, 30);
+    g.fillRect(0, 52, W, 20);
+  }
+  // south: an Antarctica-style ice continent with a ragged coast, bays and a long peninsula
+  {
+    const edge = lon => {
+      const r = lon * (Math.PI / 180);
+      let lat = -66 + 3.2 * Math.sin(r * 2 + 0.7) + 2.1 * Math.sin(r * 5 + 1.9) + 1.2 * Math.sin(r * 11 + 0.3);
+      lat += 13 * Math.exp(-(((lon + 62) / 9) ** 2)); // the peninsula, reaching north
+      lat -= 7 * Math.exp(-(((lon + 150) / 18) ** 2)) + 6 * Math.exp(-(((lon + 20) / 14) ** 2)); // two deep ice-shelf bays
+      return lat;
+    };
+    const coast = (ctx, open) => {
+      ctx.beginPath();
+      if (!open) ctx.moveTo(0, H);
+      for (let lon = -180; lon <= 180; lon += 1) ctx.lineTo(...px(edge(lon) + Math.sin(lon * 1.7) * 0.35, lon));
+      if (!open) {
+        ctx.lineTo(W, H);
+        ctx.closePath();
+      }
+    };
+    const ice = g.createLinearGradient(0, H * 0.7, 0, H);
+    ice.addColorStop(0, '#e3eef6');
+    ice.addColorStop(1, '#fbfdff');
+    g.fillStyle = ice;
+    coast(g);
+    g.fill();
+    // blue-grey crevasses and wind-scoured ridges
+    g.save();
+    coast(g);
+    g.clip();
+    for (let i = 0; i < 900; i++) {
+      const x = rnd() * W,
+        y = H * 0.76 + rnd() * H * 0.24;
+      g.strokeStyle = `rgba(${120 + rnd() * 40},${150 + rnd() * 40},${185 + rnd() * 30},${0.12 + rnd() * 0.2})`;
+      g.lineWidth = 0.8 + rnd() * 1.6;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + (rnd() - 0.5) * 40, y + (rnd() - 0.5) * 8);
+      g.stroke();
+    }
+    g.restore();
+    g.strokeStyle = 'rgba(90,130,170,.75)';
+    g.lineWidth = 2.5;
+    coast(g, true); // just the shoreline (no seam down to the pole)
+    g.stroke();
+    // relief: a high ice dome rising toward the pole
+    const hgr = hg.createLinearGradient(0, H * 0.8, 0, H);
+    hgr.addColorStop(0, '#9a9a9a');
+    hgr.addColorStop(1, '#ffffff');
+    hg.fillStyle = hgr;
+    coast(hg);
+    hg.fill();
+    rg.fillStyle = '#bdbdbd';
+    coast(rg);
+    rg.fill();
   }
   // ground decals so each level's model sits into the land / sea rather than on top of it
   const decal = (id, col, rx, ry) => {
