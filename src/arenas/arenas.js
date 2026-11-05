@@ -4,6 +4,7 @@ import { scene } from '../render/renderer.js';
 import { cv, glowTex, stripeTex, tex } from '../render/textures.js';
 import { bigtop } from './stage.js';
 import { V3 } from '../core/constants.js';
+import { PREMIUM } from './premium.js';
 
 let sun, sky, turntable, ringGlow;
 
@@ -808,6 +809,8 @@ function lattice(rep) {
 }
 
 export function initArenas() {
+  // the 7 premium arenas (free for now, `premium: true`) join the table here
+  Object.assign(ARENAS, PREMIUM);
   /* ---------- arenas ---------- */
   sun = new THREE.DirectionalLight(0xfff1d6, 0);
   sun.position.set(-30, 40, -20);

@@ -1,3 +1,4 @@
+import { PREMIUM_THEMES } from './premiumSongs.js';
 /* ---------- sound worlds: every arena has its own instruments, room and background ambience ----------
    lead/stab/hit/jump: voice names (see voice() in synth.js)
    bass: bass instrument, kick/snare: drum flavour, comp: how chords are played, pad: sustained chord bed
@@ -91,5 +92,7 @@ const THEMES = {
     amb: 'space',
   },
 };
+
+Object.assign(THEMES, PREMIUM_THEMES);
 
 export { THEMES };

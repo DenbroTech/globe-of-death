@@ -1,3 +1,4 @@
+import { PREMIUM_SONGS } from './premiumSongs.js';
 import { game } from '../core/state.js';
 import { ARENAS } from '../arenas/arenas.js';
 import { arenaId } from '../arenas/current.js';
@@ -187,6 +188,7 @@ const SONGS = [
     ldec: 0.6,
   },
 ];
+SONGS.push(...PREMIUM_SONGS); // premium arenas' songs: indices 11-17
 const songFor = a => {
   const L = ARENAS[arenaId].songs;
   return L[(a - 1 + L.length * 99) % L.length];

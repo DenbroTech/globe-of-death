@@ -14,6 +14,13 @@ const SPOTS = {
   crane: { lat: 38, lon: 120 },
   under: { lat: -12, lon: -140 },
   moon: { moon: true },
+  cavern: { lat: 30, lon: 62 },
+  garden: { lat: 53, lon: -2 },
+  solar: { orbit: true },
+  pirate: { lat: -8, lon: -32 },
+  castle: { lat: 52, lon: 22 },
+  dino: { lat: -4, lon: 24 },
+  matrix: { lat: 62, lon: 95 },
 };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const onSphere = (lat, lon, r = 1) => {
@@ -179,6 +186,56 @@ function marker(id) {
     ring.rotation.x = Math.PI / 2;
     g.userData.bubbles = true;
   }
+  else if (id === 'cavern') {
+    // a rocky peak with a cave mouth and glowing crystals
+    add(new THREE.ConeGeometry(0.075, 0.1, 7), M(0x6a6170, { flatShading: true }), 0, 0.05);
+    add(new THREE.SphereGeometry(0.022, 10, 8), M(0x111015), 0, 0.02, 0.06);
+    for (const [x, z, c] of [
+      [0.04, 0.05, 0x7ef2ff],
+      [-0.05, 0.04, 0xc58cff],
+      [0.06, -0.02, 0xff7ad9],
+    ])
+      add(new THREE.OctahedronGeometry(0.014, 0), M(c, { emissive: c, emissiveIntensity: 1 }), x, 0.015, z).scale.set(1, 2, 1);
+  } else if (id === 'garden') {
+    // a tiny shed, a fence and a giant flower
+    add(new THREE.CylinderGeometry(0.07, 0.07, 0.004, 20), M(0x4c9a35), 0, 0.002);
+    add(new THREE.BoxGeometry(0.05, 0.035, 0.035), M(0x9a6a3e), 0.02, 0.018, -0.02);
+    add(new THREE.ConeGeometry(0.04, 0.025, 4), M(0x3b4048), 0.02, 0.048, -0.02).rotation.y = Math.PI / 4;
+    add(new THREE.CylinderGeometry(0.002, 0.002, 0.07, 4), M(0x3f8a2a), -0.03, 0.035, 0.03);
+    add(new THREE.SphereGeometry(0.016, 10, 6), M(0xff4f6d), -0.03, 0.072, 0.03).scale.set(1, 0.4, 1);
+    add(new THREE.SphereGeometry(0.006, 8, 6), M(0xffc928), -0.03, 0.076, 0.03);
+  } else if (id === 'pirate') {
+    // a little galleon at sea
+    add(new THREE.BoxGeometry(0.09, 0.022, 0.034), M(0x5a3418), 0, 0.011);
+    add(new THREE.CylinderGeometry(0.002, 0.002, 0.08, 4), M(0x3a2414), 0.012, 0.06);
+    add(new THREE.CylinderGeometry(0.002, 0.002, 0.065, 4), M(0x3a2414), -0.022, 0.052);
+    add(new THREE.PlaneGeometry(0.035, 0.035), new THREE.MeshStandardMaterial({ color: 0xefe6cf, side: THREE.DoubleSide }), 0.012, 0.065, 0.003).rotation.y = Math.PI / 2;
+    add(new THREE.PlaneGeometry(0.028, 0.028), new THREE.MeshStandardMaterial({ color: 0xefe6cf, side: THREE.DoubleSide }), -0.022, 0.055, 0.003).rotation.y = Math.PI / 2;
+    add(new THREE.PlaneGeometry(0.014, 0.009), new THREE.MeshBasicMaterial({ color: 0x111111, side: THREE.DoubleSide }), 0.012, 0.105, 0).rotation.y = Math.PI / 2;
+  } else if (id === 'castle') {
+    // keep and four towers with blue roofs
+    add(new THREE.BoxGeometry(0.06, 0.04, 0.06), M(0x9a9286), 0, 0.02);
+    for (const [x, z] of [
+      [0.035, 0.035],
+      [-0.035, 0.035],
+      [0.035, -0.035],
+      [-0.035, -0.035],
+    ]) {
+      add(new THREE.CylinderGeometry(0.012, 0.013, 0.06, 10), M(0x9a9286), x, 0.03, z);
+      add(new THREE.ConeGeometry(0.016, 0.03, 10), M(0x2b3a7a), x, 0.075, z);
+    }
+    add(new THREE.BoxGeometry(0.012, 0.008, 0.001), M(0xc7202c), 0, 0.06, 0);
+  } else if (id === 'dino') {
+    // a smoking volcano in the jungle
+    add(new THREE.CylinderGeometry(0.015, 0.06, 0.07, 14), M(0x4a3a30, { flatShading: true }), 0, 0.035);
+    add(new THREE.CircleGeometry(0.013, 12), M(0xff6a1a, { emissive: 0xff5a1a, emissiveIntensity: 1.5 }), 0, 0.0705).rotation.x = -Math.PI / 2;
+    for (let k = 0; k < 5; k++) add(new THREE.ConeGeometry(0.01, 0.04, 5), M(0x2f7a2a), Math.cos(k * 1.3) * 0.07, 0.02, Math.sin(k * 1.3) * 0.07);
+    g.userData.smoke = add(new THREE.SphereGeometry(0.014, 8, 6), M(0x777777, { transparent: true, opacity: 0.6 }), 0, 0.09);
+  } else if (id === 'matrix') {
+    // a glowing green data block
+    add(new THREE.BoxGeometry(0.07, 0.003, 0.07), new THREE.MeshBasicMaterial({ color: 0x1aff6a, wireframe: true }), 0, 0.002);
+    for (let k = 0; k < 6; k++) add(new THREE.BoxGeometry(0.012, 0.02 + (k % 3) * 0.02, 0.012), M(0x0f5a2a, { emissive: 0x1aff6a, emissiveIntensity: 0.8 }), ((k % 3) - 1) * 0.025, 0.02, (k > 2 ? 1 : -1) * 0.015);
+  }
   return g;
 }
 
@@ -214,7 +271,7 @@ function mountGlobe(host, open, sel, onPick) {
   );
   const pins = {};
   for (const [id, sp] of Object.entries(SPOTS)) {
-    if (!open(id) || sp.moon) continue;
+    if (!open(id) || sp.moon || sp.orbit) continue;
     const m = marker(id),
       n = onSphere(sp.lat, sp.lon);
     m.position.copy(n);
@@ -247,6 +304,17 @@ function mountGlobe(host, open, sel, onPick) {
     moon.add(dome);
     scene.add(moon);
     pins.moon = { obj: moon, moon: true };
+  }
+  // the Solar system level: a ringed planet on a wider orbit
+  let ringed = null;
+  if (open('solar')) {
+    ringed = new THREE.Group();
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(0.17, 28, 18), M(0xd8b27a));
+    const rg = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.38, 40), new THREE.MeshBasicMaterial({ color: 0xe8d0a0, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
+    rg.rotation.x = -1.2;
+    ringed.add(ball, rg);
+    scene.add(ringed);
+    pins.solar = { obj: ringed, moon: true };
   }
   // the pin: a line out from the spot with a glowing dot at the end
   const pinMat = new THREE.LineBasicMaterial({ color: 0xffc23d }),
@@ -316,6 +384,10 @@ function mountGlobe(host, open, sel, onPick) {
     raf = requestAnimationFrame(loop);
     const t = (performance.now() - t0) / 1000;
     if (!drag) planet.quaternion.slerp(target, 0.12);
+    if (ringed) {
+      const a = t * 0.16 + 2.4;
+      ringed.position.set(Math.sin(a) * 2.25, -0.55, Math.cos(a) * 2.25);
+    }
     if (moon) {
       const a = t * 0.25;
       moon.position.set(Math.sin(a) * 1.75, 0.45, Math.cos(a) * 1.75);
