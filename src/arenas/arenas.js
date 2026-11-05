@@ -675,6 +675,7 @@ const ARENAS = {
       stars: 1,
     },
     crowdGlow: 0.6,
+    crowdLift: 0.55, // the moon base is dark: keep the crowd readable
     crowd: { tiers: 6, r0: 14, dr: 1.4, y0: 0.5, dy: 0.8, gap: 0.66, stepCol: 0x55575e },
     build() {
       const g = new THREE.Group();

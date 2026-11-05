@@ -391,7 +391,7 @@ function buildGarden() {
   const wing = new THREE.CircleGeometry(1, 12);
   wing.translate(1, 0, 0);
   wing.rotateX(-Math.PI / 2); // lie flat; flapping turns them about the body (z) axis
-  const flyers = Array.from({ length: 7 }, (_, i) => {
+  const flyers = Array.from({ length: 0 }, (_, i) => { // butterflies removed (owner asked)
     const b = new THREE.Group(),
       col = [0xff8a1f, 0x4fa8ff, 0xffe14a, 0xff5fb0][i % 4],
       wm = new THREE.MeshStandardMaterial({ color: col, side: THREE.DoubleSide, roughness: 0.6 });
@@ -755,10 +755,7 @@ function buildPirate() {
     }
     // the island slides past as we sail
     island.position.z = -160 + ((t * 2.5) % 320);
-    // the ship rocks on the swell (the globe and crowd rock with it: env.rock in arenaTick)
-    ship.rotation.z = Math.sin(t * 0.6) * 0.035;
-    ship.rotation.x = Math.sin(t * 0.43) * 0.02;
-    ship.position.y = Math.sin(t * 0.9) * 0.15;
+    // (the ship rocks on the swell in arenaTick: env.rock, so the deck, cage and crowd move as one)
     gulls.forEach(m => {
       const u = m.userData,
         a = t * u.s + u.ph;
@@ -790,17 +787,22 @@ function buildCastle() {
   );
   const stone = std(0xffffff, { map: stoneTex });
   g.add(ground(120, stone));
+  // the royal end (carpet, dais, thrones, king and queen) sits behind the stands' gap opposite the gate:
+  // built facing -z, then the whole set is turned to face in from angle π
+  const royal = new THREE.Group();
+  royal.rotation.y = Math.PI / 2;
+  g.add(royal);
   // red carpet to the thrones
   const carpet = new THREE.Mesh(new THREE.PlaneGeometry(5, 26), std(0x9c1420, { roughness: 1 }));
   carpet.rotation.x = -Math.PI / 2;
   carpet.position.set(0, 0.02, -22);
-  g.add(carpet);
+  royal.add(carpet);
   // the curtain wall, towers and gatehouse are built from the Kenney Castle Kit (kitCastle in premiumKit.js)
   const W = 44;
   // royal dais with two thrones and the king and queen watching
   const dais = new THREE.Mesh(new THREE.CylinderGeometry(9, 10, 1.6, 32, 1, false, Math.PI * 0.75, Math.PI * 0.5), std(0x6e6a62, { map: stoneTex }));
   dais.position.set(0, 0.8, -30);
-  g.add(dais);
+  royal.add(dais);
   const goldM = std(0xd7a72e, { metalness: 0.8, roughness: 0.3 }),
     velvet = std(0x7a0f1b, { roughness: 1 });
   [-3.2, 3.2].forEach((x, i) => {
@@ -818,13 +820,13 @@ function buildCastle() {
       th.add(arm);
     }
     th.position.set(x, 1.6, -31);
-    g.add(th);
+    royal.add(th);
     // a royal figure (the game's King outfit) standing in front of the throne
     try {
       const fig = makeFigure('king', i ? 0x6a2bbf : 0xc7202c, null, null, null, null);
       fig.position.set(x, 1.6, -29.5);
       fig.scale.setScalar(1.6);
-      g.add(fig);
+      royal.add(fig);
     } catch (e) {}
   });
   // torches with flickering flames on the wall
@@ -1396,7 +1398,7 @@ const PREMIUM = {
     crowdLift: 0.38,
     crowdGlow: 0.35,
     // no stand: a few rows of people at the bow and the stern, standing on the deck
-    crowd: crowdRing({ r0: 6.7, tiers: 3, dr: 0.75, y0: 2.0, dy: 0.12, gap: 0.55, steps: false, empty: 0.1, size: 1.35, arcs: [[Math.PI / 2 - 0.36, 0.72], [-Math.PI / 2 - 0.3, 0.6]] }),
+    crowd: crowdRing({ r0: 6.3, tiers: 3, dr: 0.6, y0: 2.0, dy: 0.12, gap: 0.55, steps: false, empty: 0.1, size: 1.35, arcs: [[Math.PI / 2 - 0.24, 0.48], [-Math.PI / 2 - 0.3, 0.6]] }),
     build: () => kitPirate(morePirate(buildPirate())),
   },
   castle: {

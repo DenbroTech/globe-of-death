@@ -229,7 +229,59 @@ function mapTexture() {
     g.ellipse(x, y, rx, ry, 0, 0, 7);
     g.fill();
   };
-  decal('beach', 'rgba(240,215,140,1)', 34, 22);
+  // the beach: a green headland wrapped round a round bay, with a curve of golden sand between land and sea
+  {
+    const [x, y] = px(SPOTS.beach.lat, SPOTS.beach.lon),
+      bx = x + 26,
+      by = y - 20; // the bay opens to the north-east (open sea); the spot sits on the sand at its back
+    const land = g.createRadialGradient(x - 4, y - 4, 0, x - 4, y - 4, 92);
+    land.addColorStop(0, '#3f8f34');
+    land.addColorStop(0.75, '#5ea844');
+    land.addColorStop(1, 'rgba(94,168,68,0)');
+    g.fillStyle = land;
+    g.beginPath();
+    g.ellipse(x, y - 6, 92, 66, -0.5, 0, 7);
+    g.fill();
+    hg.fillStyle = '#4a4a4a';
+    hg.beginPath();
+    hg.ellipse(x - 4, y - 4, 80, 56, -0.5, 0, 7);
+    hg.fill();
+    g.fillStyle = '#f2d78f'; // sand ring
+    g.beginPath();
+    g.arc(bx, by, 44, 0, 7);
+    g.fill();
+    g.fillStyle = '#e0c072';
+    g.beginPath();
+    g.arc(bx, by, 38, 0, 7);
+    g.fill();
+    const bay = g.createRadialGradient(bx + 8, by + 8, 0, bx, by, 34);
+    bay.addColorStop(0, '#1a6ab8');
+    bay.addColorStop(0.75, '#2a9ad0');
+    bay.addColorStop(1, '#63d2dc'); // shallow turquoise at the shore
+    g.fillStyle = bay;
+    g.beginPath();
+    g.arc(bx, by, 34, 0, 7);
+    g.fill();
+    // the mouth of the bay, open to the sea
+    g.save();
+    g.translate(bx, by);
+    g.rotate(-Math.PI / 4);
+    const mouth = g.createLinearGradient(20, 0, 90, 0);
+    mouth.addColorStop(0, '#1a6ab8');
+    mouth.addColorStop(1, '#1a5aa6');
+    g.fillStyle = mouth;
+    g.fillRect(20, -20, 90, 40);
+    g.restore();
+    g.strokeStyle = 'rgba(255,255,255,.55)';
+    g.lineWidth = 1.5;
+    g.beginPath();
+    g.arc(bx, by, 33, Math.PI * 0.45, Math.PI * 1.45 + 0.6);
+    g.stroke();
+    hg.fillStyle = '#000';
+    hg.beginPath();
+    hg.arc(bx, by, 34, 0, 7);
+    hg.fill();
+  }
   decal('garden', 'rgba(110,190,70,1)', 30, 20);
   decal('stadium', 'rgba(70,160,80,1)', 26, 18);
   decal('bigtop', 'rgba(200,170,110,1)', 24, 16);
@@ -416,7 +468,7 @@ function marker(id) {
 /* the real game models on the globe (same Kenney / Quaternius / Poly models as the arenas), tiny.
    [model, x, y, z, rotY, scale]; `clear` drops the hand-built marker first */
 const KIT_MARKERS = {
-  beach: { clear: 1, parts: [['patch-sand-foliage', 0, -0.004, 0, 0, 0.05], ['palm-detailed-bend', 0.025, 0, 0.012, 0, 0.032], ['palm-detailed-straight', -0.03, 0, -0.018, 1.2, 0.03], ['boat-row-large', 0.05, 0, -0.04, 0.6, 0.02]] },
+  beach: { clear: 1, parts: [['palm-detailed-bend', 0.025, 0, 0.012, 0, 0.032], ['palm-detailed-straight', -0.03, 0, -0.018, 1.2, 0.03], ['boat-row-large', 0.05, 0, -0.04, 0.6, 0.02]] },
   castle: {
     clear: 1,
     parts: [
@@ -508,6 +560,24 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
       new THREE.MeshBasicMaterial({ color: 0x7fc4ff, transparent: true, opacity: 0.12, side: THREE.BackSide }),
     ),
   );
+  // a soft blue halo round the planet (in the scene, so the orbiting moon and ringed planet pass behind it)
+  {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const x = c.getContext('2d'),
+      gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(90,160,255,0.0)');
+    gr.addColorStop(0.62, 'rgba(90,160,255,0.0)');
+    gr.addColorStop(0.68, 'rgba(110,180,255,0.55)');
+    gr.addColorStop(0.8, 'rgba(70,130,255,0.18)');
+    gr.addColorStop(1, 'rgba(40,80,200,0)');
+    x.fillStyle = gr;
+    x.fillRect(0, 0, 128, 128);
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+    halo.scale.setScalar(3.2);
+    halo.renderOrder = 2;
+    scene.add(halo);
+  }
   const pins = {};
   for (const [id, sp] of Object.entries(SPOTS)) {
     if (!open(id) || sp.moon || sp.orbit) continue;
@@ -560,6 +630,17 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
     const rg = new THREE.Mesh(new THREE.RingGeometry(0.24, 0.38, 40), new THREE.MeshBasicMaterial({ color: 0xe8d0a0, side: THREE.DoubleSide, transparent: true, opacity: 0.8 }));
     rg.rotation.x = -1.2;
     ringed.add(ball, rg);
+    // its own little moons, so it reads as a solar system
+    ringed.userData.moons = [
+      [0x9fc8ff, 0.035, 0.46, 0.9, 0],
+      [0xe0805a, 0.028, 0.56, -0.65, 2],
+      [0xf0e0c0, 0.022, 0.66, 0.5, 4],
+    ].map(([c, r, d, s, ph]) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), M(c));
+      m.userData = { d, s, ph };
+      ringed.add(m);
+      return m;
+    });
     scene.add(ringed);
     pins.solar = { obj: ringed, moon: true };
   }
@@ -640,13 +721,20 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
     last = ms;
     const t = (performance.now() - t0) / 1000;
     if (!drag) planet.quaternion.slerp(target, 0.12);
+    // the moon and the ringed planet circle round BEHIND the Earth (never across its face), the ringed
+    // planet much further out, with its own moons
     if (ringed) {
-      const a = t * 0.16 + 2.4;
-      ringed.position.set(Math.sin(a) * 2.25, -0.55, Math.cos(a) * 2.25);
+      const a = t * 0.07 + 2.4;
+      ringed.position.set(Math.sin(a) * 2.3, Math.cos(a) * 1.55 - 0.1, -2.2);
+      ringed.userData.moons.forEach(m => {
+        const u = m.userData,
+          b = t * u.s + u.ph;
+        m.position.set(Math.cos(b) * u.d, Math.sin(b) * u.d * 0.3, Math.sin(b) * u.d);
+      });
     }
     if (moon) {
-      const a = t * 0.25;
-      moon.position.set(Math.sin(a) * 1.75, 0.45, Math.cos(a) * 1.75);
+      const a = t * 0.18;
+      moon.position.set(Math.sin(a) * 1.55, Math.cos(a) * 1.3, -0.6);
       moon.rotation.y = a;
     }
     for (const p of Object.values(pins)) if (p.obj.userData.bubbles) p.obj.children.forEach((c, i) => c.geometry && c.geometry.type === 'SphereGeometry' && (c.position.y = 0.01 + ((i * 0.012 + t * 0.03) % 0.11)));

@@ -88,9 +88,17 @@ function arenaTick(t) {
   if (game.bubbleMesh && game.bubbleMesh.visible) bubbleMat.uniforms.uTime.value = t;
   // the pirate ship rocks on the swell: the globe and crowd move with the deck
   if (A.env.rock) {
+    // the cage tilts about its own centre; the ship and crowd tilt the same way about that same point, so the
+    // cage stays planted on the deck (the globe itself never moves: the ride's maths stay in place)
     globe.rotation.z = Math.sin(t * 0.6) * 0.035;
     globe.rotation.x = Math.sin(t * 0.43) * 0.02;
-    b.c.grp.rotation.copy(globe.rotation);
+    const C = globe.position,
+      off = C.clone().sub(C.clone().applyEuler(globe.rotation));
+    for (const o of [b.c.grp, b.g.userData.ship]) {
+      if (!o) continue;
+      o.rotation.copy(globe.rotation);
+      o.position.copy(off);
+    }
   }
   if (A.env.sway) {
     globe.rotation.z = Math.sin(t * 0.5) * 0.035;

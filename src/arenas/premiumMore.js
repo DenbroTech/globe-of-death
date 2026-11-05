@@ -405,7 +405,7 @@ function moreSolar(g) {
   st.rotation.y = -0.7;
   g.add(st);
   // satellites orbiting closer in
-  const sats = Array.from({ length: 3 }, (_, i) => {
+  const sats = Array.from({ length: 0 }, (_, i) => { // the boxy satellites are gone: the modelled spaceships fly here now
     const s = new THREE.Group();
     s.add(new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.6), std(0xd8b04a, { metalness: 0.8, roughness: 0.3 })));
     for (const x of [-1.8, 1.8]) {

@@ -25,6 +25,86 @@ function put(g, name, x, y, z, ry = 0, s = 1, then) {
     .catch(() => null);
 }
 
+/* cut-stone blocks with mortar, worn and varied (for the curtain wall) */
+let stoneMat = null;
+function castleStone() {
+  if (stoneMat) return stoneMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const x = c.getContext('2d');
+  let sd = 9;
+  const rnd = () => ((sd = (sd * 16807) % 2147483647) / 2147483647);
+  x.fillStyle = '#5d574e'; // mortar
+  x.fillRect(0, 0, 256, 256);
+  for (let r = 0; r < 8; r++)
+    for (let k = -1; k < 5; k++) {
+      const bx = k * 64 + (r % 2 ? 32 : 0) + (rnd() - 0.5) * 6,
+        by = r * 32,
+        v = 120 + rnd() * 50,
+        w = 58 + rnd() * 4;
+      x.fillStyle = `rgb(${v + 8},${v + 2},${v - 10})`;
+      x.fillRect(bx + 3, by + 3, w, 26);
+      // weathering: darker lower edge, light chips, a few moss flecks
+      x.fillStyle = 'rgba(0,0,0,.18)';
+      x.fillRect(bx + 3, by + 23, w, 6);
+      for (let i = 0; i < 14; i++) {
+        x.fillStyle = rnd() < 0.15 ? 'rgba(80,110,50,.35)' : `rgba(255,255,255,${rnd() * 0.12})`;
+        x.fillRect(bx + 3 + rnd() * w, by + 3 + rnd() * 24, 2 + rnd() * 5, 2 + rnd() * 4);
+      }
+    }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = 4;
+  stoneMat = new THREE.MeshStandardMaterial({ map: t, roughness: 0.92 });
+  return stoneMat;
+}
+/* give a wall tile planar stone UVs (tile-local: 1 unit wide; 4 block rows per unit) and the stone material */
+function stoneUp(m) {
+  m.traverse(o => {
+    if (!o.isMesh) return;
+    const geo = o.geometry;
+    if (!geo.userData.stoneUV) {
+      const p = geo.attributes.position,
+        uv = new Float32Array(p.count * 2);
+      for (let i = 0; i < p.count; i++) {
+        uv[i * 2] = (p.getX(i) + p.getZ(i)) * 2;
+        uv[i * 2 + 1] = p.getY(i) * 4;
+      }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      geo.userData.stoneUV = true;
+    }
+    o.material = castleStone();
+  });
+}
+/* bunting: a sagging string of little triangular flags between two points */
+function bunting(g, a, b, n = 14, sag = 1.6) {
+  const cols = [0xd8262f, 0xf4d03f, 0x1f5fbf, 0xf4f1ea, 0x2f9a4a];
+  const flag = new THREE.BufferGeometry();
+  flag.setAttribute('position', new THREE.Float32BufferAttribute([-0.45, 0, 0, 0.45, 0, 0, 0, -1, 0], 3));
+  flag.computeVertexNormals();
+  const im = new THREE.InstancedMesh(flag, new THREE.MeshStandardMaterial({ side: THREE.DoubleSide, roughness: 0.8 }), n),
+    o = new THREE.Object3D(),
+    c = new THREE.Color(),
+    pts = [];
+  for (let i = 0; i <= 24; i++) {
+    const f = i / 24;
+    pts.push(a.clone().lerp(b, f).add(new THREE.Vector3(0, -Math.sin(f * Math.PI) * sag, 0)));
+  }
+  g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x3a2a1a })));
+  const dir = b.clone().sub(a).setY(0).normalize();
+  for (let i = 0; i < n; i++) {
+    const f = (i + 0.5) / n;
+    o.position.copy(a).lerp(b, f).y -= Math.sin(f * Math.PI) * sag;
+    o.rotation.set(0, Math.atan2(-dir.z, dir.x), 0);
+    o.updateMatrix();
+    im.setMatrixAt(i, o.matrix);
+    im.setColorAt(i, c.setHex(cols[i % cols.length]));
+  }
+  g.add(im);
+  return im;
+}
+
 /* ---------- Royal court: Kenney Castle Kit curtain wall, towers and gatehouse ---------- */
 function kitCastle(g) {
   const S = 7, // kit tiles are 1 unit: 7 m per tile
@@ -53,7 +133,7 @@ function kitCastle(g) {
       }
       continue;
     }
-    put(g, TOWERS.has(i) ? 'wall' : 'wall', x, 0, z, ry, [tileW * S, S, S]);
+    put(g, 'wall', x, 0, z, ry, [tileW * S, S, S], stoneUp);
     if (TOWERS.has(i)) {
       // a tall tower with a spire and a banner on the inside face
       const R = RW + 0.5;
@@ -71,7 +151,7 @@ function kitCastle(g) {
   g.add(moat);
   // the grand keep behind the thrones: a tall hexagonal tower with a blue spire
   {
-    const a = -Math.PI / 2,
+    const a = Math.PI, // behind the thrones, in the stands' gap opposite the gate
       R = 41,
       x = Math.cos(a) * R,
       z = Math.sin(a) * R,
@@ -81,7 +161,7 @@ function kitCastle(g) {
     put(g, 'tower-hexagon-mid', x, K * 2.31, z, 0, K);
     put(g, 'tower-hexagon-top', x, K * 3.31, z, 0, K);
     put(g, 'tower-hexagon-roof', x, K * 3.6, z, 0, K * 1.05);
-    put(g, 'flag-banner-long', x, K * 1.6, z + K * 0.42, Math.PI / 2, K * 0.75);
+    put(g, 'flag-banner-long', x + K * 0.42, K * 1.6, z, 0, K * 0.75);
   }
   // a grass ring between the stands and the walls
   {
@@ -96,13 +176,20 @@ function kitCastle(g) {
     const a = (i / 18) * Math.PI * 2 + 0.17;
     put(g, 'flag-pennant', Math.cos(a) * 47, S * 1.31, Math.sin(a) * 47, -a, S * 0.6);
   }
-  // siege engines and trees in the courtyard, behind the stands
+  // bunting: swags all round the battlements, and long runs from the keep and the gate towers to the walls
+  {
+    const V = (a, r, y) => new THREE.Vector3(Math.cos(a) * r, y, Math.sin(a) * r),
+      top = S * 1.25;
+    for (let i = 0; i < 24; i++) bunting(g, V((i / 24) * Math.PI * 2, 46.5, top), V(((i + 1) / 24) * Math.PI * 2, 46.5, top), 9, 1.1);
+    for (const a of [Math.PI - 0.9, Math.PI - 0.45, Math.PI + 0.45, Math.PI + 0.9]) bunting(g, V(Math.PI, 38, 24), V(a, 46.5, top + 1), 22, 3);
+    for (const a of [-0.9, 0.9]) bunting(g, V(a * 0.25, 48, S * 2.2), V(a, 46.5, top + 1), 18, 2.5);
+  }
+  // siege engines in the courtyard, behind the stands (no trees inside the walls)
   put(g, 'siege-trebuchet', Math.cos(2.2) * 33, 0, Math.sin(2.2) * 33, 1.2, 4.5);
   put(g, 'siege-catapult', Math.cos(4.1) * 33, 0, Math.sin(4.1) * 33, -0.6, 4.5);
   put(g, 'siege-tower', Math.cos(1.2) * 36, 0, Math.sin(1.2) * 36, 2, 5);
-  put(g, 'siege-ram', Math.cos(3.3) * 34, 0, Math.sin(3.3) * 34, 0.5, 4.5);
+  put(g, 'siege-ram', Math.cos(5.85) * 34, 0, Math.sin(5.85) * 34, 0.5, 4.5);
   put(g, 'siege-ballista', Math.cos(5.0) * 33, 0, Math.sin(5.0) * 33, -1.2, 4.5);
-  [0.9, 2.6, 3.7, 5.3].forEach((a, i) => put(g, i % 2 ? 'tree-large' : 'tree-small', Math.cos(a) * 38, 0, Math.sin(a) * 38, a, 6));
   addTick(g, t => {
     const p = g.userData.portcullis;
     if (!p) return;
@@ -184,11 +271,15 @@ function kitPirate(g) {
     // the mast out of the top of the cage
     const wood = new THREE.MeshStandardMaterial({ color: 0x6b4223, roughness: 0.8 });
     const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 13, 10), wood);
-    mast.position.y = 7.4 + 6.5; // starts clear above the cage top (7.05): nothing goes through the globe
+    mast.position.y = 6.9 + 6.5; // sits on the cage's top cap (7.05), never down through the globe
     const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7, 8), wood);
     yard.rotation.z = Math.PI / 2;
     yard.position.y = 17.4;
     ship.add(mast, yard);
+    // planks over the open hatch under the cage (the sea showed through it)
+    const boards = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.06, 4.6), new THREE.MeshStandardMaterial({ color: 0xe8b47c, roughness: 0.85 }));
+    boards.position.set(0, 0.0, 0.4);
+    ship.add(boards);
     put(ship, 'flag-pirate-high', 0, 19.6, 0, 0, 1.4);
     for (const side of [-1, 1]) put(ship, 'cannon', side * 3.3, 0, 3.6, side * Math.PI / 2, 1.2);
     put(ship, 'barrel', -2.9, 0, -4.2, 0, 1);
@@ -228,7 +319,7 @@ function kitDino(g) {
     const a = (i / 46) * Math.PI * 2 + Math.sin(i * 7.3) * 0.06,
       r = 58 + ((i * 37) % 30),
       kind = i % 3 === 0 ? 'palm-detailed-bend' : i % 3 === 1 ? 'tree-large' : 'palm-detailed-straight';
-    put(g, kind, Math.cos(a) * r, 0, Math.sin(a) * r, a * 3, (kind === 'tree-large' ? 9 + (i % 4) : 4 + (i % 3)) * 0.6);
+    put(g, kind, Math.cos(a) * r, 0, Math.sin(a) * r, a * 3, kind === 'tree-large' ? (9 + (i % 4)) * 0.6 : 1.4 + (i % 3) * 0.3); // palms ≈ the conifers' height (the palm model is 4.2 tall, the conifer 1.85)
   }
   const herd = [];
   const add = (name, len, r, speed, ph, clip) =>
@@ -298,6 +389,12 @@ function kitGarden(g) {
         a = t * u.s + u.ph;
       w.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 3 + u.ph) * 1.2, Math.sin(a) * u.r);
       w.rotation.y = -a;
+      // a fast buzz (at frame rate it reads as a blur of beating wings)
+      const L = w.getObjectByName('wingL'),
+        Rw = w.getObjectByName('wingR'),
+        f = Math.sin(t * 71 + u.ph) * 0.55;
+      if (L) L.rotation.z = -f;
+      if (Rw) Rw.rotation.z = f;
     });
   });
   return g;

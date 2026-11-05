@@ -372,6 +372,9 @@ function comp(t, root, k, maj, spb) {
     if (k % 4 === 2) ch.forEach(i => voice('organ', t, root + i, 0.028, spb * 0.6));
   } else if (K.comp === 'uke') {
     if (k % 2 === 1 || k === 0) ch.concat([24]).forEach((i, n) => voice('uke', t + n * 0.012, root + i, 0.035, 0.3));
+  } else if (K.comp === 'lute') {
+    // a lute strummed in a 3+3+2 dance rhythm
+    if (k === 0 || k === 3 || k === 6) ch.forEach((i, n) => voice('uke', t + n * 0.018, root + i, 0.03, 0.35));
   } else if (K.comp === 'brass') {
     if (k === 0 || k === 3) ch.forEach(i => voice('brass', t, root + i, 0.028, spb * 1.1));
   } else if (K.comp === 'arp') {
@@ -381,7 +384,11 @@ function comp(t, root, k, maj, spb) {
   // sustained pad at the start of each bar
   if (K.pad && k === 0) {
     const d = spb * 8,
-      notes = K.pad === 'whale' ? [0, 7, 12] : K.pad === 'space' ? [0, 7, 14, 19] : [0, maj ? 4 : 3, 7];
+      notes = K.pad === 'whale' ? [0, 7, 12] : K.pad === 'space' ? [0, 7, 14, 19] : K.pad === 'drone' ? [-12, -5] : [0, maj ? 4 : 3, 7];
+    // drone: a hurdy-gurdy style open fifth, low and reedy
+    if (K.pad === 'drone')
+      notes.forEach((i, n) => synthNote(t, mid(root + 12 + i), ['sawtooth', 'square'], 0.02, d, 900, 500, 0.05, 6, 0, (n - 0.5) * 0.3));
+    else
     notes.forEach((i, n) =>
       synthNote(t, mid(root + 12 + i), ['sawtooth', 'triangle'], 0.022, d, K.pad === 'whale' ? 500 : 1500, 400, d * 0.35, 12, K.pad === 'whale' ? 0.006 : 0, (n - 1) * 0.4),
     );

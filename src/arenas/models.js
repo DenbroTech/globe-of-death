@@ -95,7 +95,50 @@ const MAKERS = {
   polarbear: () => objModel(bearObj, null, 3.2, { color: 0xf2efe6, roughness: 0.9 }),
   ladybug: () => objModel(ladyObj, ladyTex, 1.2, { roughness: 0.35 }),
   ant: () => objModel(antObj, antTex, 0.6, { roughness: 0.4 }),
-  wasp: () => objModel(waspObj, waspTex, 0.9, { roughness: 0.4 }),
+  // the wings are cut out of the body mesh onto two hinges ("wingL"/"wingR") so they can buzz
+  wasp: () => {
+    const g = objModel(waspObj, waspTex, 0.9, { roughness: 0.4 }),
+      o = g.children[0],
+      mesh = o.children.find(m => m.isMesh),
+      geo = mesh.geometry,
+      WING = ['lambert3SG', 'lambert4SG', 'initialShadingGroup'],
+      names = new OBJLoader().parse(waspObj).children[0].material.map(m => m.name),
+      pos = geo.attributes.position,
+      uv = geo.attributes.uv,
+      side = [
+        [[], []],
+        [[], []],
+      ];
+    const keepGroups = [];
+    geo.groups.forEach(gr => {
+      if (!WING.includes(names[gr.materialIndex])) return keepGroups.push(gr);
+      for (let i = gr.start; i < gr.start + gr.count; i += 3) {
+        const cx = pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2),
+          sd = side[cx < 0 ? 0 : 1];
+        for (let k = i; k < i + 3; k++) {
+          sd[0].push(pos.getX(k) - (cx < 0 ? -0.2 : 0.2), pos.getY(k) - 0.45, pos.getZ(k) + 1.6);
+          if (uv) sd[1].push(uv.getX(k), uv.getY(k));
+        }
+      }
+    });
+    // drop the wing triangles from the body
+    geo.clearGroups();
+    keepGroups.forEach(gr => geo.addGroup(gr.start, gr.count, 0));
+    mesh.material = [mesh.material];
+    const wm = new THREE.MeshStandardMaterial({ map: mesh.material[0].map, roughness: 0.2, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+    side.forEach(([p, u], i) => {
+      const wg = new THREE.BufferGeometry();
+      wg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+      if (u.length) wg.setAttribute('uv', new THREE.Float32BufferAttribute(u, 2));
+      wg.computeVertexNormals();
+      const hinge = new THREE.Group();
+      hinge.name = i ? 'wingR' : 'wingL';
+      hinge.position.set(i ? 0.2 : -0.2, 0.45, -1.6);
+      hinge.add(new THREE.Mesh(wg, wm));
+      o.add(hinge);
+    });
+    return g;
+  },
   shark: () => objModel(sharkObj, sharkTex, 0.6, { roughness: 0.45 }),
   // nose along -z; the main rotor blades are re-parented onto a pivot named "rotor" so they can spin
   heli: () => {

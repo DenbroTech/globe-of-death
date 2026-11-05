@@ -74,6 +74,11 @@ function makeCrowd(c) {
         '#include <uv_vertex>',
         '#include <uv_vertex>\n#ifdef USE_UV\nvUv = uv*vec2(0.1,0.05) + instUv;\n#endif',
       );
+    // seen from behind (e.g. the near end of the pirate ship from the Arena camera) people show as dark
+    // backs in shade instead of a mirrored front
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <map_fragment>', '#include <map_fragment>\nif (!gl_FrontFacing) diffuseColor.rgb = vec3(0.05, 0.045, 0.05);')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\nif (!gl_FrontFacing) totalEmissiveRadiance = vec3(0.02);');
   };
   const mesh = new THREE.InstancedMesh(geo, mat, list.length);
   mesh.frustumCulled = false;
