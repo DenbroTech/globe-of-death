@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { sharkGeo } from './props.js';
+import { model } from './models.js';
 import { V3 } from '../core/constants.js';
 import { rand } from './life.js';
 
@@ -271,6 +272,12 @@ function makeSeaLife(g) {
   ].map(([r, h, w, ph]) => {
     const s = new THREE.Mesh(sg, sm);
     s.scale.setScalar(2.1);
+    // swap in the imported shark model (Poly by Google) once it loads; the old mesh stays as the mover
+    model('shark').then(m => {
+      s.geometry = new THREE.BufferGeometry();
+      m.position.y -= 0.3;
+      s.add(m);
+    });
     s.castShadow = true;
     g.add(s);
     return { s, r, h, w, ph };

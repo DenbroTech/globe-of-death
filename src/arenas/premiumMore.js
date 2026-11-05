@@ -300,7 +300,7 @@ function moreGarden(g) {
     w1.position.set(0, 0.5, 0.5);
     w2.position.set(0, 0.5, -0.5);
     b.add(bb, w1, w2);
-    b.userData = { w1, w2, r: 30 + i * 4, h: 5 + i * 1.5, s: 0.25 + i * 0.05, ph: i * 1.3 };
+    b.userData = { w1, w2, r: 30 + i * 4, h: 5 + i * 1.5, s: 0.25 + i * 0.05, ph: i * 1.3, bee: 1 };
     g.add(b);
     return b;
   });
@@ -319,6 +319,7 @@ function moreGarden(g) {
     antLeg = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.03, 0.03, 0.55, 4), antM, NA * 6),
     crumbs = new THREE.InstancedMesh(new THREE.BoxGeometry(0.35, 0.25, 0.3), std(0xe8c27a), NA);
   g.add(antBody, antLeg, crumbs);
+  g.userData.antParts = [antBody, antLeg, crumbs];
   const _o = new THREE.Object3D(),
     _m = new THREE.Matrix4();
   const ants = t => {
@@ -573,6 +574,7 @@ function morePirate(g) {
   rflag.rotation.y = Math.PI / 2;
   rival.add(rflag);
   g.add(rival);
+  g.userData.rival = rival;
   const fireGlow = glow('#ff7a2a', 14, 0);
   g.add(fireGlow);
   const ball = new THREE.Mesh(new THREE.SphereGeometry(0.4, 10, 8), std(0x111111, { metalness: 0.6 }));
@@ -588,7 +590,7 @@ function morePirate(g) {
   const battle = t => {
     const k = t % P_;
     // the cannon on our starboard side, in world space (the ship rocks)
-    gun.set(15.5, 1.3, -8).applyMatrix4(ship.matrixWorld);
+    gun.set(3.6, 1.2, -1).applyMatrix4(ship.matrixWorld);
     // rival: sails in, gets hit at 7.5 s, burns and sinks, gone until the next battle
     const sink = Math.max(0, Math.min(1, (k - 7.5) / 7));
     rival.visible = k < 16;
@@ -649,7 +651,7 @@ function morePirate(g) {
     battle(t);
     foam.forEach((f, i) => {
       const k = ((t * 0.35 + i / foam.length) % 1);
-      f.position.set((i % 2 ? 1 : -1) * (5 + k * 2.5), -0.9, -14 + k * 30);
+      f.position.set((i % 2 ? 1 : -1) * (4.2 + k * 2.5), -0.9, -6 + k * 26);
       f.material.opacity = 0.55 * Math.sin(k * Math.PI);
       f.scale.setScalar(1.2 + k * 2.5);
     });

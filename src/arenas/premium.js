@@ -4,7 +4,7 @@ import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
 import { model } from './models.js';
-import { kitArctic, kitCastle } from './premiumKit.js';
+import { kitArctic, kitCastle, kitDino, kitGarden, kitPirate } from './premiumKit.js';
 import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
 import { moreCastle, moreCavern, moreDino, moreGarden, moreMatrix, morePirate, moreSolar } from './premiumMore.js';
 
@@ -709,6 +709,7 @@ function buildPirate() {
   }
   island.position.set(-80, 0, -60);
   g.add(island);
+  g.userData.island = island;
   // gulls
   const gullGeo = new THREE.BufferGeometry();
   gullGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, -1, 0.3, 0, -0.2, 0, 0.2, 0, 0, 0, 1, 0.3, 0, 0.2, 0, 0.2]), 3));
@@ -1325,7 +1326,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x6a4a2a }),
-    build: () => extraGarden(moreGarden(buildGarden())),
+    build: () => kitGarden(extraGarden(moreGarden(buildGarden()))),
   },
   solar: {
     name: 'Solar system',
@@ -1375,8 +1376,8 @@ const PREMIUM = {
     },
     crowdGlow: 0.35,
     // no stand: a few rows of people at the bow and the stern, standing on the deck
-    crowd: crowdRing({ r0: 7.4, tiers: 3, dr: 0.9, y0: 0.35, dy: 0.3, gap: 0.62, steps: false, empty: 0.15, arcs: [[Math.PI / 2 - 0.3, 0.6], [-Math.PI / 2 - 0.3, 0.6]] }),
-    build: () => morePirate(buildPirate()),
+    crowd: crowdRing({ r0: 8.7, tiers: 3, dr: 0.75, y0: 1.95, dy: 0.15, gap: 0.6, steps: false, empty: 0.12, arcs: [[Math.PI / 2 - 0.32, 0.64]] }),
+    build: () => kitPirate(morePirate(buildPirate())),
   },
   castle: {
     name: 'Royal court',
@@ -1423,7 +1424,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x5a4a30 }),
-    build: () => moreDino(buildDino()),
+    build: () => kitDino(moreDino(buildDino())),
   },
   matrix: {
     name: 'Digital grid',

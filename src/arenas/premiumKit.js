@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { model } from './models.js';
+import { dino, model } from './models.js';
 
 /* ---------- arenas dressed with imported models (see models.js) ----------
    Models load asynchronously; each piece is placed as soon as it arrives. */
@@ -106,4 +106,121 @@ function kitArctic(g) {
   return g;
 }
 
-export { kitArctic, kitCastle };
+/* ---------- Pirate ship: Kenney Pirate Kit galleon (the globe stands on the open deck between the masts) ---------- */
+function kitPirate(g) {
+  const ship = g.userData.ship;
+  if (ship) {
+    ship.clear(); // drop the old hand-built hull, masts and deck props
+    ship.scale.setScalar(1);
+    // ×1.6: deck ≈ the globe's width; deck height 2.1 → sits at 0; shifted so the globe is between the masts
+    put(ship, 'ship-pirate-large', 0, -3.36, 4.58, 0, 1.6);
+    for (const side of [-1, 1])
+      for (const z of [-2.2, 1.8]) put(ship, 'cannon', side * 2.9, 0, z, side * Math.PI / 2, 1.3);
+    put(ship, 'barrel', -2.4, 0, -6.6, 0, 1.1);
+    put(ship, 'barrel', 2.3, 0, -6.4, 1, 1.1);
+    put(ship, 'crate-bottles', 2.4, 0, 6.2, 0.4, 1.1);
+    put(ship, 'chest', -2.3, 1.95, 13, 0.3, 1.1);
+  }
+  // the rival galleon that gets sunk
+  const rival = g.userData.rival;
+  if (rival) {
+    rival.clear();
+    put(rival, 'ship-pirate-medium', 0, -2.6, 0, Math.PI / 2, 1.6);
+  }
+  // the island we sail past: sand, palms, rocks and a watchtower
+  const isl = g.userData.island;
+  if (isl) {
+    isl.clear();
+    put(isl, 'patch-sand-foliage', 0, -1.4, 0, 0, 7);
+    put(isl, 'rocks-sand-a', 8, -1.2, 4, 1, 2.5);
+    put(isl, 'rocks-sand-b', -7, -1.2, -5, 2, 2.5);
+    put(isl, 'tower-complete-large', 3, -1, -6, 0.5, 2.2);
+    [
+      [-4, 3, 0],
+      [5, -3, 2],
+      [-1, 7, 4],
+    ].forEach(([x, z, r]) => put(isl, 'palm-detailed-bend', x, -0.6, z, r, 2.6));
+    put(isl, 'boat-row-large', 10, -1.3, 9, 0.6, 2);
+  }
+  return g;
+}
+
+/* ---------- Dino valley: animated dinosaurs (Quaternius) replace the hand-built ones ---------- */
+function kitDino(g) {
+  g.traverse(o => {
+    if (o.userData && o.userData.legs) o.visible = false;
+  });
+  const herd = [];
+  const add = (name, len, r, speed, ph, clip) =>
+    dino(name, len)
+      .then(d => {
+        d.play(clip);
+        d.obj.userData = { r, speed, ph, mixer: d.mixer };
+        g.add(d.obj);
+        herd.push(d.obj);
+      })
+      .catch(() => {});
+  add('Apatosaurus', 24, 78, 0.022, 0, 'Walk');
+  add('Apatosaurus', 20, 86, 0.02, 2.4, 'Walk');
+  add('Trex', 13, 56, 0.05, 1.2, 'Walk');
+  add('Triceratops', 8, 44, 0.05, 3.6, 'Walk');
+  add('Triceratops', 7, 47, 0.05, 4.1, 'Walk');
+  [0, 1, 2].forEach(i => add('Velociraptor', 3.6, 27 + i * 1.6, 0.22, i * 0.25, 'Run'));
+  let last = null;
+  addTick(g, t => {
+    const dt = last == null ? 0 : Math.min(0.1, t - last);
+    last = t;
+    herd.forEach(o => {
+      const u = o.userData,
+        a = u.ph + t * u.speed;
+      o.position.set(Math.cos(a) * u.r, 0, Math.sin(a) * u.r);
+      o.rotation.y = -a; // facing along the circle
+      u.mixer.update(dt);
+    });
+  });
+  return g;
+}
+
+/* ---------- Back garden: real ants and wasps ---------- */
+function kitGarden(g) {
+  (g.userData.antParts || []).forEach(m => (m.visible = false));
+  g.traverse(o => {
+    if (o.userData && o.userData.bee) o.visible = false;
+  });
+  const ants = Array.from({ length: 16 }, (_, i) => {
+    const a = new THREE.Group();
+    model('ant').then(m => {
+      m.scale.setScalar(2.2);
+      a.add(m);
+    });
+    g.add(a);
+    return a;
+  });
+  const wasps = Array.from({ length: 4 }, (_, i) => {
+    const w = new THREE.Group();
+    model('wasp').then(m => {
+      m.scale.setScalar(2.4);
+      w.add(m);
+    });
+    w.userData = { r: 28 + i * 5, h: 6 + i * 2, s: 0.3 + i * 0.06, ph: i * 1.6 };
+    g.add(w);
+    return w;
+  });
+  addTick(g, t => {
+    ants.forEach((a, i) => {
+      const ang = t * 0.06 - i * 0.05,
+        r = 10.5 + Math.sin(ang * 5) * 0.6;
+      a.position.set(Math.cos(ang) * r, Math.abs(Math.sin(t * 14 + i)) * 0.03, Math.sin(ang) * r);
+      a.rotation.y = -ang; // marching along the circle
+    });
+    wasps.forEach(w => {
+      const u = w.userData,
+        a = t * u.s + u.ph;
+      w.position.set(Math.cos(a) * u.r, u.h + Math.sin(t * 3 + u.ph) * 1.2, Math.sin(a) * u.r);
+      w.rotation.y = -a;
+    });
+  });
+  return g;
+}
+
+export { kitArctic, kitCastle, kitDino, kitGarden, kitPirate };

@@ -1,6 +1,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { SkeletonUtils } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import pirateTex from '../assets/models/pirate/colormap.png';
+import antObj from '../assets/models/ant.obj?raw';
+import antTex from '../assets/models/ant.png';
+import waspObj from '../assets/models/wasp.obj?raw';
+import sharkObj from '../assets/models/shark.obj?raw';
+import sharkTex from '../assets/models/shark.png';
+import waspTex from '../assets/models/wasp.png';
 import castleTex from '../assets/models/castle/colormap.png';
 import penguinObj from '../assets/models/penguin.obj?raw';
 import penguinTex from '../assets/models/penguin.png';
@@ -15,10 +24,16 @@ import ladyTex from '../assets/models/ladybug.png';
    `model(name)` resolves to a fresh clone, so an arena adds a placeholder-free group and fills it in. */
 
 const CASTLE = import.meta.glob('../assets/models/castle/*.glb', { eager: true, query: '?url', import: 'default' });
-const manager = new THREE.LoadingManager();
-// the Kenney .glb files point at "Textures/colormap.png": hand them the bundled texture instead
-manager.setURLModifier(url => (/colormap\.png$/.test(url) ? castleTex : url));
-const gltf = new GLTFLoader(manager),
+const PIRATE = import.meta.glob('../assets/models/pirate/*.glb', { eager: true, query: '?url', import: 'default' });
+const DINO = import.meta.glob('../assets/models/dino/*.fbx', { eager: true, query: '?url', import: 'default' });
+// each Kenney kit's .glb files point at "Textures/colormap.png": hand them that kit's bundled texture
+const kitLoader = tex => {
+  const m = new THREE.LoadingManager();
+  m.setURLModifier(url => (/colormap\.png$/.test(url) ? tex : url));
+  return new GLTFLoader(m);
+};
+const gltf = kitLoader(castleTex),
+  gltfPirate = kitLoader(pirateTex),
   texLoader = new THREE.TextureLoader();
 const cache = {};
 
@@ -46,15 +61,20 @@ const MAKERS = {
   // the black bear, re-coloured as a polar bear
   polarbear: () => objModel(bearObj, null, 3.2, { color: 0xf2efe6, roughness: 0.9 }),
   ladybug: () => objModel(ladyObj, ladyTex, 1.2, { roughness: 0.35 }),
+  ant: () => objModel(antObj, antTex, 0.6, { roughness: 0.4 }),
+  wasp: () => objModel(waspObj, waspTex, 0.9, { roughness: 0.4 }),
+  shark: () => objModel(sharkObj, sharkTex, 0.6, { roughness: 0.45 }),
 };
 
 function model(name) {
   if (!cache[name]) {
     if (MAKERS[name]) cache[name] = Promise.resolve(MAKERS[name]());
     else {
-      const url = CASTLE[`../assets/models/castle/${name}.glb`];
+      const cu = CASTLE[`../assets/models/castle/${name}.glb`],
+        pu = PIRATE[`../assets/models/pirate/${name}.glb`],
+        url = cu || pu;
       cache[name] = url
-        ? gltf.loadAsync(url).then(r => {
+        ? (cu ? gltf : gltfPirate).loadAsync(url).then(r => {
             r.scene.traverse(m => {
               if (m.isMesh) {
                 m.castShadow = m.receiveShadow = true;
@@ -69,4 +89,45 @@ function model(name) {
   return cache[name].then(m => m.clone());
 }
 
-export { model };
+/* animated dinosaurs (Quaternius, CC0): resolves to { obj, mixer, play(clipName) } — a fresh skinned copy
+   with its own animation mixer; call mixer.update(dt) every frame. `length` sets its nose-to-tail size. */
+const fbxCache = {};
+function dino(name, length) {
+  if (!fbxCache[name]) fbxCache[name] = new FBXLoader().loadAsync(DINO[`../assets/models/dino/${name}.fbx`]);
+  return fbxCache[name].then(src => {
+    const obj = SkeletonUtils.clone(src),
+      wrap = new THREE.Group();
+    obj.traverse(m => {
+      if (m.isMesh) {
+        m.frustumCulled = false; // skinned meshes move away from their bind-pose bounds
+        // the FBX colours come in linear and read near-black: lift them to the intended sRGB look
+        [].concat(m.material).forEach(x => {
+          if (!x.userData.lifted) {
+            x.color.convertLinearToSRGB();
+            x.userData.lifted = true;
+          }
+          x.roughness = 0.75;
+        });
+      }
+    });
+    const box = new THREE.Box3().setFromObject(src),
+      sz = box.getSize(new THREE.Vector3());
+    obj.scale.setScalar(length / Math.max(sz.x, sz.z));
+    obj.position.y = -box.min.y * obj.scale.y; // feet on the ground
+    wrap.add(obj);
+    const mixer = new THREE.AnimationMixer(obj),
+      clips = src.animations;
+    let cur = null;
+    const play = key => {
+      const c = clips.find(a => a.name.toLowerCase().includes(key.toLowerCase()));
+      if (!c) return;
+      const act = mixer.clipAction(c);
+      if (cur && cur !== act) cur.fadeOut(0.3);
+      act.reset().fadeIn(0.3).play();
+      cur = act;
+    };
+    return { obj: wrap, mixer, play };
+  });
+}
+
+export { dino, model };
