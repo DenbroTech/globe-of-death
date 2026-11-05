@@ -71,7 +71,10 @@ function showLevels() {
     <div class="lglobe" id="lglobe"></div>
     <button class="lvback" id="lvBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
     <h1 class="lvtitle">Levels</h1>
-    <button class="lvbar" id="lvBar"><span class="lvbn" id="lvbn"></span><span class="lvbs" id="lvbs"></span><i class="lvchev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i></button>
+    <div class="lvfoot">
+      <button class="lvbar" id="lvBar"><span class="lvbn" id="lvbn"></span><span class="lvbs" id="lvbs"></span><i class="lvchev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></i></button>
+      <div class="lvgo"><div class="seg lvmode"><button data-lmode="show" aria-pressed="${game.gameMode === 'show'}">The show</button><button data-lmode="free" aria-pressed="${game.gameMode === 'free'}">Free ride</button></div><button class="go" id="lvRide">Let's ride</button></div>
+    </div>
     <div class="lvsheet" id="lvSheet" hidden><div class="lvsh"><h2>All levels</h2><button id="lvClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button></div>
     <div class="lvlist">${Object.entries(ARENAS)
       .map(
@@ -113,6 +116,22 @@ function showLevels() {
       }),
   );
   $('#lvBar').onclick = () => ($('#lvSheet').hidden = false);
+  // pick the mode and go straight from here, no trip back to the menu
+  ov.querySelectorAll('[data-lmode]').forEach(
+    b =>
+      (b.onclick = () => {
+        game.gameMode = b.dataset.lmode;
+        try {
+          localStorage.setItem('god-mode', game.gameMode);
+        } catch (e) {}
+        ov.querySelectorAll('[data-lmode]').forEach(x => x.setAttribute('aria-pressed', x === b));
+      }),
+  );
+  $('#lvRide').onclick = () => {
+    unmountGlobe();
+    ov.classList.remove('lvdim');
+    tutDone() ? start() : startTutorial();
+  };
   $('#lvClose').onclick = () => ($('#lvSheet').hidden = true);
   $('#lvBack').onclick = () => {
     unmountGlobe();

@@ -69,9 +69,39 @@ function kitCastle(g) {
   moat.rotation.x = -Math.PI / 2;
   moat.position.y = 0.04;
   g.add(moat);
+  // the grand keep behind the thrones: a tall hexagonal tower with a blue spire
+  {
+    const a = -Math.PI / 2,
+      R = 41,
+      x = Math.cos(a) * R,
+      z = Math.sin(a) * R,
+      K = 11;
+    put(g, 'tower-hexagon-base', x, 0, z, 0, K);
+    put(g, 'tower-hexagon-mid', x, K * 1.31, z, 0, K);
+    put(g, 'tower-hexagon-mid', x, K * 2.31, z, 0, K);
+    put(g, 'tower-hexagon-top', x, K * 3.31, z, 0, K);
+    put(g, 'tower-hexagon-roof', x, K * 3.6, z, 0, K * 1.05);
+    put(g, 'flag-banner-long', x, K * 1.6, z + K * 0.42, Math.PI / 2, K * 0.75);
+  }
+  // a grass ring between the stands and the walls
+  {
+    const grass = new THREE.Mesh(new THREE.RingGeometry(23, 46, 64), new THREE.MeshStandardMaterial({ color: 0x5e9a3c, roughness: 1 }));
+    grass.rotation.x = -Math.PI / 2;
+    grass.position.y = 0.03;
+    g.add(grass);
+  }
+  // stairs up to the walls and pennants along the battlements
+  [0.6, 2.2, 3.9, 5.5].forEach(a => put(g, 'stairs-stone', Math.cos(a) * 43, 0, Math.sin(a) * 43, -a - Math.PI / 2, [5, 5, 5]));
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2 + 0.17;
+    put(g, 'flag-pennant', Math.cos(a) * 47, S * 1.31, Math.sin(a) * 47, -a, S * 0.6);
+  }
   // siege engines and trees in the courtyard, behind the stands
   put(g, 'siege-trebuchet', Math.cos(2.2) * 33, 0, Math.sin(2.2) * 33, 1.2, 4.5);
   put(g, 'siege-catapult', Math.cos(4.1) * 33, 0, Math.sin(4.1) * 33, -0.6, 4.5);
+  put(g, 'siege-tower', Math.cos(1.2) * 36, 0, Math.sin(1.2) * 36, 2, 5);
+  put(g, 'siege-ram', Math.cos(3.3) * 34, 0, Math.sin(3.3) * 34, 0.5, 4.5);
+  put(g, 'siege-ballista', Math.cos(5.0) * 33, 0, Math.sin(5.0) * 33, -1.2, 4.5);
   [0.9, 2.6, 3.7, 5.3].forEach((a, i) => put(g, i % 2 ? 'tree-large' : 'tree-small', Math.cos(a) * 38, 0, Math.sin(a) * 38, a, 6));
   addTick(g, t => {
     const p = g.userData.portcullis;
@@ -106,20 +136,63 @@ function kitArctic(g) {
   return g;
 }
 
+/* drop the triangles of the two built-in masts (and their tops) from the galleon's hull mesh */
+function cutMasts(geo) {
+  const p = geo.attributes.position,
+    idx = geo.index.array,
+    keep = [];
+  const mastV = i => {
+    const x = Math.abs(p.getX(i)),
+      y = p.getY(i),
+      z = p.getZ(i),
+      // the mast poles run from the deck (y≈2.1) to the top in single long faces, so take everything thin
+      // above the deck, plus the wider crow's nests and yards higher up (measured from the model)
+      inMain = z > -0.95 && z < 0.25,
+      inFore = z > -6.4 && z < -4.15;
+    return (inMain && ((x < 0.3 && y > 1.95) || (x < 0.55 && y > 3.8))) || (inFore && ((x < 0.3 && y > 1.95) || (x < 0.95 && y > 4.4)));
+  };
+  for (let i = 0; i < idx.length; i += 3) if (!(mastV(idx[i]) && mastV(idx[i + 1]) && mastV(idx[i + 2]))) keep.push(idx[i], idx[i + 1], idx[i + 2]);
+  geo.setIndex(keep);
+}
+
 /* ---------- Pirate ship: Kenney Pirate Kit galleon (the globe stands on the open deck between the masts) ---------- */
 function kitPirate(g) {
   const ship = g.userData.ship;
   if (ship) {
     ship.clear(); // drop the old hand-built hull, masts and deck props
     ship.scale.setScalar(1);
-    // ×1.6: deck ≈ the globe's width; deck height 2.1 → sits at 0; shifted so the globe is between the masts
-    put(ship, 'ship-pirate-large', 0, -3.36, 4.58, 0, 1.6);
-    for (const side of [-1, 1])
-      for (const z of [-2.2, 1.8]) put(ship, 'cannon', side * 2.9, 0, z, side * Math.PI / 2, 1.3);
-    put(ship, 'barrel', -2.4, 0, -6.6, 0, 1.1);
-    put(ship, 'barrel', 2.3, 0, -6.4, 1, 1.1);
-    put(ship, 'crate-bottles', 2.4, 0, 6.2, 0.4, 1.1);
-    put(ship, 'chest', -2.3, 1.95, 13, 0.3, 1.1);
+    // ×1.6: deck ≈ the globe's width; deck height 2.1 → sits at 0. The ship's own masts and sails would block the
+    // view, so they're cut out; the globe stands mid-deck (model z −0.75) clear of the raised bow and stern decks,
+    // and a single mast rises out of the top of the cage carrying the skull sail.
+    put(ship, 'ship-pirate-large', 0, -3.36, 1.2, 0, 1.6, m => {
+      let sail = null;
+      m.traverse(o => {
+        if (/^(sail|flag)/.test(o.name)) {
+          if (o.name === 'sail-a' && !sail) sail = o;
+          o.visible = false;
+        }
+        if (o.isMesh && o.name !== 'sail-a' && o.geometry.index) cutMasts(o.geometry);
+      });
+      if (sail) {
+        const s2 = sail.clone();
+        s2.visible = true;
+        s2.position.set(0, 11.6, 0);
+        s2.scale.setScalar(1.6);
+        ship.add(s2);
+      }
+    });
+    // the mast out of the top of the cage
+    const wood = new THREE.MeshStandardMaterial({ color: 0x6b4223, roughness: 0.8 });
+    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 13, 10), wood);
+    mast.position.y = 7.1 + 6.5;
+    const yard = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 7, 8), wood);
+    yard.rotation.z = Math.PI / 2;
+    yard.position.y = 17.4;
+    ship.add(mast, yard);
+    put(ship, 'flag-pirate-high', 0, 19.6, 0, 0, 1.4);
+    for (const side of [-1, 1]) put(ship, 'cannon', side * 3.3, 0, 3.6, side * Math.PI / 2, 1.2);
+    put(ship, 'barrel', -2.9, 0, -4.2, 0, 1);
+    put(ship, 'crate-bottles', 2.9, 0, -4, 0.4, 1);
   }
   // the rival galleon that gets sunk
   const rival = g.userData.rival;
@@ -150,6 +223,13 @@ function kitDino(g) {
   g.traverse(o => {
     if (o.userData && o.userData.legs) o.visible = false;
   });
+  // a forest round the valley: conifers and palms (Kenney kits), thicker further out
+  for (let i = 0; i < 46; i++) {
+    const a = (i / 46) * Math.PI * 2 + Math.sin(i * 7.3) * 0.06,
+      r = 58 + ((i * 37) % 30),
+      kind = i % 3 === 0 ? 'palm-detailed-bend' : i % 3 === 1 ? 'tree-large' : 'palm-detailed-straight';
+    put(g, kind, Math.cos(a) * r, 0, Math.sin(a) * r, a * 3, kind === 'tree-large' ? 9 + (i % 4) : 4 + (i % 3));
+  }
   const herd = [];
   const add = (name, len, r, speed, ph, clip) =>
     dino(name, len)

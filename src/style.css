@@ -377,3 +377,9 @@ body.lightsout #dark{opacity:1}
 .lvsheet .lvname{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .lvsheet .lvname small{font-size:13px;color:var(--mute);font-weight:400}
 .lvsheet .lvrow{min-height:60px}
+
+.lvfoot{position:absolute;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;z-index:2}
+.lvfoot .lvbar{position:static}
+.lvgo{display:flex;gap:10px;align-items:center}
+.lvgo .lvmode{flex:1}
+.lvgo .go{flex:0 0 auto;padding:0 22px;min-height:48px}

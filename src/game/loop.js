@@ -635,7 +635,8 @@ function frame(nowMs) {
   game.crowdLight +=
     ((game.running && !game.over && !game.paused ? 0.08 : 0.6) - game.crowdLight) * Math.min(1, dt * 2);
   if (game.curCrowd) {
-    game.curCrowd.mat.emissiveIntensity = game.crowdLight * (ARENAS[arenaId].crowdGlow ?? 1);
+    // crowdLift: a steady extra glow so sprite people don't go murky in sunlit arenas
+    game.curCrowd.mat.emissiveIntensity = game.crowdLight * (ARENAS[arenaId].crowdGlow ?? 1) + (ARENAS[arenaId].crowdLift || 0);
     game.curCrowd.mat.color.setScalar(game.running && !game.over && !game.paused ? 0.7 : 1);
   }
   if (P.h === undefined) P.h = 0;

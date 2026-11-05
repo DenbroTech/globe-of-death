@@ -167,6 +167,46 @@ function extraMatrix(g) {
     bars.setColorAt(i, col.setHex(0x1aff6a));
   });
   g.add(bars);
+  // the floor under the cage: a glowing hex grid with pulses rippling out from the middle and data streaking
+  // along circuit traces; its hue cycles with the rest of the arena
+  const floorU = { uT: { value: 0 }, uHue: { value: 0.33 } };
+  const floor = new THREE.Mesh(
+    new THREE.CircleGeometry(13.6, 96),
+    new THREE.ShaderMaterial({
+      uniforms: floorU,
+      transparent: true,
+      depthWrite: false,
+      vertexShader: 'varying vec2 vP; void main(){ vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+      fragmentShader: `
+        uniform float uT, uHue; varying vec2 vP;
+        vec3 hsl(float h){ vec3 k = clamp(abs(mod(h*6.0+vec3(0.,4.,2.),6.)-3.)-1., 0., 1.); return k; }
+        float hexd(vec2 p){ p = abs(p); return max(dot(p, normalize(vec2(1.,1.732))), p.x); }
+        void main(){
+          vec2 p = vP * 0.55;
+          // hex tiling
+          vec2 r = vec2(1., 1.732), h = r * 0.5;
+          vec2 a = mod(p, r) - h, b = mod(p - h, r) - h;
+          vec2 g = dot(a,a) < dot(b,b) ? a : b;
+          float edge = smoothstep(0.06, 0.0, abs(hexd(g) - 0.5));
+          float rad = length(vP);
+          // rings pulsing outward and a sweeping radar arm
+          float ring = smoothstep(0.35, 0.0, abs(fract(rad * 0.18 - uT * 0.5) - 0.5) - 0.42);
+          float ang = atan(vP.y, vP.x);
+          float sweep = pow(max(0., cos(ang - uT * 1.2)), 24.0);
+          // circuit traces: radial spokes with data blobs racing outward
+          float spoke = smoothstep(0.05, 0.0, abs(sin(ang * 12.0)) * rad * 0.12);
+          float data = spoke * smoothstep(0.7, 1.0, fract(rad * 0.25 - uT * 1.4 + floor(ang * 12.0 / 6.283) * 0.37));
+          vec3 col = hsl(uHue);
+          vec3 c = col * (0.18 + edge * 0.9 + ring * 0.8 + sweep * 0.6) + vec3(1.) * data * 0.9 + col * spoke * 0.25;
+          float fade = smoothstep(13.6, 11.5, rad);
+          gl_FragColor = vec4(c, (0.55 + 0.45 * max(edge, ring)) * fade);
+        }`,
+    }),
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = 0.04;
+  floor.renderOrder = 1;
+  g.add(floor);
   // the floor grid and other green bits shift hue with the bars
   const tinted = [];
   g.traverse(m => {
@@ -188,6 +228,8 @@ function extraMatrix(g) {
     bars.instanceMatrix.needsUpdate = true;
     bars.instanceColor.needsUpdate = true;
     const hue = (0.33 + 0.5 * (0.5 + 0.5 * Math.sin(t * 0.35))) % 1;
+    floorU.uT.value = t;
+    floorU.uHue.value = hue;
     tinted.forEach(m => m.color.setHSL(hue, 0.9, m.map ? 0.75 : 0.55));
   });
   return g;

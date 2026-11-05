@@ -93,7 +93,18 @@ function model(name) {
    with its own animation mixer; call mixer.update(dt) every frame. `length` sets its nose-to-tail size. */
 const fbxCache = {};
 function dino(name, length) {
-  if (!fbxCache[name]) fbxCache[name] = new FBXLoader().loadAsync(DINO[`../assets/models/dino/${name}.fbx`]);
+  if (!fbxCache[name])
+    fbxCache[name] = new FBXLoader().loadAsync(DINO[`../assets/models/dino/${name}.fbx`]).then(src => {
+      // smooth the faceted low-poly look: shared normals + softer material
+      src.traverse(m => {
+        if (m.isMesh) {
+          m.geometry.deleteAttribute('normal');
+          m.geometry.computeVertexNormals();
+          [].concat(m.material).forEach(x => (x.flatShading = false));
+        }
+      });
+      return src;
+    });
   return fbxCache[name].then(src => {
     const obj = SkeletonUtils.clone(src),
       wrap = new THREE.Group();

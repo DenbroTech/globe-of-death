@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dino, model } from '../arenas/models.js';
 
 /* ---------- Levels screen: a little world globe ----------
    A spinning planet with a hand-drawn map. Each unlocked level has a small model on its spot (tent, beach,
@@ -361,6 +362,52 @@ function marker(id) {
   }
   return g;
 }
+/* the real game models on the globe (same Kenney / Quaternius / Poly models as the arenas), tiny.
+   [model, x, y, z, rotY, scale]; `clear` drops the hand-built marker first */
+const KIT_MARKERS = {
+  beach: { clear: 1, parts: [['patch-sand-foliage', 0, -0.004, 0, 0, 0.05], ['palm-detailed-bend', 0.025, 0, 0.012, 0, 0.032], ['palm-detailed-straight', -0.03, 0, -0.018, 1.2, 0.03], ['boat-row-large', 0.05, 0, -0.04, 0.6, 0.02]] },
+  castle: {
+    clear: 1,
+    parts: [
+      ['tower-square-base', 0, 0, 0, 0, 0.045],
+      ['tower-square-mid-windows', 0, 0.045, 0, 0, 0.045],
+      ['tower-square-top-roof-high', 0, 0.09, 0, 0, 0.045],
+      ['wall', 0.045, 0, 0, 0, 0.045],
+      ['wall', -0.045, 0, 0, 0, 0.045],
+      ['tower-hexagon-base', 0.09, 0, 0.005, 0, 0.04],
+      ['tower-hexagon-roof', 0.09, 0.052, 0.005, 0, 0.04],
+      ['tower-hexagon-base', -0.09, 0, 0.005, 0, 0.04],
+      ['tower-hexagon-roof', -0.09, 0.052, 0.005, 0, 0.04],
+    ],
+  },
+  pirate: { clear: 1, parts: [['ship-pirate-medium', 0, -0.012, 0, 0.7, 0.012]] },
+  garden: { clear: 1, parts: [['ladybug', 0.02, 0, 0.01, 0.8, 0.045], ['ant', -0.03, 0, -0.01, 2, 0.08], ['tree-small', -0.04, 0, 0.04, 0, 0.04]] },
+  under: { parts: [['shark', 0, 0.035, 0, 1, 0.06]] },
+  arctic: { parts: [['penguin', 0.045, 0, 0.01, -0.4, 0.028], ['penguin', 0.06, 0, -0.012, 0.3, 0.024]] },
+  dino: { parts: [['palm-detailed-bend', 0.05, 0, 0.03, 0, 0.03], ['palm-detailed-straight', -0.05, 0, -0.02, 1, 0.028]] },
+};
+function kitMarker(id, g) {
+  const K = KIT_MARKERS[id];
+  if (!K) return;
+  if (K.clear) g.clear();
+  K.parts.forEach(([n, x, y, z, ry, sc]) =>
+    model(n)
+      .then(m => {
+        m.position.set(x, y, z);
+        m.rotation.y = ry;
+        m.scale.multiplyScalar(sc);
+        g.add(m);
+      })
+      .catch(() => {}),
+  );
+  if (id === 'dino')
+    dino('Trex', 0.13)
+      .then(d => {
+        d.obj.rotation.y = 0.8;
+        g.add(d.obj);
+      })
+      .catch(() => {});
+}
 /* a little green flag planted by a level you've finished */
 function flag() {
   const f = new THREE.Group();
@@ -415,6 +462,7 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
     if (!open(id) || sp.moon || sp.orbit) continue;
     const m = marker(id),
       n = onSphere(sp.lat, sp.lon);
+    kitMarker(id, m);
     m.position.copy(n);
     m.quaternion.setFromUnitVectors(V(0, 1, 0), n);
     m.scale.setScalar(1.9);
@@ -550,7 +598,7 @@ function mountGlobe(host, open, sel, onPick, done = () => false) {
       moon.position.set(Math.sin(a) * 1.75, 0.45, Math.cos(a) * 1.75);
       moon.rotation.y = a;
     }
-    for (const p of Object.values(pins)) if (p.obj.userData.bubbles) p.obj.children.forEach((c, i) => c.geometry.type === 'SphereGeometry' && (c.position.y = 0.01 + ((i * 0.012 + t * 0.03) % 0.11)));
+    for (const p of Object.values(pins)) if (p.obj.userData.bubbles) p.obj.children.forEach((c, i) => c.geometry && c.geometry.type === 'SphereGeometry' && (c.position.y = 0.01 + ((i * 0.012 + t * 0.03) % 0.11)));
     // pin from the selected spot
     const p = pins[cur];
     if (p) {

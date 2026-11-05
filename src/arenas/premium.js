@@ -937,17 +937,34 @@ function buildDino() {
     g.add(s);
     return s;
   });
-  // ferns and palms
-  const frond = new THREE.ConeGeometry(0.6, 6, 4);
-  frond.translate(0, 3, 0);
-  g.add(
-    instances(frond, std(0x2f7a2a, { flatShading: true }), Array.from({ length: 240 }, () => (o) => {
-      const [a, r] = [rnd() * 6.28, 30 + rnd() * 55];
-      o.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-      o.rotation.set((rnd() - 0.5) * 1.4, rnd() * 6.28, (rnd() - 0.5) * 1.4);
-      o.scale.setScalar(0.5 + rnd() * 1.1);
-    })),
-  );
+  // normal grass: short curved blades over the valley floor (the forest of trees is added in kitDino)
+  {
+    const pos = [],
+      col = [],
+      idx = [];
+    for (let i = 0; i <= 3; i++) {
+      const f = i / 3,
+        w = 0.1 * (1 - f) + 0.01;
+      pos.push(-w, f, f * f * 0.3, w, f, f * f * 0.3);
+      const c = new THREE.Color(0x3d5a22).lerp(new THREE.Color(0x9ab454), f);
+      col.push(c.r, c.g, c.b, c.r, c.g, c.b);
+      if (i < 3) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2);
+    }
+    const blade = new THREE.BufferGeometry();
+    blade.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    blade.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    blade.setIndex(idx);
+    blade.computeVertexNormals();
+    g.add(
+      instances(blade, new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 }), Array.from({ length: 5000 }, () => (o) => {
+        const [a, r] = [rnd() * 6.28, 4.5 + Math.sqrt(rnd()) * 70];
+        o.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+        o.rotation.set(0, rnd() * 6.28, (rnd() - 0.5) * 0.4);
+        const h = 0.5 + rnd() * 1.1;
+        o.scale.set(1.4, h, h);
+      })),
+    );
+  }
   for (let i = 0; i < 16; i++) {
     const palm = makePalm(10 + rnd() * 8, rnd),
       a = rnd() * 6.28,
@@ -1280,6 +1297,7 @@ const PREMIUM = {
       beams: 0,
       exp: 1.05,
     },
+    crowdLift: 0.38,
     crowdGlow: 0.5,
     crowd: crowdRing({ stepCol: 0xcfdcea }),
     build: () => kitArctic(buildArctic()),
@@ -1324,6 +1342,7 @@ const PREMIUM = {
       beams: 0,
       exp: 1.05,
     },
+    crowdLift: 0.38,
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x6a4a2a }),
     build: () => kitGarden(extraGarden(moreGarden(buildGarden()))),
@@ -1374,9 +1393,10 @@ const PREMIUM = {
       exp: 1.0,
       rock: 1,
     },
+    crowdLift: 0.38,
     crowdGlow: 0.35,
     // no stand: a few rows of people at the bow and the stern, standing on the deck
-    crowd: crowdRing({ r0: 8.7, tiers: 3, dr: 0.75, y0: 1.95, dy: 0.15, gap: 0.6, steps: false, empty: 0.12, arcs: [[Math.PI / 2 - 0.32, 0.64]] }),
+    crowd: crowdRing({ r0: 6.7, tiers: 3, dr: 0.75, y0: 2.0, dy: 0.12, gap: 0.55, steps: false, empty: 0.1, size: 1.35, arcs: [[Math.PI / 2 - 0.36, 0.72], [-Math.PI / 2 - 0.3, 0.6]] }),
     build: () => kitPirate(morePirate(buildPirate())),
   },
   castle: {
@@ -1398,6 +1418,7 @@ const PREMIUM = {
       beams: 0,
       exp: 1.15,
     },
+    crowdLift: 0.38,
     crowdGlow: 0.65,
     crowd: crowdRing({ stepCol: 0x6e6a62 }),
     build: () => kitCastle(moreCastle(buildCastle())),
@@ -1422,6 +1443,7 @@ const PREMIUM = {
       beams: 0,
       exp: 1.0,
     },
+    crowdLift: 0.38,
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x5a4a30 }),
     build: () => kitDino(moreDino(buildDino())),

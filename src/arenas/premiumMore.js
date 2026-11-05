@@ -590,7 +590,7 @@ function morePirate(g) {
   const battle = t => {
     const k = t % P_;
     // the cannon on our starboard side, in world space (the ship rocks)
-    gun.set(3.6, 1.2, -1).applyMatrix4(ship.matrixWorld);
+    gun.set(3.9, 1.1, 3.6).applyMatrix4(ship.matrixWorld);
     // rival: sails in, gets hit at 7.5 s, burns and sinks, gone until the next battle
     const sink = Math.max(0, Math.min(1, (k - 7.5) / 7));
     rival.visible = k < 16;
@@ -734,16 +734,6 @@ function moreCastle(g) {
     tp.position.set(Math.cos(a) * 43.5, 8, Math.sin(a) * 43.5);
     tp.lookAt(0, 8, 0);
     g.add(tp);
-  }
-  // topiary in planters
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * 6.28 + 0.2,
-      r = 34,
-      pot = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1, 1.4, 12), stone),
-      bush = new THREE.Mesh(i % 2 ? new THREE.ConeGeometry(1.4, 4, 12) : new THREE.SphereGeometry(1.6, 14, 10), std(0x2f6f2a));
-    pot.position.set(Math.cos(a) * r, 0.7, Math.sin(a) * r);
-    bush.position.set(Math.cos(a) * r, i % 2 ? 3.3 : 2.9, Math.sin(a) * r);
-    g.add(pot, bush);
   }
   const flags = []; // (tower flags now come with the Kenney castle)
   // doves circling
