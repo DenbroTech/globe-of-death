@@ -30,76 +30,166 @@ const onSphere = (lat, lon, r = 1) => {
   return V(r * Math.cos(la) * Math.cos(lo), r * Math.sin(la), -r * Math.cos(la) * Math.sin(lo));
 };
 
-/* equirectangular map: sea with depth shading, a few continents with beaches, forest and snow caps */
+/* equirectangular map, drawn crisp: deep-to-shallow sea, continents with wavy coastlines, a sand rim and a dark
+   coast line, greens / dry land / mountains by latitude, ice caps, the Sky crane city. Also returns a height map
+   (bump) and a roughness map (shiny sea, matte land) so the planet has relief and definition. */
 function mapTexture() {
-  const W = 1024,
-    H = 512,
-    c = document.createElement('canvas');
-  c.width = W;
-  c.height = H;
-  const g = c.getContext('2d');
-  const sea = g.createLinearGradient(0, 0, 0, H);
-  sea.addColorStop(0, '#1d4f8f');
-  sea.addColorStop(0.5, '#2a6db8');
-  sea.addColorStop(1, '#1d4f8f');
-  g.fillStyle = sea;
-  g.fillRect(0, 0, W, H);
+  const W = 2048,
+    H = 1024;
+  const mk = () => {
+    const c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    return [c, c.getContext('2d')];
+  };
+  const [c, g] = mk(),
+    [hc, hg] = mk(),
+    [rc, rg] = mk();
   const px = (lat, lon) => [((lon + 180) / 360) * W, ((90 - lat) / 180) * H];
-  // seeded blobs so the map is the same every time
   let s = 7;
   const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  const blob = (lat, lon, rx, ry, col, n = 14) => {
-    const [x, y] = px(lat, lon);
-    for (let i = 0; i < n; i++) {
-      g.fillStyle = col;
-      g.beginPath();
-      g.ellipse(x + (rnd() - 0.5) * rx * 1.4, y + (rnd() - 0.5) * ry * 1.4, rx * (0.35 + rnd() * 0.5), ry * (0.35 + rnd() * 0.5), rnd() * 3, 0, 7);
-      g.fill();
-    }
-  };
+  // sea: deep blue with a gentle latitude gradient and fine ripple noise
+  const sea = g.createLinearGradient(0, 0, 0, H);
+  sea.addColorStop(0, '#123a6e');
+  sea.addColorStop(0.5, '#1a5aa6');
+  sea.addColorStop(1, '#123a6e');
+  g.fillStyle = sea;
+  g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 9000; i++) {
+    g.fillStyle = `rgba(255,255,255,${rnd() * 0.04})`;
+    g.fillRect(rnd() * W, rnd() * H, 6 + rnd() * 14, 1);
+  }
+  hg.fillStyle = '#000';
+  hg.fillRect(0, 0, W, H);
+  rg.fillStyle = '#2a2a2a'; // sea: fairly shiny
+  rg.fillRect(0, 0, W, H);
+  // continents: wavy closed outlines (lat, lon, radius x/y in px, seed)
   const LAND = [
-    [45, 10, 90, 55], // Europe-ish
-    [10, 20, 70, 90], // Africa-ish
-    [45, 100, 170, 70], // Asia-ish
-    [40, -100, 110, 60], // North America-ish
-    [-15, -60, 55, 80], // South America-ish
-    [-25, 135, 60, 35], // Australia-ish
+    [48, 12, 150, 80, 1], // Europe
+    [6, 20, 120, 170, 2], // Africa
+    [45, 100, 300, 120, 3], // Asia
+    [42, -100, 200, 115, 4], // North America
+    [-16, -60, 95, 160, 5], // South America
+    [-25, 135, 110, 65, 6], // Australia
   ];
-  // shallow-water halo, sand rim, then land
-  for (const [la, lo, rx, ry] of LAND) blob(la, lo, rx * 1.15, ry * 1.15, 'rgba(90,170,220,.55)');
-  s = 7;
-  for (const [la, lo, rx, ry] of LAND) blob(la, lo, rx * 1.03, ry * 1.03, '#e6cf8a');
-  s = 7;
-  for (const [la, lo, rx, ry] of LAND) blob(la, lo, rx, ry, '#4f9a3c');
-  // forests and hills
-  for (const [la, lo, rx, ry] of LAND) blob(la, lo, rx * 0.6, ry * 0.6, '#3c7e2e', 8);
-  // ice caps
-  g.fillStyle = '#eef4f8';
-  g.fillRect(0, 0, W, 22);
-  g.fillRect(0, H - 26, W, 26);
+  const shape = (ctx, [la, lo, rx, ry, sd], grow = 1) => {
+    const [x, y] = px(la, lo);
+    ctx.beginPath();
+    for (let i = 0; i <= 96; i++) {
+      const a = (i / 96) * Math.PI * 2,
+        k = 1 + 0.22 * Math.sin(3 * a + sd) + 0.12 * Math.sin(5 * a + sd * 2.1) + 0.06 * Math.sin(11 * a + sd * 3.3) + 0.03 * Math.sin(23 * a + sd);
+      const X = x + Math.cos(a) * rx * k * grow,
+        Y = y + Math.sin(a) * ry * k * grow;
+      i ? ctx.lineTo(X, Y) : ctx.moveTo(X, Y);
+    }
+    ctx.closePath();
+  };
+  // shallow water halo
+  g.save();
+  g.filter = 'blur(14px)';
+  g.fillStyle = 'rgba(70,170,220,.75)';
+  LAND.forEach(L => (shape(g, L, 1.1), g.fill()));
+  g.restore();
+  // sand rim, then land
+  g.fillStyle = '#e8d28e';
+  LAND.forEach(L => (shape(g, L, 1.025), g.fill()));
+  LAND.forEach(L => {
+    const [la, lo] = L,
+      [x, y] = px(la, lo),
+      gr = g.createRadialGradient(x, y, 0, x, y, Math.max(L[2], L[3]) * 1.1);
+    const dry = Math.abs(la) < 25; // tropics: greener in the middle, dry at the edges
+    gr.addColorStop(0, dry ? '#3f8f34' : '#4f9a3c');
+    gr.addColorStop(0.6, dry ? '#6aa83f' : '#5ea844');
+    gr.addColorStop(1, dry ? '#c2a85a' : '#7fae4f');
+    g.fillStyle = gr;
+    shape(g, L);
+    g.fill();
+  });
+  // forests, deserts and mountain ranges inside the land (clipped to it)
+  g.save();
+  g.beginPath();
+  LAND.forEach(L => shape(g, L));
+  g.clip();
+  hg.save();
+  hg.beginPath();
+  LAND.forEach(L => shape(hg, L));
+  hg.clip();
+  hg.fillStyle = '#3a3a3a';
+  hg.fillRect(0, 0, W, H);
+  for (let i = 0; i < 260; i++) {
+    const L = LAND[i % LAND.length],
+      [x, y] = px(L[0], L[1]),
+      X = x + (rnd() - 0.5) * L[2] * 1.6,
+      Y = y + (rnd() - 0.5) * L[3] * 1.6,
+      r = 8 + rnd() * 26,
+      k = rnd();
+    g.fillStyle = k < 0.55 ? 'rgba(40,110,40,.45)' : k < 0.75 ? 'rgba(210,180,100,.4)' : 'rgba(120,100,80,.55)';
+    g.beginPath();
+    g.ellipse(X, Y, r * (1 + rnd()), r, rnd() * 3, 0, 7);
+    g.fill();
+    if (k >= 0.75) {
+      // mountain: grey-brown with a snowy cap, and high on the height map
+      g.fillStyle = 'rgba(240,244,248,.75)';
+      g.beginPath();
+      g.ellipse(X, Y, r * 0.35, r * 0.25, 0, 0, 7);
+      g.fill();
+      const hgr = hg.createRadialGradient(X, Y, 0, X, Y, r * 1.4);
+      hgr.addColorStop(0, '#ffffff');
+      hgr.addColorStop(1, 'rgba(255,255,255,0)');
+      hg.fillStyle = hgr;
+      hg.fillRect(X - r * 1.5, Y - r * 1.5, r * 3, r * 3);
+    }
+  }
+  hg.restore();
+  g.restore();
+  // crisp coastline
+  g.strokeStyle = 'rgba(30,60,30,.65)';
+  g.lineWidth = 2.5;
+  LAND.forEach(L => (shape(g, L), g.stroke()));
+  // matte land on the roughness map
+  rg.fillStyle = '#e0e0e0';
+  LAND.forEach(L => (shape(rg, L, 1.02), rg.fill()));
+  // ice caps with a soft edge
+  for (const [y0, y1] of [
+    [0, 52],
+    [H - 60, H],
+  ]) {
+    const ig = g.createLinearGradient(0, y0 ? y0 - 20 : y1 + 20, 0, y0 ? y0 + 10 : y1 - 10);
+    ig.addColorStop(0, 'rgba(240,246,250,0)');
+    ig.addColorStop(1, '#f0f6fa');
+    g.fillStyle = '#f0f6fa';
+    g.fillRect(0, y0, W, y1 - y0);
+    g.fillStyle = ig;
+    g.fillRect(0, y0 ? y0 - 20 : y1, W, 30);
+  }
   // sky crane city: a grey patch with a street grid
   {
     const [x, y] = px(SPOTS.crane.lat, SPOTS.crane.lon);
     g.fillStyle = '#8a8f99';
     g.beginPath();
-    g.ellipse(x, y, 34, 22, 0, 0, 7);
+    g.ellipse(x, y, 60, 40, 0, 0, 7);
     g.fill();
     g.strokeStyle = '#5d626b';
-    g.lineWidth = 1.5;
-    for (let i = -30; i <= 30; i += 8) {
+    g.lineWidth = 2;
+    for (let i = -56; i <= 56; i += 12) {
       g.beginPath();
-      g.moveTo(x + i, y - 22);
-      g.lineTo(x + i, y + 22);
+      g.moveTo(x + i, y - 40);
+      g.lineTo(x + i, y + 40);
       g.stroke();
       g.beginPath();
-      g.moveTo(x - 34, y + i * 0.7);
-      g.lineTo(x + 34, y + i * 0.7);
+      g.moveTo(x - 60, y + i * 0.7);
+      g.lineTo(x + 60, y + i * 0.7);
       g.stroke();
     }
   }
-  const t = new THREE.CanvasTexture(c);
-  t.anisotropy = 4;
-  return t;
+  const T = c => {
+    const t = new THREE.CanvasTexture(c);
+    t.anisotropy = 8;
+    return t;
+  };
+  const map = T(c);
+  map.encoding = THREE.sRGBEncoding;
+  return { map, bump: T(hc), rough: T(rc) };
 }
 
 /* small models for each spot, built in the spot's local frame (+Y = up out of the ground) */
@@ -261,7 +351,13 @@ function mountGlobe(host, open, sel, onPick) {
   scene.add(sun);
   const planet = new THREE.Group();
   scene.add(planet);
-  planet.add(new THREE.Mesh(new THREE.SphereGeometry(1, 64, 40), new THREE.MeshStandardMaterial({ map: mapTexture(), roughness: 0.75 })));
+  const MAP = mapTexture();
+  planet.add(
+    new THREE.Mesh(
+      new THREE.SphereGeometry(1, 96, 64),
+      new THREE.MeshStandardMaterial({ map: MAP.map, bumpMap: MAP.bump, bumpScale: 0.025, roughnessMap: MAP.rough, roughness: 1, metalness: 0.05 }),
+    ),
+  );
   // thin atmosphere glow
   planet.add(
     new THREE.Mesh(

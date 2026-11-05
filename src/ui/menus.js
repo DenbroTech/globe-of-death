@@ -24,7 +24,8 @@ const ARENA_ART = {
 const ICO = n =>
   `<svg viewBox="0 0 24 24" class="hi">${{ gar: `<path d="M3 21V9l9-6 9 6v12"/><path d="M7 21v-7h10v7"/>`, lb: `<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 6h3v2a3 3 0 0 1-3 3M7 6H4v2a3 3 0 0 0 3 3"/>`, learn: `<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><path d="M12 17.5v.5"/>`, set: `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>` }[n]}</svg>`;
 function showStart() {
-  unmountGlobe(); // leaving the Levels screen any way (back button, etc.) stops its globe
+  unmountGlobe();
+  ov.classList.remove('lvdim'); // leaving the Levels screen any way (back button, etc.) stops its globe
   app.classList.add('menu');
   parkBike();
   ov.hidden = false;
@@ -62,6 +63,7 @@ function showLevels() {
     lk =
       '<svg viewBox="0 0 24 24" class="st-i"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
   const status = k => (k === arenaId ? ok + 'Selected' : arenaOpen(k) ? 'Unlocked' : lk + reqText(k).replace(' to unlock', ''));
+  ov.classList.add('lvdim'); // darker backdrop behind the globe
   ov.innerHTML = `<div class="card lvcard"><h1>Levels</h1><div class="lglobe" id="lglobe"></div><div class="lvlist">${Object.entries(ARENAS)
     .map(([k, A]) => {
       const open = arenaOpen(k);

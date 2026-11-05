@@ -50,7 +50,7 @@ const std = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ co
 const ARENAS = {
   bigtop: {
     name: 'Big Top',
-    songs: [0, 5],
+    songs: [18, 0, 5],
     kit: { lead: 'organ', stab: 'organ', hit: 'organ', jump: 'slide' },
     blurb: 'Sawdust, stripes and spotlights.',
     env: {

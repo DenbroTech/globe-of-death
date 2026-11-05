@@ -6,6 +6,7 @@ import { PREMIUM_THEMES } from './premiumSongs.js';
    amb: background ambience recipe (see ambience in synth.js) */
 const THEMES = {
   bigtop: {
+    mel: 'calliope',
     lead: 'calliope',
     stab: 'organ',
     hit: 'calliope',

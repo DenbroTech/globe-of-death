@@ -3,6 +3,7 @@ import { cv, tex } from '../render/textures.js';
 import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
+import { moreCastle, moreCavern, moreDino, moreGarden, moreMatrix, morePirate, moreSolar } from './premiumMore.js';
 
 /* ---------- the 7 premium arenas ----------
    Free for now; `premium: true` marks them so they can be locked behind an in-app purchase later.
@@ -432,7 +433,7 @@ function buildSolar() {
   g.add(rings);
   // the floor is a slab of asteroid rock the crowd stands on, floating in space
   const rockM = std(0x3a3640, { flatShading: true });
-  const slab = new THREE.Mesh(new THREE.CylinderGeometry(22, 12, 6, 24, 2), rockM);
+  const slab = new THREE.Mesh(new THREE.CylinderGeometry(22, 12, 6, 24, 2), std(0x24222a, { flatShading: true }));
   slab.position.y = -3;
   g.add(slab);
   // the Sun, glowing far off
@@ -1072,7 +1073,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.9,
     crowd: crowdRing({ stepCol: 0x3a3440 }),
-    build: buildCavern,
+    build: () => moreCavern(buildCavern()),
   },
   garden: {
     name: 'Back garden',
@@ -1096,7 +1097,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x6a4a2a }),
-    build: buildGarden,
+    build: () => moreGarden(buildGarden()),
   },
   solar: {
     name: 'Solar system',
@@ -1121,7 +1122,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.6,
     crowd: crowdRing({ stepCol: 0x4a4550 }),
-    build: buildSolar,
+    build: () => moreSolar(buildSolar()),
   },
   pirate: {
     name: 'Pirate ship',
@@ -1145,7 +1146,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.35,
     crowd: crowdRing({ r0: 13.5, tiers: 4, stepCol: 0x6b4223 }),
-    build: buildPirate,
+    build: () => morePirate(buildPirate()),
   },
   castle: {
     name: 'Royal court',
@@ -1168,7 +1169,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.35,
     crowd: crowdRing({ stepCol: 0x6e6a62 }),
-    build: buildCastle,
+    build: () => moreCastle(buildCastle()),
   },
   dino: {
     name: 'Dino valley',
@@ -1192,7 +1193,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.3,
     crowd: crowdRing({ stepCol: 0x5a4a30 }),
-    build: buildDino,
+    build: () => moreDino(buildDino()),
   },
   matrix: {
     name: 'Digital grid',
@@ -1212,7 +1213,7 @@ const PREMIUM = {
     },
     crowdGlow: 1.0,
     crowd: crowdRing({ stepCol: 0x0a2a14 }),
-    build: buildMatrix,
+    build: () => moreMatrix(buildMatrix()),
   },
 };
 

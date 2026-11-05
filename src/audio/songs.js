@@ -297,6 +297,17 @@ function playStep(S, k, bar, a, t, spb) {
     const ln = S.lead[k];
     if (ln != null) voice(K.lead || 'tri', t, root + ln + 12, S.lv * 1.3, (S.ldec || 0.16) + 0.08);
   }
+  // a proper tune: 8 bars of eighth-notes looping with the chords (0 = hold, null = rest)
+  if (S.mel) {
+    const L = S.mel.length,
+      i = (bar * 8 + k) % L,
+      n = S.mel[i];
+    if (n) {
+      let d = 1;
+      while (d < 8 && S.mel[(i + d) % L] === 0) d++;
+      voice(K.mel || K.lead || 'tri', t, n, S.mv || 0.08, d * spb * 0.92);
+    }
+  }
   if (S.stab && S.stab.includes(k)) [12, 16, 19].forEach(i => voice(K.stab || 'organ', t, root + i, 0.03, 0.14));
   if (S.chord && S.chord.includes(k)) [12, S.maj ? 16 : 15, 19].forEach(i => voice(K.stab || 'tri', t, root + i, 0.028, 0.16));
   comp(t, root, k, S.maj, spb);
