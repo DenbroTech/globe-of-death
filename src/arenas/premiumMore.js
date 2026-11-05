@@ -743,22 +743,7 @@ function moreCastle(g) {
     bush.position.set(Math.cos(a) * r, i % 2 ? 3.3 : 2.9, Math.sin(a) * r);
     g.add(pot, bush);
   }
-  // waving flags on the towers
-  const flags = [];
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * 6.28 + 0.26,
-      x = Math.cos(a) * 44,
-      z = Math.sin(a) * 44;
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 5, 6), std(0x333333));
-    pole.position.set(x, 38, z);
-    const fg = new THREE.PlaneGeometry(4, 2.4, 10, 2);
-    fg.translate(2, 0, 0);
-    const f = new THREE.Mesh(fg, new THREE.MeshStandardMaterial({ color: i % 2 ? 0xc7202c : 0xffc23d, side: THREE.DoubleSide }));
-    f.position.set(x, 39.3, z);
-    f.userData.base = Float32Array.from(fg.attributes.position.array);
-    g.add(pole, f);
-    flags.push(f);
-  }
+  const flags = []; // (tower flags now come with the Kenney castle)
   // doves circling
   const doveG = new THREE.BufferGeometry();
   doveG.setAttribute('position', new THREE.BufferAttribute(new Float32Array([0, 0, 0, -0.9, 0.25, 0, -0.2, 0, 0.3, 0, 0, 0, 0.9, 0.25, 0, 0.2, 0, 0.3]), 3));

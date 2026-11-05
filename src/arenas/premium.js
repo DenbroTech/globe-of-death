@@ -3,6 +3,8 @@ import { cv, tex } from '../render/textures.js';
 import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
+import { model } from './models.js';
+import { kitArctic, kitCastle } from './premiumKit.js';
 import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
 import { moreCastle, moreCavern, moreDino, moreGarden, moreMatrix, morePirate, moreSolar } from './premiumMore.js';
 
@@ -365,17 +367,11 @@ function buildGarden() {
   // ladybirds crawling, butterflies and a bee flying
   const lady = () => {
     const b = new THREE.Group();
-    const shell = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10, 0, 6.3, 0, 1.6), std(0xd8141c, { roughness: 0.3 }));
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.45, 10, 8), std(0x111111));
-    head.position.set(0, 0.1, 1);
-    b.add(shell, head);
-    for (let k = 0; k < 6; k++) {
-      const s = new THREE.Mesh(new THREE.CircleGeometry(0.2, 10), std(0x111111));
-      const a = (k / 6) * 6.28;
-      s.position.set(Math.cos(a) * 0.55, 0.8, Math.sin(a) * 0.55);
-      s.lookAt(Math.cos(a) * 2, 3, Math.sin(a) * 2);
-      b.add(s);
-    }
+    model('ladybug').then(m => {
+      m.scale.setScalar(1.6);
+      m.rotation.y = Math.PI / 2;
+      b.add(m);
+    });
     return b;
   };
   const ladies = Array.from({ length: 3 }, (_, i) => {
@@ -791,36 +787,8 @@ function buildCastle() {
   carpet.rotation.x = -Math.PI / 2;
   carpet.position.set(0, 0.02, -22);
   g.add(carpet);
-  // curtain wall with crenellations and towers
-  const wallTex = stoneTex.clone();
-  wallTex.needsUpdate = true;
-  wallTex.repeat.set(16, 2);
-  const wallM = std(0xffffff, { map: wallTex });
-  const W = 44,
-    wall = new THREE.Mesh(new THREE.CylinderGeometry(W, W, 14, 64, 1, true), new THREE.MeshStandardMaterial({ map: wallTex, side: THREE.BackSide, roughness: 0.9 }));
-  wall.position.y = 7;
-  g.add(wall);
-  g.add(
-    instances(new THREE.BoxGeometry(2.4, 2.4, 2.2), wallM, Array.from({ length: 56 }, (_, i) => (o) => {
-      const a = (i / 56) * 6.28;
-      o.position.set(Math.cos(a) * W, 15.2, Math.sin(a) * W);
-      o.rotation.y = -a;
-    })),
-  );
-  const roofM = std(0x2b3a7a);
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * 6.28 + 0.26,
-      x = Math.cos(a) * W,
-      z = Math.sin(a) * W,
-      tw = new THREE.Mesh(new THREE.CylinderGeometry(5, 5.5, 26, 20), stone),
-      roof = new THREE.Mesh(new THREE.ConeGeometry(6.2, 10, 20), roofM),
-      ban = new THREE.Mesh(new THREE.PlaneGeometry(3, 7), new THREE.MeshStandardMaterial({ color: i % 2 ? 0xc7202c : 0x2a4fb8, side: THREE.DoubleSide }));
-    tw.position.set(x, 13, z);
-    roof.position.set(x, 31, z);
-    ban.position.set(x * 0.885, 16, z * 0.885);
-    ban.lookAt(0, 16, 0);
-    g.add(tw, roof, ban);
-  }
+  // the curtain wall, towers and gatehouse are built from the Kenney Castle Kit (kitCastle in premiumKit.js)
+  const W = 44;
   // royal dais with two thrones and the king and queen watching
   const dais = new THREE.Mesh(new THREE.CylinderGeometry(9, 10, 1.6, 32, 1, false, Math.PI * 0.75, Math.PI * 0.5), std(0x6e6a62, { map: stoneTex }));
   dais.position.set(0, 0.8, -30);
@@ -1123,38 +1091,10 @@ function lathe(points, segs = 20) {
   return new THREE.LatheGeometry(points.map(([x, y]) => new THREE.Vector2(x, y)), segs);
 }
 function penguin() {
+  // the imported Poly penguin model (loads async); wings are dummies so the waddle code still runs
   const p = new THREE.Group();
-  // a smooth lathe-turned body: black back, white front, orange beak and feet
-  const body = new THREE.Mesh(lathe([[0, 0], [0.42, 0.08], [0.55, 0.45], [0.5, 0.9], [0.36, 1.2], [0.3, 1.38], [0.33, 1.55], [0.25, 1.75], [0, 1.82]]), std(0x15161c, { roughness: 0.5 }));
-  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.46, 18, 14), std(0xf4f4f0, { roughness: 0.6 }));
-  belly.scale.set(0.85, 1.35, 0.6);
-  belly.position.set(0, 0.68, 0.2);
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 10), std(0xf4f4f0));
-  face.scale.set(1, 0.9, 0.6);
-  face.position.set(0, 1.5, 0.2);
-  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.3, 8), std(0xff8a1a));
-  beak.rotation.x = Math.PI / 2;
-  beak.position.set(0, 1.5, 0.42);
-  p.add(body, belly, face, beak);
-  for (const x of [-0.1, 0.1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), std(0x111111));
-    eye.position.set(x, 1.6, 0.31);
-    p.add(eye);
-  }
-  const wings = [];
-  for (const sx of [-1, 1]) {
-    const w = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 8), std(0x15161c));
-    w.scale.set(0.12, 0.9, 0.35);
-    w.geometry.translate(0, -0.4, 0);
-    w.position.set(sx * 0.5, 1.15, 0);
-    p.add(w);
-    wings.push(w);
-    const foot = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 6), std(0xff8a1a));
-    foot.scale.set(1, 0.35, 1.6);
-    foot.position.set(sx * 0.18, 0.04, 0.15);
-    p.add(foot);
-  }
-  p.userData.wings = wings;
+  model('penguin').then(m => p.add(m));
+  p.userData.wings = [new THREE.Object3D(), new THREE.Object3D()];
   return p;
 }
 function buildArctic() {
@@ -1341,7 +1281,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.5,
     crowd: crowdRing({ stepCol: 0xcfdcea }),
-    build: buildArctic,
+    build: () => kitArctic(buildArctic()),
   },
   cavern: {
     name: 'Crystal cavern',
@@ -1459,7 +1399,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.65,
     crowd: crowdRing({ stepCol: 0x6e6a62 }),
-    build: () => extraCastle(moreCastle(buildCastle())),
+    build: () => kitCastle(moreCastle(buildCastle())),
   },
   dino: {
     name: 'Dino valley',
