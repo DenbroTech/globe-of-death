@@ -1,3 +1,4 @@
+import { moreMoon, moreStadium } from './classicMore.js';
 import * as THREE from 'three';
 import { makePalm } from './props.js';
 import { scene } from '../render/renderer.js';
@@ -55,7 +56,7 @@ const ARENAS = {
     blurb: 'Sawdust, stripes and spotlights.',
     env: {
       bg: 0x07060a,
-      fog: [0x07060a, 22, 55],
+      fog: [0x140a0c, 40, 130],
       sky: null,
       hemi: [0x6e5c80, 0x140c08, 0.45],
       sun: 0,
@@ -206,14 +207,12 @@ const ARENAS = {
       g.add(apron);
       const roofM = std(0x1b1d22, { side: THREE.DoubleSide });
       const rf = new THREE.Mesh(new THREE.CylinderGeometry(36, 34, 1, 64, 1, true), roofM);
-      rf.position.y = 14;
-      g.add(rf);
+      rf.position.y = 14; // (replaced by the canopy in moreStadium)
       const ad = new THREE.Mesh(
         new THREE.CylinderGeometry(17.6, 17.6, 0.9, 96, 1, true),
         new THREE.MeshBasicMaterial({ map: stripeTex(24, '#e63946', '#1d4ed8'), side: THREE.DoubleSide }),
       );
-      ad.position.y = 0.45;
-      g.add(ad);
+      ad.position.y = 0.45; // (replaced by the scrolling sponsor boards in moreStadium)
       [
         [1, 1],
         [1, -1],
@@ -237,7 +236,7 @@ const ARENAS = {
         t.add(gl);
         g.add(t);
       });
-      return g;
+      return moreStadium(g);
     },
   },
   crane: {
@@ -769,7 +768,7 @@ const ARENAS = {
       );
       dome.position.set(32, 0, -28);
       g.add(dome);
-      return g;
+      return moreMoon(g);
     },
   },
 };

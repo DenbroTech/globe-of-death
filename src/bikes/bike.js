@@ -514,6 +514,33 @@ function makeBike(o) {
     geo.computeVertexNormals();
     return mesh(geo, mat, par);
   };
+  /* loftP: turn a side profile (z,y outline) into a rounded, moulded volume: the outline gives each
+     section's top and bottom, `wf(u)` shapes the width along it (u = 0 rear … 1 front) */
+  const loftP = (pts, w, mat, { n = 2.8, tw = 0.12, wf = u => Math.pow(Math.sin(Math.PI * u), 0.45), steps = 9 } = {}) => {
+    const zs = pts.map(q => q[0]),
+      z0 = Math.min(...zs),
+      z1 = Math.max(...zs),
+      secs = [];
+    for (let i = 0; i <= steps; i++) {
+      const u = Math.min(0.985, Math.max(0.015, i / steps)),
+        z = z0 + (z1 - z0) * u;
+      let lo = Infinity,
+        hi = -Infinity;
+      for (let k = 0; k < pts.length; k++) {
+        const a = pts[k],
+          b = pts[(k + 1) % pts.length];
+        if ((a[0] - z) * (b[0] - z) > 0 || a[0] === b[0]) continue;
+        const y = a[1] + ((b[1] - a[1]) * (z - a[0])) / (b[0] - a[0]);
+        lo = Math.min(lo, y);
+        hi = Math.max(hi, y);
+      }
+      if (!isFinite(lo)) continue;
+      const h = Math.max(0.006, (hi - lo) / 2);
+      secs.push({ z, y: (hi + lo) / 2, h, w: Math.max(0.006, (w / 2) * wf(u)), n, tw });
+    }
+    secs.reverse(); // front → back, like the hand-written lofts
+    return loft(secs, mat, { sub: 4 });
+  };
   /* a thin flat panel cut from a side profile (z,y), e.g. a fin or winglet */
   const plate = (pts, th, mat, par = SG) => {
     const sh = new THREE.Shape();
@@ -1172,7 +1199,8 @@ function makeBike(o) {
         ],
         paint,
       );
-    else sideX(S.tank, S.tankW, paint, 0.5, 0.04);
+    // a teardrop tank: full shoulders at the front, drawn in at the knees
+    else loftP(S.tank, S.tankW * 1.06, paint, { wf: u => Math.pow(Math.sin(Math.PI * u), 0.42) * (0.78 + 0.22 * u) });
     const tt = S.tank.reduce((a, p) => (p[1] > a[1] ? p : a));
     const cap = disc(0.03, 0.02, chrome, V(0, tt[1] + 0.01, tt[0] - 0.02), 16);
     cap.rotation.set(0, 0, 0);
@@ -1182,7 +1210,8 @@ function makeBike(o) {
       kp.rotation.y = (sx * Math.PI) / 2;
     });
   }
-  sideX(S.seatP, S.seatW, leather, 0.45, 0.03);
+  // a padded saddle: flatter on top, rounded edges
+  loftP(S.seatP, S.seatW, leather, { n: 3.4, tw: 0.06, wf: u => Math.pow(Math.sin(Math.PI * u), 0.3) });
   if (st === 'classic') {
     sideX(
       [
