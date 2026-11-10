@@ -423,21 +423,22 @@ function riderKit(par, M) {
       /* shoulder armour: one moulded cap, white on top, black underneath, with a slider */
       M.part = 'shoulder';
       sc(
-        sh.clone().add(V(-sx * 0.02, 0.05, 0)),
-        sh.clone().add(V(sx * 0.085, -0.075, 0)),
+        // fitted to the shoulder (not a wing sticking out): suit colour with one light stripe over the top
+        sh.clone().add(V(-sx * 0.012, 0.036, 0)),
+        sh.clone().add(V(sx * 0.062, -0.082, 0)),
         f,
         [
-          [0, 0.03, 0.05],
-          [0.45, 0.046, 0.068],
-          [1, 0.03, 0.048],
+          [0, 0.026, 0.046],
+          [0.45, 0.04, 0.062],
+          [1, 0.03, 0.05],
         ],
         M.suit,
         18,
         12,
         0.45,
-        (t, n) => (n.dot(YAX) > 0.1 ? SEC : BLK),
+        (t, n) => (n.dot(YAX) > 0.1 ? (t > 0.36 && t < 0.6 ? SEC : MAIN) : BLK),
       );
-      puck(sh.clone().add(V(sx * 0.082, -0.045, 0)), out, 0.024, 0.008, M.slider);
+      puck(sh.clone().add(V(sx * 0.064, -0.05, 0)), out, 0.02, 0.006, M.slider);
       /* elbow slider */
       puck(
         el

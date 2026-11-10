@@ -240,13 +240,14 @@ const BSPEC = {
     ],
     tankW: 0.36,
     seatP: [
-      [-0.24, 0.76],
-      [-0.3, 0.82],
-      [-0.5, 0.84],
-      [-0.62, 0.8],
-      [-0.5, 0.75],
+      [-0.08, 0.7],
+      [-0.16, 0.755],
+      [-0.4, 0.78],
+      [-0.5, 0.775],
+      [-0.46, 0.735],
+      [-0.2, 0.7],
     ],
-    seatW: 0.24,
+    seatW: 0.22,
     ex: 'jet',
     fend: 'hug',
     light: 'jet',
@@ -448,6 +449,81 @@ function makeBike(o) {
     geo.computeVertexNormals();
     return mesh(geo, mat, par);
   };
+  /* loft: a smooth sculpted body skinned through cross-sections along the bike (z). Each section is
+     { z, y, w, h, hb, n, tw }: centre height y, half-width w, half-height above (h) and below (hb, default h),
+     n = superellipse exponent (2 round … 4 boxy), tw = how much the top narrows (pear shape). Sections are
+     joined with a Catmull-Rom spline, the ends close to a point, so panels read as real moulded bodywork. */
+  const loft = (secs, mat, { seg = 28, sub = 6, par = SG } = {}) => {
+    const L = secs.length,
+      def = { n: 2.6, tw: 0 },
+      at = (k, j) => {
+        const q = secs[Math.max(0, Math.min(L - 1, j))];
+        return k === 'hb' ? (q.hb ?? q.h) : (q[k] ?? def[k]);
+      },
+      val = (k, u) => {
+        const i = Math.min(L - 2, Math.floor(u)),
+          f = u - i,
+          p0 = at(k, i - 1),
+          p1 = at(k, i),
+          p2 = at(k, i + 1),
+          p3 = at(k, i + 2);
+        return 0.5 * (2 * p1 + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f + (-p0 + 3 * p1 - 3 * p2 + p3) * f * f * f);
+      };
+    const rings = (L - 1) * sub + 1,
+      pos = [],
+      idx = [],
+      fwd = secs[L - 1].z > secs[0].z;
+    for (let r = 0; r < rings; r++) {
+      const u = r / sub,
+        z = val('z', u),
+        y = val('y', u),
+        w = Math.max(0.001, val('w', u)),
+        h = Math.max(0.001, val('h', u)),
+        hb = Math.max(0.001, val('hb', u)),
+        ex = 2 / Math.max(1.6, val('n', u)),
+        tw = val('tw', u);
+      for (let j = 0; j < seg; j++) {
+        const th = (j / seg) * Math.PI * 2,
+          c = Math.cos(th),
+          sn = Math.sin(th);
+        pos.push(w * Math.sign(c) * Math.pow(Math.abs(c), ex) * (1 - tw * sn), y + (sn >= 0 ? h : hb) * Math.sign(sn) * Math.pow(Math.abs(sn), ex), z);
+      }
+    }
+    for (let r = 0; r < rings - 1; r++)
+      for (let j = 0; j < seg; j++) {
+        const a = r * seg + j,
+          b = r * seg + ((j + 1) % seg),
+          c = a + seg,
+          d = b + seg;
+        fwd ? idx.push(a, b, c, b, d, c) : idx.push(a, c, b, b, c, d);
+      }
+    // close both ends
+    [0, rings - 1].forEach((r, e) => {
+      const q = secs[e ? L - 1 : 0],
+        ci = pos.length / 3;
+      pos.push(0, q.y, q.z);
+      for (let j = 0; j < seg; j++) {
+        const a = r * seg + j,
+          b = r * seg + ((j + 1) % seg);
+        (e ? fwd : !fwd) ? idx.push(ci, a, b) : idx.push(ci, b, a);
+      }
+    });
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return mesh(geo, mat, par);
+  };
+  /* a thin flat panel cut from a side profile (z,y), e.g. a fin or winglet */
+  const plate = (pts, th, mat, par = SG) => {
+    const sh = new THREE.Shape();
+    pts.forEach((q, i) => (i ? sh.lineTo(q[0], q[1]) : sh.moveTo(q[0], q[1])));
+    sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: th, bevelEnabled: true, bevelThickness: th * 0.4, bevelSize: th * 0.4, bevelSegments: 2 });
+    geo.translate(0, 0, -th / 2);
+    geo.rotateY(-Math.PI / 2);
+    return mesh(geo, mat, par);
+  };
   const wheels = [],
     AF = V(0, S.rf, S.zf),
     AR = V(0, S.rr, S.zr);
@@ -457,9 +533,18 @@ function makeBike(o) {
     wg.position.copy(c);
     m.add(wg);
     const R0 = r - t;
-    const tire = mesh(new THREE.TorusGeometry(R0, t, 12, 44), rubber, wg);
-    tire.rotation.y = Math.PI / 2;
-    tire.scale.set(1, 1, 0.92);
+    // a real tyre section: flatter crown, rounded shoulders and sidewalls that tuck in to the rim
+    const road = !S.knobs,
+      wide = road && (st === 'sport' || st === 'rocket') ? (front ? 1.05 : 1.22) : 1,
+      prof = [];
+    for (let i = 0; i <= 20; i++) {
+      const ph = -2.15 + (4.3 * i) / 20,
+        c = Math.cos(ph),
+        sn = Math.sin(ph);
+      prof.push(new THREE.Vector2(R0 + t * Math.sign(c) * Math.pow(Math.abs(c), road ? 0.72 : 0.9), -t * wide * Math.sign(sn) * Math.pow(Math.abs(sn), 0.8)));
+    }
+    const tire = mesh(new THREE.LatheGeometry(prof, 52), rubber, wg);
+    tire.rotation.z = Math.PI / 2;
     if (S.knobs) {
       for (let i = 0; i < 34; i++) {
         const a = (i / 34) * 6.283;
@@ -470,11 +555,22 @@ function makeBike(o) {
         }
       }
     } else {
+      // tread: two fine grooves running round the crown
       for (const sx of [-1, 1]) {
-        const gr = mesh(new THREE.TorusGeometry(R0, t * 0.995, 4, 48), black, wg);
+        const gr = mesh(new THREE.TorusGeometry(r - t * 0.075, 0.004, 4, 56), black, wg);
         gr.rotation.y = Math.PI / 2;
-        gr.scale.set(1, 1, 0.05);
-        gr.position.x = sx * t * 0.32;
+        gr.position.x = sx * t * wide * 0.36;
+      }
+      // a raised ring on each sidewall, and on the fast bikes a rim stripe in the paint colour
+      for (const sx of [-1, 1]) {
+        const sw = mesh(new THREE.TorusGeometry(R0 - t * 0.1, 0.006, 5, 48), black, wg);
+        sw.rotation.y = Math.PI / 2;
+        sw.position.x = sx * t * wide * 0.93;
+        if (st === 'sport' || st === 'rocket') {
+          const stripe = mesh(new THREE.TorusGeometry(R0 - t * 0.6, 0.007, 5, 48), paint, wg);
+          stripe.rotation.y = Math.PI / 2;
+          stripe.position.x = sx * t * 0.56;
+        }
       }
     }
     const rimR = R0 - t * 0.62;
@@ -906,15 +1002,78 @@ function makeBike(o) {
     disc(0.08, 0.025, dark, V(-0.17, E.y - 0.02, E.z), 24);
   }
   if (S.eng === 'jet') {
-    const a = V(0, E.y, E.z + 0.3),
-      b = V(0, E.y, E.z - 0.7);
-    cyl(0.13, 0.17, null, chrome, a, b, 28);
-    for (let k = 0; k < 6; k++) {
-      const p = a.clone().lerp(b, k / 5);
-      const t = mesh(new THREE.TorusGeometry(0.13 + k * 0.008, 0.012, 6, 28), dark);
-      t.position.copy(p);
-    }
-    cyl(0.17, 0.1, null, dark, b, b.clone().add(V(0, 0, -0.18)), 28);
+    // twin turbines slung either side of the rear wheel
+    const titan = SM(0xaeb4bd, 0.3, 0.95),
+      heat = SM(0x6a5a8a, 0.35, 0.9), // heat-blued nozzle
+      core = SM(0x9fe8ff, 0.2, 0, { emissive: 0x4fc8ff, emissiveIntensity: 2.2 }),
+      TY = 0.4,
+      Z0 = -0.26,
+      LEN = 0.62;
+    S._noz = [];
+    [1, -1].forEach(sx => {
+      const TX = sx * 0.205,
+        pr = [
+          [0.058, 0],
+          [0.078, 0.012],
+          [0.092, 0.1],
+          [0.098, 0.26],
+          [0.096, 0.42],
+          [0.082, 0.54],
+          [0.07, LEN],
+        ].map(q => new THREE.Vector2(q[0], q[1]));
+      const nac = mesh(new THREE.LatheGeometry(pr, 28), titan);
+      nac.rotation.x = -Math.PI / 2; // lathe axis (y) → pointing back (-z)
+      nac.position.set(TX, TY, Z0);
+      nac.material.side = THREE.DoubleSide;
+      // intake: dark throat, fan blades and a chrome spinner
+      const throat = mesh(new THREE.CylinderGeometry(0.058, 0.058, 0.004, 24), black);
+      throat.rotation.x = Math.PI / 2;
+      throat.position.set(TX, TY, Z0 - 0.05);
+      for (let k = 0; k < 11; k++) {
+        const bl = mesh(new THREE.BoxGeometry(0.05, 0.003, 0.02), alu);
+        const a = (k / 11) * 6.283;
+        bl.position.set(TX + Math.cos(a) * 0.033, TY + Math.sin(a) * 0.033, Z0 - 0.03);
+        bl.rotation.set(0, 0, a);
+        bl.rotateX(0.6);
+      }
+      const spin = mesh(new THREE.ConeGeometry(0.02, 0.06, 14), chrome);
+      spin.rotation.x = Math.PI / 2;
+      spin.position.set(TX, TY, Z0 - 0.005);
+      // bands and panel rings along the casing
+      [0.1, 0.26, 0.42].forEach((d, k) => {
+        const rg = mesh(new THREE.TorusGeometry([0.093, 0.099, 0.097][k], 0.005, 6, 28), dark);
+        rg.position.set(TX, TY, Z0 - d);
+      });
+      // nozzle: heat-blued petals round a glowing core
+      const nz = Z0 - LEN;
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * 6.283,
+          pt = mesh(new THREE.BoxGeometry(0.034, 0.004, 0.09), heat);
+        pt.position.set(TX + Math.cos(a) * 0.062, TY + Math.sin(a) * 0.062, nz - 0.03);
+        pt.rotation.set(0, 0, a + Math.PI / 2);
+        pt.rotateX(-0.18);
+      }
+      const glowDisc = mesh(new THREE.CircleGeometry(0.05, 20), core);
+      glowDisc.rotation.y = Math.PI;
+      glowDisc.position.set(TX, TY, nz + 0.02);
+      const inner = mesh(new THREE.TorusGeometry(0.04, 0.008, 6, 20), core);
+      inner.position.set(TX, TY, nz - 0.02);
+      // pylon up to the body, and a little stabiliser winglet
+      box(0.03, 0.14, 0.2, paint, sx * 0.175, TY + 0.13, Z0 - 0.16, 0);
+      const wl = plate(
+        [
+          [0, 0],
+          [-0.2, 0.0],
+          [-0.3, 0.1],
+          [-0.24, 0.1],
+        ],
+        0.012,
+        paint,
+      );
+      wl.position.set(TX + sx * 0.085, TY + 0.02, Z0 - 0.3);
+      wl.rotation.z = -sx * 1.15;
+      S._noz.push([TX, TY, nz - 0.08]);
+    });
   }
   /* ---- exhaust ---- */
   const can = (a, b, r) => {
@@ -1000,11 +1159,24 @@ function makeBike(o) {
   }
   /* ---- tank, seat, bodywork ---- */
   if (st !== 'rocket') {
-    sideX(S.tank, S.tankW, paint, 0.5, 0.04);
+    if (st === 'sport')
+      // a sculpted tank: broad shoulders, cut in at the knees
+      loft(
+        [
+          { z: 0.37, y: 0.77, w: 0.02, h: 0.02 },
+          { z: 0.32, y: 0.79, w: 0.11, h: 0.07, hb: 0.08 },
+          { z: 0.2, y: 0.8, w: 0.165, h: 0.1, hb: 0.1, n: 3 },
+          { z: 0.08, y: 0.79, w: 0.16, h: 0.1, hb: 0.1, n: 3, tw: 0.15 },
+          { z: -0.03, y: 0.76, w: 0.11, h: 0.07, hb: 0.06, tw: 0.2 },
+          { z: -0.1, y: 0.74, w: 0.03, h: 0.02 },
+        ],
+        paint,
+      );
+    else sideX(S.tank, S.tankW, paint, 0.5, 0.04);
     const tt = S.tank.reduce((a, p) => (p[1] > a[1] ? p : a));
     const cap = disc(0.03, 0.02, chrome, V(0, tt[1] + 0.01, tt[0] - 0.02), 16);
     cap.rotation.set(0, 0, 0);
-    [1, -1].forEach(sx => {
+    if (st !== 'sport') [1, -1].forEach(sx => {
       const kp = mesh(new THREE.CircleGeometry(0.05, 16), black);
       kp.position.set(sx * (S.tankW * 0.48), tt[1] - 0.07, tt[0]);
       kp.rotation.y = (sx * Math.PI) / 2;
@@ -1083,47 +1255,74 @@ function makeBike(o) {
     );
   }
   if (st === 'sport') {
-    sideX(
+    // one continuous fairing: nose cowl over the front wheel, sweeping down round the engine to the belly pan
+    loft(
       [
-        [0.68, 0.48],
-        [0.62, 0.66],
-        [0.5, 0.86],
-        [0.36, 0.92],
-        [0.2, 0.88],
-        [0.12, 0.64],
-        [0.2, 0.36],
-        [0.46, 0.34],
+        { z: 0.74, y: 0.745, w: 0.012, h: 0.012 },
+        { z: 0.7, y: 0.75, w: 0.085, h: 0.07, hb: 0.055 },
+        { z: 0.6, y: 0.76, w: 0.148, h: 0.1, hb: 0.1, n: 3.2 },
+        { z: 0.48, y: 0.75, w: 0.174, h: 0.1, hb: 0.15, n: 3.2 },
+        { z: 0.36, y: 0.69, w: 0.182, h: 0.11, hb: 0.2, n: 3.2 },
+        { z: 0.24, y: 0.57, w: 0.188, h: 0.19, hb: 0.36, n: 3.4 },
+        { z: 0.06, y: 0.5, w: 0.19, h: 0.2, hb: 0.34, n: 3.6 },
+        { z: -0.1, y: 0.42, w: 0.172, h: 0.18, hb: 0.26, n: 3.4 },
+        { z: -0.22, y: 0.3, w: 0.1, h: 0.08, hb: 0.13 },
+        { z: -0.29, y: 0.24, w: 0.012, h: 0.012 },
       ],
-      0.36,
       paint,
-      0.6,
-      0.04,
+      { seg: 32 },
     );
-    sideX(
+    // double-bubble screen
+    loft(
       [
-        [0.52, 0.88],
-        [0.4, 1.02],
-        [0.33, 1.02],
-        [0.36, 0.9],
+        { z: 0.6, y: 0.83, w: 0.01, h: 0.01 },
+        { z: 0.55, y: 0.87, w: 0.08, h: 0.04, hb: 0.05 },
+        { z: 0.46, y: 0.93, w: 0.105, h: 0.07, hb: 0.1 },
+        { z: 0.38, y: 0.97, w: 0.09, h: 0.05, hb: 0.12 },
+        { z: 0.34, y: 0.96, w: 0.02, h: 0.01, hb: 0.05 },
       ],
-      0.24,
       glass,
-      0.4,
-      0.006,
+      { seg: 20 },
     );
-    sideX(
+    // tail cowl sweeping up behind the seat
+    loft(
       [
-        [0.44, 0.22],
-        [0.2, 0.12],
-        [-0.1, 0.12],
-        [-0.12, 0.24],
-        [0.3, 0.3],
+        { z: -0.24, y: 0.71, w: 0.02, h: 0.01 },
+        { z: -0.3, y: 0.72, w: 0.11, h: 0.03, hb: 0.07 },
+        { z: -0.44, y: 0.78, w: 0.128, h: 0.035, hb: 0.08, n: 3 },
+        { z: -0.6, y: 0.86, w: 0.095, h: 0.04, hb: 0.06, n: 3 },
+        { z: -0.71, y: 0.9, w: 0.015, h: 0.012 },
       ],
-      0.24,
       paint,
-      0.4,
-      0.03,
     );
+    // air intakes, side vents and winglets
+    const ventM = SM(0x08080a, 0.6, 0.3);
+    [1, -1].forEach(sx => {
+      for (let k = 0; k < 3; k++) {
+        const v = box(0.012, 0.022, 0.1 - k * 0.012, ventM, sx * (0.19 - k * 0.003), 0.5 - k * 0.055, 0.12 - k * 0.025, 0);
+        v.rotation.x = -0.5;
+      }
+      const intake = box(0.05, 0.03, 0.02, ventM, sx * 0.055, 0.7, 0.705, 0);
+      intake.rotation.y = sx * 0.35;
+      const wl = plate(
+        [
+          [0, 0],
+          [-0.16, 0.012],
+          [-0.2, 0.05],
+          [-0.03, 0.03],
+        ],
+        0.01,
+        black,
+      );
+      wl.position.set(sx * 0.17, 0.64, 0.5);
+      wl.rotation.z = -sx * 1.25;
+      // mirror on a stalk
+      tube([V(sx * 0.14, 0.82, 0.5), V(sx * 0.2, 0.88, 0.5), V(sx * 0.25, 0.9, 0.47)], 0.007, black, 10);
+      const mh = sph(0.05, 0.03, 0.018, paint, sx * 0.27, 0.9, 0.46, 12);
+      mh.rotation.y = sx * 0.2;
+    });
+    // pinstripe and race number panel on the tail
+    box(0.12, 0.004, 0.14, SM(0xf4f4f4, 0.4, 0.1), 0, 0.885, -0.6, -0.48);
     const hf = mesh(new THREE.CylinderGeometry(S.rf + 0.03, S.rf + 0.03, 0.09, 24, 1, true, 0.6, 1.3), paint);
     hf.rotation.z = Math.PI / 2;
     hf.position.copy(AF);
@@ -1172,45 +1371,113 @@ function makeBike(o) {
     );
   }
   if (st === 'rocket') {
-    sideX(S.tank, S.tankW, paint, 0.55, 0.05);
-    sideX(
+    const neonM = SM(0x6fd3ff, 0.3, 0, { emissive: 0x6fd3ff, emissiveIntensity: 1.6 });
+    // one long fuselage: needle nose out over the front wheel, broad shoulders, slim waist under the seat,
+    // rising to a pointed tail
+    loft(
       [
-        [0.62, 0.66],
-        [0.52, 0.86],
-        [0.4, 0.96],
-        [0.34, 0.84],
+        { z: 1.04, y: 0.7, w: 0.008, h: 0.008 },
+        { z: 0.95, y: 0.7, w: 0.055, h: 0.045, hb: 0.04 },
+        { z: 0.78, y: 0.71, w: 0.115, h: 0.085, hb: 0.07, n: 3 },
+        { z: 0.56, y: 0.72, w: 0.165, h: 0.115, hb: 0.1, n: 3.2 },
+        { z: 0.34, y: 0.72, w: 0.188, h: 0.11, hb: 0.18, n: 3.2 },
+        { z: 0.12, y: 0.7, w: 0.192, h: 0.09, hb: 0.24, n: 3.2, tw: 0.1 },
+        { z: -0.08, y: 0.67, w: 0.165, h: 0.05, hb: 0.2, tw: 0.15 },
+        { z: -0.28, y: 0.66, w: 0.135, h: 0.045, hb: 0.12 },
+        { z: -0.5, y: 0.71, w: 0.12, h: 0.05, hb: 0.09, n: 3 },
+        { z: -0.72, y: 0.79, w: 0.07, h: 0.035, hb: 0.05 },
+        { z: -0.86, y: 0.82, w: 0.008, h: 0.008 },
       ],
-      0.26,
-      glass,
-      0.4,
-      0.006,
+      paint,
+      { seg: 32 },
     );
-    [1, -1].forEach(sx =>
-      sideX(
-        [
-          [-0.36, 0.7],
-          [-0.62, 1.0],
-          [-0.7, 0.96],
-          [-0.6, 0.72],
-        ],
-        0.02,
-        paint,
-        0,
-        0.008,
-        SG,
-        sx * 0.17,
-      ),
+    // reactor block under the body with a glowing core window each side
+    loft(
+      [
+        { z: 0.34, y: 0.36, w: 0.02, h: 0.04 },
+        { z: 0.26, y: 0.34, w: 0.1, h: 0.13, hb: 0.12, n: 3.4 },
+        { z: 0.06, y: 0.32, w: 0.135, h: 0.16, hb: 0.14, n: 3.6 },
+        { z: -0.14, y: 0.31, w: 0.115, h: 0.14, hb: 0.11, n: 3.4 },
+        { z: -0.26, y: 0.32, w: 0.02, h: 0.04 },
+      ],
+      dark,
     );
-    for (let k = 0; k < 3; k++)
-      box(
-        0.38 - k * 0.02,
-        0.012,
-        0.02,
-        SM(0x6fd3ff, 0.3, 0, { emissive: 0x6fd3ff, emissiveIntensity: 1.4 }),
-        0,
-        0.6 + k * 0.09,
-        0.55 - k * 0.06,
+    [1, -1].forEach(sx => {
+      const win = mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 20), neonM);
+      win.rotation.z = Math.PI / 2;
+      win.position.set(sx * 0.136, 0.33, 0.06);
+      const bez = mesh(new THREE.TorusGeometry(0.054, 0.008, 6, 20), chrome);
+      bez.rotation.y = Math.PI / 2;
+      bez.position.set(sx * 0.14, 0.33, 0.06);
+      for (let k = 0; k < 4; k++) box(0.012, 0.012, 0.09, alu, sx * 0.132, 0.44 - k * 0.07, -0.08, 0); // cooling fins
+      // light strip running back along the shoulder line
+      tube(
+        [V(sx * 0.118, 0.715, 0.78), V(sx * 0.168, 0.72, 0.56), V(sx * 0.192, 0.705, 0.34), V(sx * 0.195, 0.68, 0.12), V(sx * 0.165, 0.655, -0.08), V(sx * 0.137, 0.65, -0.28)],
+        0.006,
+        neonM,
+        30,
+        6,
       );
+      // slim LED headlights set into the nose
+      const hl = box(0.012, 0.014, 0.1, lens, sx * 0.075, 0.715, 0.9, 0);
+      hl.rotation.y = sx * 0.33;
+      // nose canard
+      const cn = plate(
+        [
+          [0, 0],
+          [-0.12, 0.0],
+          [-0.15, 0.045],
+          [-0.05, 0.03],
+        ],
+        0.008,
+        black,
+      );
+      cn.position.set(sx * 0.1, 0.68, 0.84);
+      cn.rotation.z = -sx * 1.35;
+      // swept tail fin, canted outward, with a lit tip
+      const fin = plate(
+        [
+          [0, 0],
+          [-0.26, 0.04],
+          [-0.44, 0.3],
+          [-0.36, 0.31],
+          [-0.12, 0.1],
+        ],
+        0.014,
+        paint,
+      );
+      fin.position.set(sx * 0.07, 0.74, -0.46);
+      fin.rotation.z = -sx * 0.42;
+      const tip = sph(0.014, 0.014, 0.03, sx > 0 ? SM(0x30ff70, 0.3, 0, { emissive: 0x30ff70, emissiveIntensity: 1.5 }) : tailM, sx * 0.19, 1.02, -0.86, 8);
+    });
+    // canopy
+    loft(
+      [
+        { z: 0.66, y: 0.8, w: 0.008, h: 0.008 },
+        { z: 0.58, y: 0.83, w: 0.07, h: 0.045, hb: 0.03 },
+        { z: 0.46, y: 0.87, w: 0.1, h: 0.075, hb: 0.06 },
+        { z: 0.37, y: 0.89, w: 0.085, h: 0.06, hb: 0.08 },
+        { z: 0.33, y: 0.88, w: 0.02, h: 0.01, hb: 0.04 },
+      ],
+      glass,
+      { seg: 20 },
+    );
+    // spine fin and panel lines over the tail
+    plate(
+      [
+        [-0.46, 0.76],
+        [-0.84, 0.84],
+        [-0.9, 0.98],
+        [-0.8, 0.98],
+      ],
+      0.012,
+      paint,
+    );
+    [0.62, 0.2, -0.36].forEach(z => {
+      const pl = mesh(new THREE.TorusGeometry(1, 0.004, 4, 24, Math.PI), black);
+      pl.scale.set(z > 0.5 ? 0.155 : z > 0 ? 0.192 : 0.13, z > 0.5 ? 0.115 : 0.1, 1);
+      pl.position.set(0, z > 0 ? 0.722 : 0.675, z);
+    });
   }
   /* ---- handlebars, controls, dash ---- */
   const B = V(0, S.bar[0], S.bar[1]),
@@ -1301,10 +1568,6 @@ function makeBike(o) {
         0,
       );
     }
-    if (st === 'sport' || st === 'rocket') {
-      const ms = V(sx * 0.2, 0.86, 0.44);
-      box(0.08, 0.04, 0.05, paint, ms.x, ms.y, ms.z);
-    }
   });
   const dialTex = (() => {
       const [c, x] = cv(64, 64);
@@ -1353,8 +1616,8 @@ function makeBike(o) {
     rg.quaternion.copy(f.quaternion);
   });
   /* ---- lights ---- */
-  const hlY = st === 'sport' ? 0.62 : st === 'dirt' ? 0.82 : st === 'rocket' ? 0.72 : H.y - 0.08,
-    hlZ = st === 'sport' ? 0.66 : st === 'dirt' ? 0.6 : st === 'rocket' ? 0.66 : H.z + 0.16;
+  const hlY = st === 'sport' ? 0.7 : st === 'dirt' ? 0.82 : st === 'rocket' ? 0.71 : H.y - 0.08,
+    hlZ = st === 'sport' ? 0.7 : st === 'dirt' ? 0.6 : st === 'rocket' ? 0.94 : H.z + 0.16;
   if (S.light === 'round') {
     const bucket = mesh(new THREE.SphereGeometry(0.08, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), chrome);
     bucket.position.set(0, hlY, hlZ);
@@ -1371,9 +1634,10 @@ function makeBike(o) {
   if (S.light === 'fair') {
     [1, -1].forEach(sx => {
       const l = mesh(new THREE.CircleGeometry(0.045, 16), lens);
-      l.position.set(sx * 0.06, 0.66, 0.705);
-      l.rotation.y = sx * 0.35;
-      l.rotation.x = -0.3;
+      l.position.set(sx * 0.062, 0.752, 0.69);
+      l.rotation.y = sx * 0.5;
+      l.rotation.x = -0.25;
+      l.scale.set(1.1, 0.55, 1); // slim, angry eyes
     });
   }
   if (S.light === 'plate') {
@@ -1392,11 +1656,6 @@ function makeBike(o) {
     const l = mesh(new THREE.CircleGeometry(0.035, 16), lens);
     l.position.set(0, 0.8, 0.66);
     l.rotation.x = -0.4;
-  }
-  if (S.light === 'jet') {
-    const l = mesh(new THREE.CircleGeometry(0.05, 16), lens);
-    l.position.set(0, 0.66, 0.66);
-    l.rotation.x = -0.5;
   }
   const tY =
       st === 'chopper'
@@ -1455,20 +1714,15 @@ function makeBike(o) {
   tl.scale.setScalar(0.2);
   tl.position.set(0, tY, tZ - 0.03);
   m.add(tl);
-  if (st === 'rocket') {
-    const fl = new THREE.Sprite(
-      new THREE.SpriteMaterial({
-        map: glowTex,
-        color: 0x6fd3ff,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        transparent: true,
-      }),
-    );
-    fl.scale.setScalar(0.55);
-    fl.position.set(0, E.y, E.z - 0.9);
-    m.add(fl);
-  }
+  if (st === 'rocket')
+    (S._noz || []).forEach(([x, y, z]) => {
+      const fl = new THREE.Sprite(
+        new THREE.SpriteMaterial({ map: glowTex, color: 0x6fd3ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }),
+      );
+      fl.scale.setScalar(0.36);
+      fl.position.set(x, y, z);
+      m.add(fl);
+    });
   mergeGroup(SG);
   // patterns that have a direction (flames) start at the front of the tank
   if (paint.userData.triOff) paint.userData.triOff.value.z = -(Math.max(...S.tank.map(p => p[0])) + 0.03);
