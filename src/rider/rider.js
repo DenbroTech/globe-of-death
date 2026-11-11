@@ -11,7 +11,7 @@ import { ik2 } from './ik.js';
 import { COSTUMES, makeCape } from './costumes.js';
 
 /* ---------- riders: sculpted bodies (smooth profiles, not tubes) plus real riding kit ---------- */
-function sculptGeo(a, b, front, prof, ws = 16, hs = 18, k = 0.3, cfn = null) {
+function sculptGeo(a, b, front, prof, ws = 16, hs = 18, k = 0.3, cfn = null, flat = false) {
   const L = Math.max(1e-4, a.distanceTo(b)),
     g = new THREE.SphereGeometry(1, ws, hs),
     P = g.attributes.position,
@@ -44,6 +44,57 @@ function sculptGeo(a, b, front, prof, ws = 16, hs = 18, k = 0.3, cfn = null) {
   const X = new V3().crossVectors(Y, Z);
   g.applyMatrix4(new THREE.Matrix4().makeBasis(X, Y, Z).setPosition(a));
   g.computeVertexNormals();
+  if (cfn && flat) {
+    /* crisp panels: one colour per quad (taken at its centre) instead of blending between vertices, so the
+       edges of suit panels are clean lines along the mesh rather than blurry smears. Shading stays smooth
+       (the vertex normals are kept). */
+    const N = g.attributes.normal,
+      pos = [],
+      nor = [],
+      colr = [],
+      n = new V3(),
+      p = new V3(),
+      W1 = ws + 1,
+      put = (i, c) => {
+        pos.push(P.getX(i), P.getY(i), P.getZ(i));
+        nor.push(N.getX(i), N.getY(i), N.getZ(i));
+        typeof c === 'number' ? colr.push(c, c, c) : colr.push(c.r, c.g, c.b);
+      };
+    for (let iy = 0; iy < hs; iy++)
+      for (let ix = 0; ix < ws; ix++) {
+        const qa = iy * W1 + ix + 1,
+          qb = iy * W1 + ix,
+          qc = (iy + 1) * W1 + ix,
+          qd = (iy + 1) * W1 + ix + 1,
+          q = [qa, qb, qc, qd];
+        n.set(0, 0, 0);
+        p.set(0, 0, 0);
+        let t = 0;
+        q.forEach(i => {
+          n.x += N.getX(i);
+          n.y += N.getY(i);
+          n.z += N.getZ(i);
+          p.x += P.getX(i);
+          p.y += P.getY(i);
+          p.z += P.getZ(i);
+          t += T[i];
+        });
+        // which way this strip of the limb faces is taken half-way along it, so a panel edge stays on one
+        // line of the mesh from end to end (a straight seam) instead of stepping where the limb tapers
+        const m0 = (hs >> 1) * W1 + ix;
+        n.set(N.getX(m0) + N.getX(m0 + 1), N.getY(m0) + N.getY(m0 + 1), N.getZ(m0) + N.getZ(m0 + 1)).normalize();
+        p.multiplyScalar(0.25);
+        const c = cfn(t / 4, n, p, X, Y, Z);
+        if (iy !== 0) [qa, qb, qd].forEach(i => put(i, c));
+        if (iy !== hs - 1) [qb, qc, qd].forEach(i => put(i, c));
+      }
+    const g2 = new THREE.BufferGeometry();
+    g2.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g2.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+    g2.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
+    g.dispose();
+    return g2;
+  }
   if (cfn) {
     const N = g.attributes.normal,
       C = new Float32Array(P.count * 3),
@@ -126,7 +177,9 @@ function riderKit(par, M) {
   const sc = (a, b, front, prof, mat, ws, hs, k, cfn) => {
     if (M.pal && mat === M.suit) cfn = toneFn(M.pal, cfn);
     else if (M.hpal && mat === M.helm) cfn = toneFn(M.hpal, cfn);
-    return mesh(sculptGeo(a, b, front, prof, ws, hs, k, cfn), mat);
+    // plain leathers: suit panels are coloured per quad for crisp edges (the torso keeps per-vertex data for its
+    // drawn chevron; costumes with their own painted design keep smooth per-vertex colour)
+    return mesh(sculptGeo(a, b, front, prof, ws, hs, k, cfn, !!cfn && mat === M.suit && M.part !== 'torso' && !M.design), mat);
   };
   const ball = (p, s, mat, seg = 14) => {
     const e = mesh(new THREE.SphereGeometry(1, seg, Math.max(8, (seg * 0.7) | 0)), mat);
@@ -267,7 +320,7 @@ function riderKit(par, M) {
       return u;
     },
     helmet(hc, u, f, opts = {}) {
-      const r = 0.15,
+      const r = 0.138, // a touch smaller than before: the big helmet made the rider read as a toy
         X = new V3().crossVectors(u, f).normalize(),
         orient = new THREE.Matrix4().makeBasis(X, u, f).setPosition(hc);
       /* shell with graphics: helmet colour, black chin and lower rim, dark centre stripe */
@@ -447,8 +500,8 @@ function riderKit(par, M) {
           .addScaledVector(o1, 0.045)
           .add(V(0, -0.02, 0)),
         o1,
-        0.03,
-        0.014,
+        0.022,
+        0.008,
         M.slider,
       );
       /* gauntlet: cuff, back of hand, knuckle armour */
@@ -661,8 +714,9 @@ function riderKit(par, M) {
         () => BLK,
       );
       const ko = out.clone().addScaledVector(kf, -out.dot(kf)).normalize();
-      puck(kn.clone().addScaledVector(ko, 0.068).addScaledVector(kf, 0.01), ko, 0.045, 0.022, M.slider);
-      puck(kn.clone().addScaledVector(ko, 0.08).addScaledVector(kf, 0.01), ko, 0.032, 0.01, M.blk);
+      // a low-profile slider set into the side of the knee (not a big disc standing proud of it)
+      puck(kn.clone().addScaledVector(ko, 0.058).addScaledVector(kf, 0.012), ko, 0.032, 0.01, M.slider);
+      puck(kn.clone().addScaledVector(ko, 0.064).addScaledVector(kf, 0.012), ko, 0.018, 0.006, M.blk);
       /* race boot: black shaft with a main-colour shin plate and white top band, sole, toe slider, heel cup */
       const ankle = an,
         sole0 = ankle.clone().add(V(0, -0.075, -0.07)),
