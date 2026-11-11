@@ -834,7 +834,15 @@ function moreDino(g) {
   skull.position.set(25.5, 1.5, -20);
   g.add(spine, skull);
   // a glowing lava river down the volcano's flank
-  const lavaC = new THREE.CatmullRomCurve3([new V3(-30, 40, -85), new V3(-24, 25, -72), new V3(-20, 10, -60), new V3(-14, 0.2, -48), new V3(-6, 0.2, -40)]);
+  // follows the new mountain's flank: radius at height y is 6 + 28·(1 − y/40)^1.25 (see buildDino)
+  const lavaC = new THREE.CatmullRomCurve3(
+    [40.4, 34, 27, 20, 13, 6, 0.4]
+      .map(y => {
+        const r = 6 + 28 * Math.pow(1 - Math.min(1, y / 40), 1.25) - 0.2;
+        return new V3(-30 + 0.397 * r, y, -85 + 0.918 * r);
+      })
+      .concat([new V3(-10, 0.25, -44), new V3(-4, 0.25, -38)]),
+  );
   const lavaTex = canvasTex(64, 64, (x, w, h) => {
     x.fillStyle = '#ff5a1a';
     x.fillRect(0, 0, w, h);

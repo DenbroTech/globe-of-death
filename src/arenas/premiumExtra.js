@@ -157,7 +157,21 @@ function extraMatrix(g) {
         r = Math.hypot(x, z);
       if (r > 22 && r < 70) cells.push([x, z, r]);
     }
-  const bars = new THREE.InstancedMesh(new THREE.BoxGeometry(S * 0.86, 1, S * 0.86).translate(0, 0.5, 0), new THREE.MeshBasicMaterial({ color: 0xffffff }), cells.length);
+  // each bar is dark glass with a bright lit cap, so the field reads as glowing columns with depth rather than
+  // flat pale boxes
+  const barG = new THREE.BoxGeometry(S * 0.86, 1, S * 0.86).translate(0, 0.5, 0);
+  {
+    const p = barG.attributes.position,
+      nrm = barG.attributes.normal,
+      vc = new Float32Array(p.count * 3);
+    for (let k = 0; k < p.count; k++) {
+      const top = nrm.getY(k) > 0.5,
+        v = top ? 1 : 0.06 + 0.5 * Math.pow(p.getY(k), 3);
+      vc[k * 3] = vc[k * 3 + 1] = vc[k * 3 + 2] = v;
+    }
+    barG.setAttribute('color', new THREE.BufferAttribute(vc, 3));
+  }
+  const bars = new THREE.InstancedMesh(barG, new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true }), cells.length);
   const o = new THREE.Object3D(),
     col = new THREE.Color();
   cells.forEach(([x, z], i) => {

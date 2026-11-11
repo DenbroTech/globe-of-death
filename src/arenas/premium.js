@@ -331,13 +331,54 @@ function buildGarden() {
       x.stroke();
     }
   }) });
-  for (let i = 0; i < 46; i++) {
-    const a = 2.2 + (i / 46) * 2.4,
-      r = 82,
-      pl = new THREE.Mesh(new THREE.BoxGeometry(5.2, 34, 0.8), plank);
-    pl.position.set(Math.cos(a) * r, 17, Math.sin(a) * r);
-    pl.lookAt(0, 17, 0);
-    g.add(pl);
+  {
+    // a proper garden fence: separate boards with dog-eared tops and gaps between them, in slightly different
+    // browns and heights, nailed to two rails with a post every few boards
+    const NB = 52,
+      board = new THREE.BoxGeometry(4.3, 30, 0.7),
+      tip = new THREE.CylinderGeometry(0.01, 3.04, 3.2, 4, 1).rotateY(Math.PI / 4).scale(1, 1, 0.163),
+      boards = new THREE.InstancedMesh(board, plank, NB),
+      tips = new THREE.InstancedMesh(tip, plank, NB),
+      o = new THREE.Object3D(),
+      cc = new THREE.Color();
+    for (let i = 0; i < NB; i++) {
+      const a = 2.2 + (i / NB) * 2.4,
+        r = 82,
+        hgt = 0.92 + rnd() * 0.14;
+      o.position.set(Math.cos(a) * r, 15 * hgt, Math.sin(a) * r);
+      o.scale.set(1, hgt, 1);
+      o.lookAt(0, 15 * hgt, 0);
+      o.rotateZ((rnd() - 0.5) * 0.02);
+      o.updateMatrix();
+      boards.setMatrixAt(i, o.matrix);
+      o.position.y = 30 * hgt + 1.6;
+      o.scale.set(1, 1, 1);
+      o.updateMatrix();
+      tips.setMatrixAt(i, o.matrix);
+      const v = 0.78 + rnd() * 0.3;
+      cc.setRGB(v, v * (0.95 + rnd() * 0.08), v * 0.92);
+      boards.setColorAt(i, cc);
+      tips.setColorAt(i, cc);
+    }
+    g.add(boards, tips);
+    const railM = std(0x6e4a28, { roughness: 0.9 });
+    for (const y of [8, 23]) {
+      const rail = new THREE.Mesh(new THREE.TorusGeometry(81.3, 0.7, 4, 48, 2.4), railM);
+      rail.rotation.x = Math.PI / 2;
+      rail.rotation.z = -2.2 - 2.4;
+      rail.position.y = y;
+      g.add(rail);
+    }
+    for (let i = 0; i <= 6; i++) {
+      const a = 2.2 + (i / 6) * 2.4,
+        post = new THREE.Mesh(new THREE.BoxGeometry(1.6, 33, 1.6), railM),
+        cap = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 1.5, 1.6, 4).rotateY(Math.PI / 4), railM);
+      post.position.set(Math.cos(a) * 80.6, 16.5, Math.sin(a) * 80.6);
+      post.rotation.y = -a;
+      cap.position.set(post.position.x, 33.8, post.position.z);
+      cap.rotation.y = -a;
+      g.add(post, cap);
+    }
   }
   const shed = new THREE.Group();
   const walls = new THREE.Mesh(new THREE.BoxGeometry(30, 22, 20), plank);
@@ -470,9 +511,92 @@ function buildSolar() {
   g.add(rings);
   // the floor is a slab of asteroid rock the crowd stands on, floating in space
   const rockM = std(0x3a3640, { flatShading: true });
-  const slab = new THREE.Mesh(new THREE.CylinderGeometry(22, 12, 6, 24, 2), std(0x24222a, { flatShading: true }));
-  slab.position.y = -3;
-  g.add(slab);
+  // a real chunk of asteroid: a cratered, cracked top, a ragged rim and a jagged underside tapering to a point
+  {
+    const RS = 44,
+      HS = 9,
+      pos = [],
+      colr = [],
+      idx = [],
+      rim = a => 23.2 + 1.4 * Math.sin(a * 3 + 1) + 0.9 * Math.sin(a * 7 + 2) + 0.5 * Math.sin(a * 13);
+    for (let j = 0; j <= HS; j++) {
+      const h = j / HS;
+      for (let i = 0; i <= RS; i++) {
+        const a = (i / RS) * Math.PI * 2,
+          jag = 1 + (0.16 * Math.sin(a * 5 + h * 6) + 0.1 * Math.sin(a * 11 - h * 9)) * Math.sin(h * Math.PI),
+          r = rim(a) * Math.pow(1 - h, 0.75) * jag;
+        pos.push(Math.cos(a) * r, -0.02 - h * 17 - Math.abs(Math.sin(a * 4 + 2)) * 2.5 * h, Math.sin(a) * r);
+        const v = 0.2 + 0.12 * Math.sin(a * 5 + h * 6) + (1 - h) * 0.08;
+        colr.push(v * 1.02, v * 0.95, v * 1.08);
+      }
+    }
+    for (let j = 0; j < HS; j++)
+      for (let i = 0; i < RS; i++) {
+        const a0 = j * (RS + 1) + i,
+          b0 = a0 + 1,
+          c0 = a0 + RS + 1,
+          d0 = c0 + 1;
+        idx.push(a0, b0, c0, b0, d0, c0);
+      }
+    const ug = new THREE.BufferGeometry();
+    ug.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    ug.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
+    ug.setIndex(idx);
+    ug.computeVertexNormals();
+    g.add(new THREE.Mesh(ug, std(0xffffff, { vertexColors: true, flatShading: true, roughness: 1, side: THREE.DoubleSide })));
+    const topTex = canvasTex(512, 512, (x, w, h) => {
+      x.fillStyle = '#4a4650';
+      x.fillRect(0, 0, w, h);
+      for (let i = 0; i < 7000; i++) {
+        x.fillStyle = rnd() < 0.5 ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.16)';
+        x.fillRect(rnd() * w, rnd() * h, 2 + rnd() * 2, 2 + rnd() * 2);
+      }
+      for (let i = 0; i < 46; i++) {
+        const r = 5 + rnd() * 26,
+          px = rnd() * w,
+          py = rnd() * h;
+        x.fillStyle = 'rgba(0,0,0,.28)';
+        x.beginPath();
+        x.arc(px, py, r, 0, 7);
+        x.fill();
+        x.strokeStyle = 'rgba(255,255,255,.22)';
+        x.lineWidth = 2;
+        x.beginPath();
+        x.arc(px, py, r, 3.5, 5.9);
+        x.stroke();
+        x.strokeStyle = 'rgba(0,0,0,.45)';
+        x.beginPath();
+        x.arc(px, py, r, 0.4, 2.8);
+        x.stroke();
+      }
+      x.strokeStyle = 'rgba(0,0,0,.5)';
+      x.lineWidth = 1.5;
+      for (let i = 0; i < 14; i++) {
+        let px = rnd() * w,
+          py = rnd() * h;
+        x.beginPath();
+        x.moveTo(px, py);
+        for (let k = 0; k < 7; k++) {
+          px += (rnd() - 0.5) * 60;
+          py += (rnd() - 0.5) * 60;
+          x.lineTo(px, py);
+        }
+        x.stroke();
+      }
+    });
+    const tg = new THREE.CircleGeometry(1, RS),
+      tp = tg.attributes.position;
+    for (let k = 1; k < tp.count; k++) {
+      const a = Math.atan2(tp.getY(k), tp.getX(k)),
+        r = rim(a < 0 ? a + Math.PI * 2 : a);
+      tp.setXY(k, Math.cos(a) * r, Math.sin(a) * r);
+    }
+    const uv = tg.attributes.uv;
+    for (let k = 0; k < tp.count; k++) uv.setXY(k, tp.getX(k) / 50 + 0.5, tp.getY(k) / 50 + 0.5);
+    const top = new THREE.Mesh(tg, std(0xffffff, { map: topTex, roughness: 1 }));
+    top.rotation.x = -Math.PI / 2;
+    g.add(top);
+  }
   // the Sun, glowing far off
   const sun = new THREE.Mesh(new THREE.SphereGeometry(9, 32, 20), new THREE.MeshBasicMaterial({ color: 0xffd060, fog: false }));
   sun.position.set(-60, 22, -45);
@@ -775,12 +899,19 @@ function buildCastle() {
     256,
     256,
     (x, w, h) => {
-      x.fillStyle = '#8c8578';
+      x.fillStyle = '#4e4a43'; // dark mortar between worn flagstones
       x.fillRect(0, 0, w, h);
       for (let y = 0; y < h; y += 32)
         for (let xx = (y / 32) % 2 ? -32 : 0; xx < w; xx += 64) {
-          x.fillStyle = `rgb(${120 + rnd() * 40},${114 + rnd() * 36},${100 + rnd() * 30})`;
+          const v = 96 + rnd() * 50;
+          x.fillStyle = `rgb(${v + 8},${v + 2},${v - 8})`;
           x.fillRect(xx + 2, y + 2, 60, 28);
+          x.fillStyle = 'rgba(0,0,0,.14)';
+          x.fillRect(xx + 2, y + 24, 60, 6);
+          for (let k = 0; k < 6; k++) {
+            x.fillStyle = `rgba(255,255,255,${rnd() * 0.1})`;
+            x.fillRect(xx + 4 + rnd() * 54, y + 4 + rnd() * 20, 2 + rnd() * 6, 2 + rnd() * 4);
+          }
         }
     },
     [12, 12],
@@ -927,7 +1058,47 @@ function buildDino() {
   );
   g.add(ground(150, std(0xffffff, { map: groundTex })));
   // a smoking volcano with glowing lava
-  const volc = new THREE.Mesh(new THREE.CylinderGeometry(6, 34, 40, 28, 4), std(0x4a3a30, { flatShading: true }));
+  // a real mountain: ridged, gullied flanks, grass creeping up the foot, dark ash and a glowing rim at the top
+  const volc = (() => {
+    const RS = 56,
+      HS = 22,
+      pos = [],
+      colr = [],
+      idx = [],
+      c = new THREE.Color(),
+      grass = new THREE.Color(0x5a8a30),
+      rock = new THREE.Color(0x5a4638),
+      ash = new THREE.Color(0x2a2222),
+      hot = new THREE.Color(0xff5a1a);
+    for (let j = 0; j <= HS; j++) {
+      const h = j / HS;
+      for (let i = 0; i <= RS; i++) {
+        const a = (i / RS) * Math.PI * 2,
+          ridge = 1 + (0.09 * Math.sin(a * 7 + h * 3) + 0.05 * Math.sin(a * 13 - h * 5) + 0.03 * Math.sin(a * 29)) * (1 - h * 0.6),
+          r = (6 + 28 * Math.pow(1 - h, 1.25)) * ridge;
+        pos.push(Math.cos(a) * r, h * 40 - 20 + Math.sin(a * 5 + 1) * 0.6 * h, Math.sin(a) * r);
+        if (h < 0.2) c.copy(grass).lerp(rock, h / 0.2);
+        else if (h < 0.75) c.copy(rock).lerp(ash, (h - 0.2) / 0.55);
+        else c.copy(ash).lerp(hot, Math.pow((h - 0.75) / 0.25, 3) * 0.9);
+        const gully = 0.82 + 0.18 * Math.sin(a * 7 + h * 3); // darker in the gullies
+        colr.push(c.r * gully, c.g * gully, c.b * gully);
+      }
+    }
+    for (let j = 0; j < HS; j++)
+      for (let i = 0; i < RS; i++) {
+        const a0 = j * (RS + 1) + i,
+          b0 = a0 + 1,
+          c0 = a0 + RS + 1,
+          d0 = c0 + 1;
+        idx.push(a0, c0, b0, b0, c0, d0);
+      }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colr, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    return new THREE.Mesh(geo, std(0xffffff, { vertexColors: true, flatShading: true, roughness: 0.95 }));
+  })();
   volc.position.set(-30, 20, -85);
   const lavaGlow = glow('#ff5a1a', 30, 0.9);
   lavaGlow.position.set(-30, 41, -85);
@@ -1145,17 +1316,46 @@ function buildArctic() {
       o.rotation.y = rnd() * 3;
     })),
   );
-  // icebergs and ice cliffs: faceted, glassy blue
-  const ice = std(0xbfe6ff, { roughness: 0.15, metalness: 0.05, flatShading: true, emissive: 0x2a5a8a, emissiveIntensity: 0.15 });
+  // icebergs: chunky faceted bergs with flat snowy tops, blue cliffs and turquoise at the waterline.
+  // (Each vertex is shaped from its own position, so the shared corners of the facets stay joined.)
+  const ice = std(0xffffff, { roughness: 0.25, metalness: 0.05, flatShading: true, vertexColors: true, emissive: 0x16385a, emissiveIntensity: 0.25 });
+  const berg = seed => {
+    const geo = new THREE.IcosahedronGeometry(1, 3),
+      p = geo.attributes.position,
+      col = new Float32Array(p.count * 3),
+      c = new THREE.Color(),
+      top = 0.42 + 0.2 * Math.sin(seed * 3.1),
+      nz = (x, y, z) => Math.sin(x * 2.3 + seed) * Math.sin(z * 2.9 + seed * 1.7) * 0.5 + Math.sin(x * 5.1 + z * 4.3 + y * 3.7 + seed * 2.3) * 0.25;
+    for (let k = 0; k < p.count; k++) {
+      let x = p.getX(k),
+        y = p.getY(k),
+        z = p.getZ(k);
+      const d = 1 + nz(x, y, z) * 0.34;
+      x *= d;
+      z *= d;
+      // sheer sides, a tilted table top with a broken edge, sunk a little into the snow
+      const tilt = top + x * 0.12 + nz(z, x, y) * 0.1;
+      if (y > tilt) y = tilt + (y - tilt) * 0.12;
+      y = Math.max(-0.25, y);
+      p.setXYZ(k, x, y, z);
+      const h = (y + 0.25) / (top + 0.25);
+      if (y >= tilt - 0.02) c.setRGB(0.97, 0.99, 1);
+      else c.setRGB(0.45 + h * 0.35, 0.74 + h * 0.2, 0.9 + h * 0.08);
+      col[k * 3] = c.r;
+      col[k * 3 + 1] = c.g;
+      col[k * 3 + 2] = c.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.computeVertexNormals();
+    return geo;
+  };
   for (let i = 0; i < 14; i++) {
     const a = rnd() * 6.28,
       r = 55 + rnd() * 35,
-      m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 1), ice);
-    const p = m.geometry.attributes.position;
-    for (let k = 0; k < p.count; k++) p.setY(k, p.getY(k) * (0.8 + rnd() * 0.6) + (p.getY(k) > 0.3 ? rnd() * 0.5 : 0));
-    m.geometry.computeVertexNormals();
-    m.position.set(Math.cos(a) * r, 2, Math.sin(a) * r);
-    m.scale.set(6 + rnd() * 10, 6 + rnd() * 16, 6 + rnd() * 10);
+      m = new THREE.Mesh(berg(i * 1.37 + 0.4), ice),
+      sxz = 7 + rnd() * 9;
+    m.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+    m.scale.set(sxz, 22 + rnd() * 34, sxz * (0.7 + rnd() * 0.5));
     m.rotation.y = rnd() * 3;
     g.add(m);
   }
@@ -1412,13 +1612,13 @@ const PREMIUM = {
         [0, '#3f6fb8'],
         [1, '#cfe2f8'],
       ],
-      hemi: [0xf0f4ff, 0x7a7060, 0.85],
-      sun: 1.5,
+      hemi: [0xf0f4ff, 0x7a7060, 0.55],
+      sun: 1.0,
       sunPos: [30, 50, 20],
       sunCol: 0xfff0d8,
       spots: 0.4,
       beams: 0,
-      exp: 1.15,
+      exp: 1.0,
     },
     crowdLift: 0.38,
     crowdGlow: 0.65,
