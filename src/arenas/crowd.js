@@ -16,6 +16,38 @@ function makeCrowd(c) {
   });
   // `arcs`: several [start, length] pieces per tier (e.g. people at both ends of the pirate ship)
   const ARCS = c.arcs || [[c.a0 || 0, c.arc || Math.PI * 2]];
+  /* a board behind the back row of every stand, as tall as the people, with a rail along the top: from
+     outside you see the back of the stand, never the backs of the crowd */
+  {
+    const rB = c.r0 + (c.tiers - 1) * c.dr + c.dr * 0.62,
+      yTop = c.y0 + (c.tiers - 1) * c.dy + (c.size || 1.25) * 1.18,
+      y0 = c.steps === false ? c.y0 - 0.25 : 0,
+      wood = c.steps === false,
+      boardM = new THREE.MeshStandardMaterial({ color: wood ? 0x7a4a26 : c.boardCol || 0x2b2e36, roughness: 0.85, side: THREE.DoubleSide }),
+      railM = new THREE.MeshStandardMaterial({ color: wood ? 0x4e2f18 : 0xb9bec6, roughness: 0.4, metalness: wood ? 0 : 0.7 });
+    for (const [a0, arc] of ARCS) {
+      const full = arc >= Math.PI * 2 - 1e-3,
+        seg = Math.max(8, Math.round((arc / (Math.PI * 2)) * 96)),
+        board = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, yTop - y0, seg, 1, true, Math.PI / 2 - a0 - arc, arc), boardM);
+      board.position.y = (yTop + y0) / 2;
+      grp.add(board);
+      const rail = new THREE.Mesh(new THREE.TorusGeometry(rB, 0.07, 6, seg, arc), railM);
+      rail.rotation.x = Math.PI / 2;
+      rail.rotation.z = -a0 - arc;
+      rail.position.y = yTop;
+      grp.add(rail);
+      // posts along it (and one at each open end)
+      const np = Math.max(2, Math.round((arc * rB) / 3.2));
+      for (let k = 0; k <= np; k++) {
+        if (full && k === np) break;
+        const a = a0 + (arc * k) / np,
+          post = new THREE.Mesh(new THREE.BoxGeometry(0.16, yTop - y0 + 0.12, 0.16), railM);
+        post.position.set(Math.cos(a) * (rB + 0.06), (yTop + y0) / 2, Math.sin(a) * (rB + 0.06));
+        post.rotation.y = -a;
+        grp.add(post);
+      }
+    }
+  }
   for (let t = 0; t < c.tiers; t++)
     for (const [a0, arc] of ARCS) {
       const r = c.r0 + t * c.dr,

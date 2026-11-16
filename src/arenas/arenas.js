@@ -1,4 +1,5 @@
 import { moreMoon, moreStadium } from './classicMore.js';
+import { reef } from './reef.js';
 import * as THREE from 'three';
 import { makePalm } from './props.js';
 import { scene } from '../render/renderer.js';
@@ -491,7 +492,7 @@ const ARENAS = {
       floor.receiveShadow = true;
       g.add(floor);
       const rock = std(0x4a5a5c, { flatShading: true });
-      for (let i = 0; i < 26; i++) {
+      for (let i = 0; i < 0; i++) { // (rocks, kelp and coral now come from reef())
         const a = Math.random() * 6.28,
           r = 22 + Math.random() * 40,
           m = new THREE.Mesh(new THREE.IcosahedronGeometry(1 + Math.random() * 3, 0), rock);
@@ -507,7 +508,7 @@ const ARENAS = {
           emissiveIntensity: 0.4,
         }),
         kelp = [];
-      for (let i = 0; i < 90; i++) {
+      for (let i = 0; i < 0; i++) {
         const a = Math.random() * 6.28,
           r = 21 + Math.random() * 30,
           h = 1.8 + Math.random() * 3.2,
@@ -522,7 +523,7 @@ const ARENAS = {
         kelp.push(piv);
       }
       const ccols = [0xff5d8f, 0xff8a3d, 0xb05cff, 0xffd23f, 0x2ec4b6, 0xff4f6d];
-      for (let i = 0; i < 70; i++) {
+      for (let i = 0; i < 0; i++) {
         const a = Math.random() * 6.28,
           r = 20.5 + Math.random() * 22,
           col = ccols[i % ccols.length],
@@ -648,7 +649,7 @@ const ARENAS = {
         }
         bg.attributes.position.needsUpdate = true;
       };
-      return g;
+      return reef(g);
     },
   },
   moon: {

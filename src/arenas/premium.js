@@ -4,6 +4,7 @@ import { makePalm } from './props.js';
 import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
 import { model } from './models.js';
+import { caveFormations } from './reef.js';
 import { flap, mkBird, mkWing } from './life.js';
 import { kitArctic, kitCastle, kitDino, kitGarden, kitPirate } from './premiumKit.js';
 import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
@@ -112,7 +113,8 @@ function buildCavern() {
     })),
   );
   g.add(
-    instances(cone, rock, Array.from({ length: 55 }, () => (o) => {
+    // (the floor's stalagmites are now the stepped flowstone ones from caveFormations)
+    instances(cone, rock, Array.from({ length: 0 }, () => (o) => {
       const [a, r] = [rnd() * 6.28, 19 + rnd() * 50],
         h = 2 + rnd() * 9;
       o.position.set(Math.cos(a) * r, h / 2, Math.sin(a) * r);
@@ -1522,7 +1524,7 @@ const PREMIUM = {
     },
     crowdGlow: 0.9,
     crowd: crowdRing({ stepCol: 0x3a3440 }),
-    build: () => moreCavern(buildCavern()),
+    build: () => caveFormations(moreCavern(buildCavern())),
   },
   garden: {
     name: 'Back garden',
