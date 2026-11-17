@@ -23,10 +23,20 @@ function makeCrowd(c) {
       yTop = c.y0 + (c.tiers - 1) * c.dy + (c.size || 1.25) * 1.18,
       y0 = c.steps === false ? c.y0 - 0.25 : 0,
       wood = c.steps === false,
-      boardM = new THREE.MeshStandardMaterial({ color: wood ? 0x7a4a26 : c.boardCol || 0x2b2e36, roughness: 0.85, side: THREE.DoubleSide }),
+      // the board takes the stand's own colour (a shade darker) unless the level names one, so it belongs there:
+      // sandy wood on the beach, stone in the castle, snow at the pole…
+      boardM = new THREE.MeshStandardMaterial({
+        color: wood ? 0x7a4a26 : c.boardCol != null ? c.boardCol : new THREE.Color(c.stepCol ?? 0x22160f).multiplyScalar(0.8),
+        roughness: 0.85,
+        side: THREE.DoubleSide,
+      }),
       railM = new THREE.MeshStandardMaterial({ color: wood ? 0x4e2f18 : 0xb9bec6, roughness: 0.4, metalness: wood ? 0 : 0.7 });
-    for (const [a0, arc] of ARCS) {
-      const full = arc >= Math.PI * 2 - 1e-3,
+    for (const [aStart, aLen] of ARCS) {
+      // a part-ring board runs a little past each end of its rows, so the end people aren't seen side-on
+      const full = aLen >= Math.PI * 2 - 1e-3,
+        pad = full ? 0 : 0.7 / rB,
+        a0 = aStart - pad,
+        arc = aLen + pad * 2,
         seg = Math.max(8, Math.round((arc / (Math.PI * 2)) * 96)),
         board = new THREE.Mesh(new THREE.CylinderGeometry(rB, rB, yTop - y0, seg, 1, true, Math.PI / 2 - a0 - arc, arc), boardM);
       board.position.y = (yTop + y0) / 2;
