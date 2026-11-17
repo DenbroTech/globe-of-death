@@ -1,5 +1,6 @@
 import { moreMoon, moreStadium } from './classicMore.js';
 import { reef } from './reef.js';
+import { moreBeach, moreCrane } from './finalPass.js';
 import * as THREE from 'three';
 import { makePalm } from './props.js';
 import { scene } from '../render/renderer.js';
@@ -155,7 +156,7 @@ const ARENAS = {
       sunS.position.set(-55, 9, -70);
       sunS.material.fog = false;
       g.add(sunS);
-      return g;
+      return moreBeach(g);
     },
   },
   stadium: {
@@ -373,6 +374,7 @@ const ARENAS = {
         o.scale.set(w, h, w);
         o.updateMatrix();
         inst.setMatrixAt(i, o.matrix);
+        (g.userData.towers = g.userData.towers || []).push({ x, z, w, top: -73 + h }); // rooftop gear goes on these (moreCrane)
       }
       g.add(inst);
       /* low-rise city filling every block between the towers, so no bare ground shows */
@@ -443,7 +445,7 @@ const ARENAS = {
       red.position.set(10.5, 21.5, 0);
       g.add(red);
       g.userData.blink = red;
-      return g;
+      return moreCrane(g);
     },
   },
   under: {

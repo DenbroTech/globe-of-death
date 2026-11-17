@@ -5,6 +5,7 @@ import { makeFigure } from '../rider/rider.js';
 import { V3 } from '../core/constants.js';
 import { model } from './models.js';
 import { caveFormations } from './reef.js';
+import { morePirateSea } from './finalPass.js';
 import { flap, mkBird, mkWing } from './life.js';
 import { kitArctic, kitCastle, kitDino, kitGarden, kitPirate } from './premiumKit.js';
 import { extraCastle, extraGarden, extraMatrix } from './premiumExtra.js';
@@ -1601,7 +1602,7 @@ const PREMIUM = {
     crowdGlow: 0.35,
     // no stand: a few rows of people at the bow and the stern, standing on the deck
     crowd: crowdRing({ r0: 6.3, tiers: 3, dr: 0.6, y0: 2.0, dy: 0.12, gap: 0.55, steps: false, empty: 0.1, size: 1.35, arcs: [[Math.PI / 2 - 0.24, 0.48], [-Math.PI / 2 - 0.3, 0.6]] }),
-    build: () => kitPirate(morePirate(buildPirate())),
+    build: () => morePirateSea(kitPirate(morePirate(buildPirate()))),
   },
   castle: {
     name: 'Royal court',
