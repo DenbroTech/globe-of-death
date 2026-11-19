@@ -7,8 +7,7 @@ import { initAgeGate } from './agegate.js';
 import { whenFullChanges } from './store.js';
 import { initAchievements } from '../game/achievements.js';
 import { arenaId, setArena } from '../arenas/current.js';
-import { ARENAS } from '../arenas/arenas.js';
-import { markSeen, paywalled } from '../game/unlocks.js';
+import { paywalled } from '../game/unlocks.js';
 import { toast } from '../ui/hud.js';
 
 /* ---------- native app shell (Expo app in mobile/, game runs in a WebView) ----------
@@ -60,9 +59,8 @@ function initApp() {
   // bought (or refunded) the full game
   whenFullChanges(full => {
     if (full) {
-      // every level opens at once: no "new level" pop-ups for all of them, just one cheer
-      Object.keys(ARENAS).forEach(k => markSeen('arena', k));
-      toast('Full game unlocked: every level is open!', 2600);
+      // the cap is lifted; levels still open one by one as you finish the show on the one before
+      toast('Full game unlocked: no more ads!', 2600);
       if (!game.running) showStart();
     } else if (paywalled('arena', arenaId)) setArena('bigtop');
   });

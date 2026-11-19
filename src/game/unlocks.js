@@ -10,13 +10,6 @@ import { CATALOG } from '../bikes/catalog.js';
      free s    survive s seconds in free ride near n   lifetime near misses in free ride
    Arenas take either a show OR a free-ride milestone, so both modes open them. */
 const UNLOCKS = {
-  arena: {
-    beach: [{ act: 3 }, { free: 45 }],
-    stadium: [{ act: 4 }, { free: 90 }],
-    crane: [{ act: 6 }, { free: 135 }],
-    under: [{ act: 8 }, { free: 180 }],
-    moon: [{ win: 1 }, { free: 240 }],
-  },
   style: {
     dirt: { perf: 100 },
     chopper: { act: 5 },
@@ -80,11 +73,38 @@ const UNLOCKS = {
     tubes: { win: 5 },
   },
 };
-/* free vs full game (see platform/store.js): the free game has the first three levels; the full game
-   (game.full) opens every level straight away when FULL_OPENS_ALL, else lifts the cap and they unlock by playing */
+/* levels unlock in order: each one opens when you finish the show (all ten acts) on the level before it.
+   A level you've already ridden stays open (so nobody loses levels earned under the old rules).
+   Free vs full game (platform/store.js): the free game stops after the first three; the full game lifts that cap
+   (the levels still have to be earned in order). The order is the Levels list order (ARENAS). */
+const LEVELS = [
+  ['bigtop', 'Big Top'],
+  ['beach', 'Beach'],
+  ['stadium', 'Stadium'],
+  ['crane', 'Sky crane'],
+  ['under', 'Underwater'],
+  ['moon', 'Moon base'],
+  ['arctic', 'South pole'],
+  ['cavern', 'Crystal cavern'],
+  ['garden', 'Back garden'],
+  ['solar', 'Solar system'],
+  ['pirate', 'Pirate ship'],
+  ['castle', 'Royal court'],
+  ['dino', 'Dino valley'],
+  ['matrix', 'Digital grid'],
+];
 const FREE_LEVELS = ['bigtop', 'beach', 'stadium'];
-const FULL_OPENS_ALL = true;
 const paywalled = (kind, id) => kind === 'arena' && !game.full && !FREE_LEVELS.includes(id);
+let progRef = null;
+const lvRec = id => (progRef && progRef.lv && progRef.lv[id]) || null;
+const levelIdx = id => LEVELS.findIndex(l => l[0] === id);
+/* earned by play: the first level, or the show finished on the one before, or ridden here already */
+function levelEarned(id) {
+  const i = levelIdx(id);
+  if (i <= 0) return true;
+  const prev = lvRec(LEVELS[i - 1][0]);
+  return !!(prev && prev.done) || !!lvRec(id);
+}
 let career = { shows: 0, freeRuns: 0, act: 1, win: 0, pts: 0, combo: 0, perf: 0, free: 0, near: 0 };
 const KEY = { act: 'act', win: 'win', pts: 'pts', combo: 'combo', perf: 'perf', shows: 'shows', free: 'free', near: 'near' };
 const met = r => Object.keys(r).every(k => career[KEY[k]] >= r[k]);
@@ -95,7 +115,7 @@ const reqsOf = (kind, id) => {
 /* earned for real (ignores the "Unlock all" test switch) */
 const earned = (kind, id) => {
   if (paywalled(kind, id)) return false;
-  if (kind === 'arena' && game.full && FULL_OPENS_ALL) return true;
+  if (kind === 'arena') return levelEarned(id);
   const R = reqsOf(kind, id);
   return !R || R.some(met);
 };
@@ -117,7 +137,14 @@ function reqLine(r) {
   if (k === 'near') return `${n(v)} near misses${pr(n(have))}`;
   return '';
 }
-const reqText = (kind, id) => (paywalled(kind, id) ? 'Full game' : (reqsOf(kind, id) || []).map(reqLine).join(' or '));
+const reqText = (kind, id) => {
+  if (paywalled(kind, id)) return 'Full game';
+  if (kind === 'arena') {
+    const i = levelIdx(id);
+    return i > 0 ? `Finish the show at ${LEVELS[i - 1][1]}` : '';
+  }
+  return (reqsOf(kind, id) || []).map(reqLine).join(' or ');
+};
 const NAMES = { arena: null, style: 'style', paint: 'paint', costume: 'costume' };
 /* fold a finished run into the career; returns names of anything newly unlocked */
 function recordCareer(run, arenaName) {
@@ -137,7 +164,7 @@ function recordCareer(run, arenaName) {
   save();
   return before.filter(([k, id]) => earned(k, id)).map(([k, id]) => (k === 'arena' ? arenaName(id) : CATALOG[NAMES[k]].find(i => i.id === id).name));
 }
-const allItems = () => Object.entries(UNLOCKS).flatMap(([k, m]) => Object.keys(m).map(id => [k, id]));
+const allItems = () => LEVELS.slice(1).map(([id]) => ['arena', id]).concat(Object.entries(UNLOCKS).flatMap(([k, m]) => Object.keys(m).map(id => [k, id])));
 function save() {
   try {
     localStorage.setItem('god-career', JSON.stringify(career));
@@ -189,7 +216,7 @@ function saveSeen() {
 }
 const isNew = (kind, id) => {
   loadSeen();
-  return !!reqsOf(kind, id) && earned(kind, id) && !seen.has(kind + ':' + id);
+  return (kind === 'arena' ? levelIdx(id) > 0 : !!reqsOf(kind, id)) && earned(kind, id) && !seen.has(kind + ':' + id);
 };
 function markSeen(kind, id) {
   loadSeen();
@@ -201,6 +228,7 @@ function markSeen(kind, id) {
 const anyNew = kinds => allItems().some(([k, id]) => kinds.includes(k) && isNew(k, id));
 /* called from initProgress: loads the career, carrying over older saves (best act, show won, best free ride) */
 function initUnlocks(prog) {
+  progRef = prog; // per-level records (prog.lv) decide which levels are open
   try {
     const c = JSON.parse(localStorage.getItem('god-career'));
     if (c) career = Object.assign(career, c);

@@ -4,12 +4,13 @@ import { isApp, toNative } from './app.js';
 
 /* ---------- free vs full game ----------
    Free: the first three levels (FREE_LEVELS), with ads between acts.
-   Full game (one-off Google Play purchase, product FULL_SKU in mobile/store.config.js): no ads, every level.
+   Full game (one-off Google Play purchase, product in mobile/store.config.js): no ads, and the cap is lifted so
+   all 14 levels can be unlocked (each still opens when you finish the show on the level before).
    game.full is cached in localStorage so the game starts right; the app confirms it with Google Play on every
    launch (window.__setFull) and that answer wins.
    In a desktop browser there's no store: the full game is on, unless localStorage god-freetest = '1'
    (to try the free version on desktop). */
-// (the level rules themselves live in game/unlocks.js: FREE_LEVELS, FULL_OPENS_ALL)
+// (the level rules themselves live in game/unlocks.js: LEVELS order, FREE_LEVELS)
 
 let price = '';
 let onChange = [];
@@ -56,7 +57,7 @@ function showFullGame(back) {
   const tick = '<svg viewBox="0 0 24 24" class="fgi"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   ov.innerHTML = `<div class="card fg">
     <h1>Full game</h1>
-    <ul class="fglist"><li>${tick}All 14 levels</li><li>${tick}No ads</li><li>${tick}One payment, yours to keep</li></ul>
+    <ul class="fglist"><li>${tick}All 14 levels to ride</li><li>${tick}No ads</li><li>${tick}One payment, yours to keep</li></ul>
     ${
       game.full
         ? '<p class="fgok">You own the full game. Thanks!</p>'
