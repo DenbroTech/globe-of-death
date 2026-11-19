@@ -8,7 +8,9 @@ import { ov, toast } from './hud.js';
 import { parkBike, showGarage } from './garage.js';
 import { showBoard } from './leaderboard.js';
 import { startTutorial, tutDone } from './tutorial.js';
-import { anyNew, isNew, isUnlocked, markSeen } from '../game/unlocks.js';
+import { anyNew, isNew, isUnlocked, markSeen, paywalled } from '../game/unlocks.js';
+import { showFullGame } from '../platform/store.js';
+import { isApp, toNative } from '../platform/app.js';
 import { start } from '../game/run.js';
 import { $ } from '../core/constants.js';
 import { mountGlobe, unmountGlobe } from './levelGlobe.js';
@@ -93,6 +95,8 @@ function showLevels() {
   bar();
   function pick(k) {
     if (!arenaOpen(k)) {
+      // a level that's only in the full game: show what the full game is
+      if (paywalled('arena', k)) return showFullGame(showLevels);
       toast(reqText(k), 1600);
       return;
     }
@@ -147,7 +151,9 @@ function showSettings() {
   ov.hidden = false;
   const row = (id, label, on) =>
     `<button class="srow" id="${id}"><span>${label}</span><i class="swt${on ? ' on' : ''}"></i></button>`;
-  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show joystick', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}</div><button class="go" id="sBack">Done</button><p class="bstamp">3D models: Kenney Castle &amp; Pirate Kits and Quaternius dinosaurs (CC0); Penguin, Black Bear, Ladybug, Ant, Wasp, Shark, Helicopter, Airplane, Airship, Submarine and Octopus by Poly by Google, TugBoat by Some Random Person, Spaceship by mastjie (CC BY), via Poly Pizza.</p><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
+  ov.innerHTML = `<div class="card"><h1>Settings</h1><div class="slist">${row('sSnd', 'Sound', game.sndOn)}${row('sRing', 'Show joystick', game.showRing)}${row('sUnl', 'Unlock all arenas', game.unlockAll)}${
+    game.full ? '' : '<button class="srow" id="sFull"><span>Full game</span><i class="sgo">›</i></button>'
+  }${isApp && !game.full ? '<button class="srow" id="sPriv"><span>Ad privacy</span><i class="sgo">›</i></button>' : ''}</div><button class="go" id="sBack">Done</button><p class="bstamp">3D models: Kenney Castle &amp; Pirate Kits and Quaternius dinosaurs (CC0); Penguin, Black Bear, Ladybug, Ant, Wasp, Shark, Helicopter, Airplane, Airship, Submarine and Octopus by Poly by Google, TugBoat by Some Random Person, Spaceship by mastjie (CC BY), via Poly Pizza.</p><p class="bstamp">Build ${typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'dev'}</p></div>`;
   $('#sSnd').onclick = () => {
     $('#sndBtn').click();
     showSettings();
@@ -168,7 +174,9 @@ function showSettings() {
     crowd.sync();
     showSettings();
   };
+  if ($('#sFull')) $('#sFull').onclick = () => showFullGame(showSettings);
+  if ($('#sPriv')) $('#sPriv').onclick = () => toNative({ type: 'privacy' });
   $('#sBack').onclick = showStart;
 }
 
-export { ICO, showStart };
+export { ICO, showLevels, showSettings, showStart };

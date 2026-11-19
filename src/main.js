@@ -4,6 +4,7 @@ import '@fontsource/barlow-condensed/500.css';
 import '@fontsource/barlow-condensed/600.css';
 import '@fontsource/barlow-condensed/700.css';
 import { initApp } from './platform/app.js';
+import { initStore } from './platform/store.js';
 import { game } from './core/state.js';
 import { arenaId, setArena } from './arenas/current.js';
 import { beatAt, lat, now, timeAt } from './audio/clock.js';
@@ -59,6 +60,7 @@ function boot() {
   initGlobe();
   initArenas();
   initSealife();
+  initStore(); // free / full game: before progress, the paywall decides which levels are open
   initProgress();
   initCurrent();
   initBike();

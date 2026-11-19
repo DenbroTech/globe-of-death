@@ -1,3 +1,4 @@
+import { checkAchievements } from './achievements.js';
 import { game } from '../core/state.js';
 import { crowd } from '../arenas/crowd.js';
 import { prog, saveProg } from './progress.js';
@@ -298,7 +299,9 @@ function careerRun(win) {
   const run = game.FREE
     ? { free: true, time: frTime, near: frNear }
     : { act: game.act, win, score: game.score, combo: game.stats.maxCombo, perfect: game.stats.perfect };
-  return recordCareer(run, id => ARENAS[id].name);
+  const got = recordCareer(run, id => ARENAS[id].name);
+  checkAchievements({ arena: arenaId, cursed: (game.cursesSurvived || 0) > 0 });
+  return got;
 }
 function gameOver() {
   game.over = { score: Math.floor(game.score) };

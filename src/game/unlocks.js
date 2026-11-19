@@ -80,6 +80,11 @@ const UNLOCKS = {
     tubes: { win: 5 },
   },
 };
+/* free vs full game (see platform/store.js): the free game has the first three levels; the full game
+   (game.full) opens every level straight away when FULL_OPENS_ALL, else lifts the cap and they unlock by playing */
+const FREE_LEVELS = ['bigtop', 'beach', 'stadium'];
+const FULL_OPENS_ALL = true;
+const paywalled = (kind, id) => kind === 'arena' && !game.full && !FREE_LEVELS.includes(id);
 let career = { shows: 0, freeRuns: 0, act: 1, win: 0, pts: 0, combo: 0, perf: 0, free: 0, near: 0 };
 const KEY = { act: 'act', win: 'win', pts: 'pts', combo: 'combo', perf: 'perf', shows: 'shows', free: 'free', near: 'near' };
 const met = r => Object.keys(r).every(k => career[KEY[k]] >= r[k]);
@@ -89,10 +94,13 @@ const reqsOf = (kind, id) => {
 };
 /* earned for real (ignores the "Unlock all" test switch) */
 const earned = (kind, id) => {
+  if (paywalled(kind, id)) return false;
+  if (kind === 'arena' && game.full && FULL_OPENS_ALL) return true;
   const R = reqsOf(kind, id);
   return !R || R.some(met);
 };
-const isUnlocked = (kind, id) => !!game.unlockAll || earned(kind, id);
+// "Unlock all" (testing) opens everything except what the free game doesn't include
+const isUnlocked = (kind, id) => !paywalled(kind, id) && (!!game.unlockAll || earned(kind, id));
 const mmss = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
 function reqLine(r) {
   const [k, v] = Object.entries(r)[0],
@@ -109,7 +117,7 @@ function reqLine(r) {
   if (k === 'near') return `${n(v)} near misses${pr(n(have))}`;
   return '';
 }
-const reqText = (kind, id) => (reqsOf(kind, id) || []).map(reqLine).join(' or ');
+const reqText = (kind, id) => (paywalled(kind, id) ? 'Full game' : (reqsOf(kind, id) || []).map(reqLine).join(' or '));
 const NAMES = { arena: null, style: 'style', paint: 'paint', costume: 'costume' };
 /* fold a finished run into the career; returns names of anything newly unlocked */
 function recordCareer(run, arenaName) {
@@ -202,4 +210,4 @@ function initUnlocks(prog) {
   } catch (e) {}
 }
 
-export { UNLOCKS, anyNew, career, earned, isNew, markSeen, initUnlocks, isUnlocked, reachAct, reqText, recordCareer, sanitizeSel };
+export { FREE_LEVELS, UNLOCKS, anyNew, paywalled, career, earned, isNew, markSeen, initUnlocks, isUnlocked, reachAct, reqText, recordCareer, sanitizeSel };

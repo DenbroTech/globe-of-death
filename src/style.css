@@ -383,3 +383,22 @@ body.lightsout #dark{opacity:1}
 .lvgo{display:flex;gap:10px;align-items:center}
 .lvgo .lvmode{flex:1}
 .lvgo .go{flex:0 0 auto;padding:0 22px;min-height:48px}
+
+/* ---- full game sheet (platform/store.js) ---- */
+.fg h1{margin:0}
+.fglist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.fglist li{display:flex;align-items:center;gap:12px;font:600 20px var(--f-u);color:var(--ink)}
+.fgi{width:26px;height:26px;flex:0 0 26px;fill:none;stroke:var(--amber);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.fgok{margin:0;color:var(--amber);font-weight:600;font-size:18px}
+.fgstate{margin:0;min-height:1.2em;color:var(--mute);font-size:15px}
+.fg .go.big{align-self:stretch}
+.sgo{font-style:normal;font-size:24px;color:var(--mute)}
+/* ---- neutral age question (platform/agegate.js) ---- */
+.agegate{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(4,6,14,.94)}
+.agecard{width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px}
+.agecard h1{margin:0;font-family:var(--f-d);font-weight:400;color:var(--amber);font-size:34px}
+.agecard p{margin:0;font-size:18px;color:var(--ink)}
+.agecard select{height:54px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.08);color:var(--ink);font-size:20px;padding:0 14px}
+.agecard select option{color:#111}
+.agecard .go{align-self:stretch}
+.agecard .go:disabled{opacity:.4}

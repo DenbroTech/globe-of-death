@@ -13,6 +13,7 @@ import { ICO } from './menus.js';
 import { ARENAS } from '../arenas/arenas.js';
 import { arenaId, setArena } from '../arenas/current.js';
 import { isNew, markSeen } from '../game/unlocks.js';
+import { showPlayAchievements } from '../game/achievements.js';
 
 let board = { show: [], combo: [], free: [], freepts: [] },
   riderName = 'Rider';
@@ -127,7 +128,7 @@ function showBoard(back) {
   ov.innerHTML = `<div class="card"><h1><small>On this phone</small>Leaderboard</h1>
   <div class="arenas lbgrid"><button class="chip" data-lb="show" aria-pressed="${game.lbTab === 'show'}">Show points</button><button class="chip" data-lb="combo" aria-pressed="${game.lbTab === 'combo'}">Best combo</button><button class="chip" data-lb="free" aria-pressed="${game.lbTab === 'free'}">Free ride time</button><button class="chip" data-lb="freepts" aria-pressed="${game.lbTab === 'freepts'}">Free ride points</button></div>
   ${boardRows(game.lbTab, game.lastEntry ? (game.lastEntry.mode === game.lbTab ? game.lastEntry.e : game.lbTab === 'combo' || game.lbTab === 'freepts' ? game.lastEntry.ce : null) : null)}
-  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${playGamesOn() ? '<button class="go ghost" id="lbplay">Google Play</button>' : ''}${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="go" id="lbback">Back</button>${playGamesOn() ? '<button class="go ghost" id="lbplay">Google Play</button><button class="go ghost" id="lbach">Achievements</button>' : ''}${board[game.lbTab].length ? '<button class="go ghost" id="lbclear">Clear this board</button>' : ''}</div></div>`;
   ov.querySelectorAll('[data-lb]').forEach(
     b =>
       (b.onclick = () => {
@@ -137,6 +138,7 @@ function showBoard(back) {
   );
   $('#lbback').onclick = back;
   if ($('#lbplay')) $('#lbplay').onclick = showPlayLeaderboards;
+  if ($('#lbach')) $('#lbach').onclick = showPlayAchievements;
   const c = $('#lbclear');
   if (c) {
     let armed = false;

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Globe Riders",
     "slug": "globeofdeath-app",
-    "version": "0.1.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -25,7 +25,22 @@
           "backgroundColor": "#07060a"
         }
       ],
-      "./plugins/withPlayGames"
+      "./plugins/withPlayGames",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-9920053523182877~8575666929",
+          "delayAppMeasurementInit": true
+        }
+      ],
+      [
+        "expo-iap",
+        {
+          "android": {
+            "store": "play"
+          }
+        }
+      ]
     ],
     "web": {
       "favicon": "./assets/favicon.png"

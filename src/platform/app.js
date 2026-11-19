@@ -3,11 +3,19 @@ import { quitToMenu, setPause } from '../game/run.js';
 import { leaveGarage, showroom } from '../ui/garage.js';
 import { showStart } from '../ui/menus.js';
 import { ac } from '../audio/synth.js';
+import { initAgeGate } from './agegate.js';
+import { whenFullChanges } from './store.js';
+import { initAchievements } from '../game/achievements.js';
+import { arenaId, setArena } from '../arenas/current.js';
+import { ARENAS } from '../arenas/arenas.js';
+import { markSeen, paywalled } from '../game/unlocks.js';
+import { toast } from '../ui/hud.js';
 
 /* ---------- native app shell (Expo app in mobile/, game runs in a WebView) ----------
    In a browser this does nothing. Inside the app, window.ReactNativeWebView exists and the
    app calls window.__nativeBack() when the Android back button is pressed.
-   AdMob and the "Remove ads" purchase will plug in here (messages to the native side). */
+   Messages to the native side: exit, score / leaderboards / ach / achievements (Play Games), age / ad / privacy
+   (AdMob, see platform/ads.js + agegate.js), buy / restore / price (the full-game purchase, platform/store.js). */
 const isApp = !!window.ReactNativeWebView;
 const toNative = msg => window.ReactNativeWebView && window.ReactNativeWebView.postMessage(JSON.stringify(msg));
 
@@ -48,7 +56,18 @@ function watchGL() {
 }
 function initApp() {
   watchGL();
+  initAchievements();
+  // bought (or refunded) the full game
+  whenFullChanges(full => {
+    if (full) {
+      // every level opens at once: no "new level" pop-ups for all of them, just one cheer
+      Object.keys(ARENAS).forEach(k => markSeen('arena', k));
+      toast('Full game unlocked: every level is open!', 2600);
+      if (!game.running) showStart();
+    } else if (paywalled('arena', arenaId)) setArena('bigtop');
+  });
   if (!isApp) return;
+  initAgeGate();
   document.documentElement.classList.add('app');
   window.__nativeBack = nativeBack;
   // app sent to the background: pause the ride and silence the audio; resume sound on return
